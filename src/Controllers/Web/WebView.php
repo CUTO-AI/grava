@@ -33,8 +33,22 @@ final class WebView
         $vars['_title'] = $vars['_title'] ?? ucfirst($view) . ' · GRAVA';
         $vars['_view']  = $view;
 
-        $partial = rtrim($this->viewsPath, '/') . '/web/' . $view . '.php';
-        $layout  = rtrim($this->viewsPath, '/') . '/web/layout.php';
+        $base    = rtrim($this->viewsPath, '/') . '/web/';
+        $partial = $base . $view . '.php';
+        $layout  = $base . 'layout.php';
+
+        // --- Parallelbetrieb Alt/Cyber (pro-View-Migration) ------------------
+        // Ist das Cyber-Design aktiv UND existiert eine migrierte Variante
+        // views/web/cyber/<view>.php, rendern wir diese in der Cyber-Schale.
+        // Fehlt sie, bleibt es beim klassischen Layout — nahtlose Migration.
+        if (\App\Support\Theme::wantsCyber()) {
+            $cyberPartial = $base . 'cyber/' . $view . '.php';
+            $cyberLayout  = $base . 'layout_cyber.php';
+            if (is_file($cyberPartial) && is_file($cyberLayout)) {
+                $partial = $cyberPartial;
+                $layout  = $cyberLayout;
+            }
+        }
 
         extract($vars, EXTR_SKIP);
 

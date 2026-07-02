@@ -1,0 +1,141 @@
+/* ==========================================================================
+   GRAVA — App-Views im Cyber-Design.
+   Ergänzt cyberride.css (Tokens) + site.css (Marketing-Komponenten) um die
+   Bausteine, die die eigentlichen App-Seiten brauchen (Formulare, Auth-Card,
+   Alerts, Content-Rahmen). Bewusst getrennt von site.css, damit ein Re-Emit
+   des Marketing-CSS diese Regeln nicht überschreibt.
+   ========================================================================== */
+
+/* ---------- Seiten-Rahmen für Content-Views ---------- */
+.cyber-main {
+    min-height: calc(100vh - 220px);
+    padding: 96px 0 72px;
+}
+.cyber-main .cr-wrap { width: 100%; }
+
+/* Zentrierte, schmale Spalte (Auth & Formular-Seiten) */
+.cyber-narrow {
+    max-width: 460px;
+    margin: 0 auto;
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+}
+
+/* ---------- Überschriften ---------- */
+.cyber-h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: var(--track-tight);
+    color: var(--text-hi);
+    font-size: var(--text-h2);
+    margin: 0 0 6px;
+}
+.cyber-kicker {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--track-wider);
+    text-transform: uppercase;
+    color: var(--cyan-500);
+    margin: 0 0 20px;
+}
+
+/* ---------- Formulare ---------- */
+.cr-form { display: flex; flex-direction: column; gap: 18px; margin-top: 8px; }
+
+.cr-field { display: flex; flex-direction: column; gap: 7px; }
+.cr-field > span,
+.cr-field > label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--track-wide);
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.cr-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 15px;
+    background: var(--void-800);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    color: var(--text-hi);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: 1.2;
+    transition: border-color var(--dur-base), box-shadow var(--dur-base), background var(--dur-base);
+    -webkit-appearance: none;
+    appearance: none;
+}
+.cr-input::placeholder { color: var(--text-disabled); }
+.cr-input:hover { border-color: var(--line-cyan); }
+.cr-input:focus {
+    outline: none;
+    border-color: var(--line-cyan-hi);
+    box-shadow: var(--glow-cyan-sm);
+    background: var(--void-700);
+}
+.cr-input:-webkit-autofill,
+.cr-input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-hi);
+    box-shadow: 0 0 0px 1000px var(--void-800) inset;
+    caret-color: var(--text-hi);
+}
+
+/* Submit — nutzt cr-btn, füllt die Breite */
+.cr-btn--block { width: 100%; justify-content: center; margin-top: 4px; cursor: pointer; }
+button.cr-btn { cursor: pointer; font-family: inherit; }
+
+/* ---------- Alerts ---------- */
+.cr-alert {
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-size: var(--text-sm);
+    font-family: var(--font-body);
+    margin-bottom: 4px;
+}
+.cr-alert--error {
+    background: var(--fill-magenta);
+    border: 1px solid var(--magenta-500);
+    color: var(--magenta-400);
+}
+.cr-alert--info {
+    background: var(--fill-cyan);
+    border: 1px solid var(--line-cyan-hi);
+    color: var(--cyan-400);
+}
+
+/* ---------- Meta-Zeile / Sekundär-Links ---------- */
+.cr-formmeta {
+    margin: 18px 0 0;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    letter-spacing: var(--track-wide);
+    color: var(--text-muted);
+    text-align: center;
+}
+.cr-formmeta a { color: var(--cyan-500); text-decoration: none; }
+.cr-formmeta a:hover { color: var(--cyan-400); text-shadow: var(--text-glow-cyan); }
+
+/* ---------- Flash (aus layout) ---------- */
+.cyber-flash {
+    max-width: 460px;
+    margin: 0 auto 20px;
+    border: 1px solid var(--line-cyan-hi);
+    background: var(--fill-cyan);
+    color: var(--cyan-400);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-size: var(--text-sm);
+}
+
+/* ---------- Logout-Button im Header (als Nav-Link getarnt) ---------- */
+.nav-form { display: inline; margin: 0; }
+.nav-button {
+    background: none; border: none; padding: 0; cursor: pointer;
+    font-family: var(--font-mono); font-size: var(--text-xs);
+    letter-spacing: var(--track-wide); text-transform: uppercase;
+    color: var(--text-muted); transition: color 160ms;
+}
+.nav-button:hover { color: var(--accent, var(--cyan-500)); }

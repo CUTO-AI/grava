@@ -22,7 +22,7 @@ class LandingController
         // --- Parallelbetrieb Alt/Cyber-Design ---------------------------------
         // Opt-in per ?theme=cyber (setzt 30-Tage-Cookie); ?theme=classic zurück.
         // Solange nur die Landing migriert ist, greift der Schalter genau hier.
-        if ($this->wantsCyberTheme()) {
+        if (\App\Support\Theme::wantsCyber()) {
             $this->renderCyberLanding();
         }
 
@@ -52,31 +52,6 @@ class LandingController
             '_ogImage' => '/assets/landing/screenshot-game-map.webp',
             '_ogUrl' => '/landing',
         ]);
-    }
-
-    /**
-     * Löst den Theme-Wunsch auf. ?theme=… überschreibt und persistiert das
-     * Cookie; ohne Query zählt das zuvor gesetzte Cookie. Default: classic.
-     */
-    private function wantsCyberTheme(): bool
-    {
-        $theme = $_GET['theme'] ?? ($_COOKIE['theme'] ?? 'classic');
-        $theme = $theme === 'cyber' ? 'cyber' : 'classic';
-
-        if (isset($_GET['theme'])) {
-            $secure = (($_SERVER['HTTPS'] ?? '') !== '')
-                || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
-            setcookie('theme', $theme, [
-                'expires'  => time() + 2592000, // 30 Tage
-                'path'     => '/',
-                'secure'   => $secure,
-                'httponly' => false,            // rein kosmetisch, kein Secret
-                'samesite' => 'Lax',
-            ]);
-            $_COOKIE['theme'] = $theme;
-        }
-
-        return $theme === 'cyber';
     }
 
     /**
