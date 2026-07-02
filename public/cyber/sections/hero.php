@@ -5,6 +5,7 @@ $H = $T['hero'];
 ?>
 <section class="hero" id="top">
   <div class="hero__bg">
+    <div class="hero__photo"></div>
     <div class="hero__grid cr-grid-bg"></div>
     <div class="hero__floor"><div class="cr-grid-bg"></div></div>
     <span class="hero__sector" style="left:58%;top:44%;width:120px;height:120px;background:var(--fill-lime);border:1.5px solid var(--lime-500);box-shadow:var(--glow-lime)"></span>
