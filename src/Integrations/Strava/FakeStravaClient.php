@@ -44,8 +44,13 @@ final class FakeStravaClient implements StravaClient
         ];
     }
 
-    public function listActivities(string $accessToken, int $perPage = 30): array
+    public function listActivities(string $accessToken, int $perPage = 30, int $page = 1): array
     {
+        // Fixtures liegen komplett auf Seite 1; Folgeseiten sind leer, damit der
+        // paginierende Import terminiert (wie beim echten Strava-Ende der Liste).
+        if ($page > 1) {
+            return [];
+        }
         return [
             [
                 'id'         => '7000000001',

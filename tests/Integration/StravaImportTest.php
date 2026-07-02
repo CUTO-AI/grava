@@ -214,6 +214,90 @@ final class StravaImportTest extends IntegrationTestCase
         $this->assertSame(1, $count, 'kein Duplikat beim Re-Import');
     }
 
+    public function testImportPaginatesAcrossPages(): void
+    {
+        // Client mit 150 GPS-Aktivitäten über zwei Seiten (100 + 50) — prüft,
+        // dass der Import über die erste Seite hinaus paginiert.
+        $paging = new class implements \App\Integrations\Strava\StravaClient {
+            public function exchangeCode(string $code): array
+            {
+                return [
+                    'access_token' => 'fake', 'refresh_token' => 'fake', 'expires_at' => time() + 3600,
+                    'athlete_id' => '99000002', 'athlete_username' => null,
+                    'scope' => 'read,activity:read_all,activity:write',
+                ];
+            }
+            public function refreshToken(string $refreshToken): array
+            {
+                return ['access_token' => 'fake', 'refresh_token' => $refreshToken, 'expires_at' => time() + 3600];
+            }
+            public function listActivities(string $accessToken, int $perPage = 30, int $page = 1): array
+            {
+                $offset = ($page - 1) * $perPage;
+                if ($offset >= 150) {
+                    return [];
+                }
+                $out = [];
+                for ($i = $offset; $i < min(150, $offset + $perPage); $i++) {
+                    $out[] = [
+                        'id'         => (string)(9000000000 + $i),
+                        'name'       => 'Runde ' . $i,
+                        'type'       => 'Ride',
+                        'start_date' => '2026-05-01T07:30:00Z',
+                    ];
+                }
+                return $out;
+            }
+            public function getActivityStreams(string $accessToken, string $activityId): array
+            {
+                return [
+                    'latlng'   => [[49.10, 8.70], [49.11, 8.72], [49.12, 8.74]],
+                    'altitude' => [180.0, 192.0, 205.0],
+                ];
+            }
+            public function uploadActivity(string $accessToken, string $fileContents, string $dataType, string $name, string $description, string $externalId): array
+            {
+                return ['upload_id' => 'x', 'external_id' => $externalId];
+            }
+            public function getUploadStatus(string $accessToken, string $uploadId): array
+            {
+                return ['activity_id' => '1', 'error' => null, 'status' => 200];
+            }
+            public function updateActivity(string $accessToken, string $activityId, ?string $description, ?string $visibility): void
+            {
+            }
+        };
+
+        $gpxExport = new RouteGpxExportService(
+            $this->routes,
+            new RouteGeoJson(new GeometryParser()),
+            new RoutePrivacyTrimmer(),
+            new PrivacyZoneRepository($this->pdo),
+        );
+        $strava = new StravaService(
+            $paging,
+            $this->crypto,
+            $this->routes,
+            'fake-client-id',
+            'http://localhost/auth/strava/callback',
+            true,
+            'http://localhost',
+            $gpxExport,
+            new RouteRepository(),
+            new \App\Game\GameRepository($this->pdo),
+        );
+
+        $userId = $this->createUser();
+        $url = $strava->authorizeUrl($userId, 'mobile');
+        parse_str((string)parse_url($url, PHP_URL_QUERY), $q);
+        $strava->handleCallback((string)$q['state'], 'fake-auth-code');
+
+        $res = $strava->import($userId);
+        $this->assertSame(150, $res['imported'], 'alle Aktivitäten beider Seiten importiert');
+        $this->assertSame(150, $res['total']);
+        $this->assertFalse($res['rate_limited']);
+    }
+
     public function testImportWithoutConnectionThrows(): void
     {
         $userId = $this->createUser();

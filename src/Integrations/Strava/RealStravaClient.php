@@ -56,9 +56,12 @@ final class RealStravaClient implements StravaClient
         ];
     }
 
-    public function listActivities(string $accessToken, int $perPage = 30): array
+    public function listActivities(string $accessToken, int $perPage = 30, int $page = 1): array
     {
-        $res = $this->get(self::API_BASE . '/athlete/activities?per_page=' . $perPage, $accessToken);
+        $res = $this->get(
+            self::API_BASE . '/athlete/activities?per_page=' . $perPage . '&page=' . max(1, $page),
+            $accessToken,
+        );
         $out = [];
         foreach ((array)$res as $a) {
             if (!is_array($a)) {
@@ -198,7 +201,7 @@ final class RealStravaClient implements StravaClient
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT        => 60,
             ]);
-            return $this->exec($ch, true);
+            return $this->exec($ch);
         } finally {
             @unlink($tmp);
         }
@@ -233,14 +236,16 @@ final class RealStravaClient implements StravaClient
     }
 
     /** @return array<string,mixed> */
-    private function exec(\CurlHandle $ch, bool $allow429 = false): array
+    private function exec(\CurlHandle $ch): array
     {
         $body = curl_exec($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err = curl_error($ch);
         curl_close($ch);
 
-        if ($allow429 && $status === 429) {
+        // 429 überall als rate_limit melden — der Import paginiert und muss bei
+        // erreichtem Limit sauber pausieren können (nicht als 502 hart failen).
+        if ($status === 429) {
             throw new StravaException('rate_limit', 'Strava-Limit erreicht, bitte später erneut.', 429);
         }
         if ($body === false || $status >= 400) {

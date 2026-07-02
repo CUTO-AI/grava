@@ -40,6 +40,16 @@ final class StravaService
         private readonly GameRepository $gameRepo,
     ) {}
 
+    /** Aktivitäten pro Seiten-Request (Strava erlaubt bis 200). */
+    private const IMPORT_PAGE_SIZE = 100;
+
+    /**
+     * Obergrenze der Seiten pro Import-Aufruf. Bei 100/Seite deckt das bis zu
+     * 5.000 Aktivitäten ab — Schutz vor Endlosschleifen und Rate-Limits. Der
+     * Import ist idempotent, ein erneuter Aufruf holt den Rest nach.
+     */
+    private const MAX_IMPORT_PAGES = 50;
+
     public function isConfigured(): bool
     {
         return $this->fakeMode || ($this->clientId !== '');
@@ -132,7 +142,13 @@ final class StravaService
     /**
      * Importiert Activities mit GPS-Spur als private Routen.
      *
-     * @return array{imported:int, skipped:int, total:int}
+     * Paginiert über die gesamte Aktivitäten-Historie (neueste zuerst), bis eine
+     * Seite leer/unvollständig ist oder das Seiten-Cap greift. Läuft der Athlet
+     * dabei in ein Strava-Rate-Limit (HTTP 429), bricht der Import kontrolliert
+     * ab und meldet `rate_limited=true` — das bereits Importierte bleibt bestehen,
+     * ein erneuter (idempotenter) Aufruf setzt fort.
+     *
+     * @return array{imported:int, skipped:int, total:int, rate_limited:bool}
      */
     public function import(int $userId): array
     {
@@ -142,61 +158,92 @@ final class StravaService
         }
 
         $accessToken = $this->freshAccessToken($userId, $conn);
-        $activities  = $this->client->listActivities($accessToken, 30);
 
         $imported = 0;
         $skipped  = 0;
-        foreach ($activities as $act) {
-            $activityId = (string)($act['id'] ?? '');
-            if ($activityId === '') {
-                $skipped++;
-                continue;
-            }
-            $clientUuid = self::activityUuid($activityId);
+        $total    = 0;
+        $rateLimited = false;
 
-            // Schon importiert? → skip (idempotent).
-            if ($this->routeExists($userId, $clientUuid)) {
-                $skipped++;
-                continue;
-            }
-
-            $streams = $this->client->getActivityStreams($accessToken, $activityId);
-            $latlng  = $streams['latlng'] ?? [];
-            if (count($latlng) < 2) {
-                $skipped++; // keine brauchbare GPS-Spur
-                continue;
-            }
-
-            $payload = self::buildGeoJson(
-                $latlng,
-                $streams['altitude'] ?? [],
-                isset($act['start_date']) ? (string)$act['start_date'] : null,
-            );
-            $title   = trim((string)($act['name'] ?? 'Strava-Aktivität'));
-            if ($title === '') {
-                $title = 'Strava-Aktivität';
-            }
-            $title = mb_substr($title, 0, 140);
-
+        for ($page = 1; $page <= self::MAX_IMPORT_PAGES; $page++) {
             try {
-                $this->routes->createOrAddVersion(
-                    userId: $userId,
-                    title: $title,
-                    description: 'Importiert aus Strava (Activity ' . $activityId . ').',
-                    visibility: 'private',
-                    source: 'strava',
-                    clientRouteUuid: $clientUuid,
-                    payload: $payload,
-                    tags: ['strava'],
+                $activities = $this->client->listActivities($accessToken, self::IMPORT_PAGE_SIZE, $page);
+            } catch (StravaException $e) {
+                if ($e->httpStatus === 429) {
+                    $rateLimited = true;
+                    break;
+                }
+                throw $e;
+            }
+            if ($activities === []) {
+                break; // keine weiteren Seiten
+            }
+            $total += count($activities);
+
+            foreach ($activities as $act) {
+                $activityId = (string)($act['id'] ?? '');
+                if ($activityId === '') {
+                    $skipped++;
+                    continue;
+                }
+                $clientUuid = self::activityUuid($activityId);
+
+                // Schon importiert? → skip (idempotent).
+                if ($this->routeExists($userId, $clientUuid)) {
+                    $skipped++;
+                    continue;
+                }
+
+                try {
+                    $streams = $this->client->getActivityStreams($accessToken, $activityId);
+                } catch (StravaException $e) {
+                    if ($e->httpStatus === 429) {
+                        $rateLimited = true;
+                        break 2; // Limit erreicht — kontrolliert stoppen
+                    }
+                    throw $e;
+                }
+                $latlng = $streams['latlng'] ?? [];
+                if (count($latlng) < 2) {
+                    $skipped++; // keine brauchbare GPS-Spur
+                    continue;
+                }
+
+                $payload = self::buildGeoJson(
+                    $latlng,
+                    $streams['altitude'] ?? [],
+                    isset($act['start_date']) ? (string)$act['start_date'] : null,
                 );
-                $imported++;
-            } catch (\Throwable $e) {
-                error_log('StravaService::import: Activity ' . $activityId . ' übersprungen: ' . $e->getMessage());
-                $skipped++;
+                $title = trim((string)($act['name'] ?? 'Strava-Aktivität'));
+                if ($title === '') {
+                    $title = 'Strava-Aktivität';
+                }
+                $title = mb_substr($title, 0, 140);
+
+                try {
+                    $this->routes->createOrAddVersion(
+                        userId: $userId,
+                        title: $title,
+                        description: 'Importiert aus Strava (Activity ' . $activityId . ').',
+                        visibility: 'private',
+                        source: 'strava',
+                        clientRouteUuid: $clientUuid,
+                        payload: $payload,
+                        tags: ['strava'],
+                    );
+                    $imported++;
+                } catch (\Throwable $e) {
+                    error_log('StravaService::import: Activity ' . $activityId . ' übersprungen: ' . $e->getMessage());
+                    $skipped++;
+                }
+            }
+
+            // Unvollständige Seite = letzte Seite der Historie.
+            if (count($activities) < self::IMPORT_PAGE_SIZE) {
+                break;
             }
         }
 
-        return ['imported' => $imported, 'skipped' => $skipped, 'total' => count($activities)];
+        return ['imported' => $imported, 'skipped' => $skipped, 'total' => $total, 'rate_limited' => $rateLimited];
     }
 
     /**

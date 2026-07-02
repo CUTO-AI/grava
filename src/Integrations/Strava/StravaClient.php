@@ -32,11 +32,13 @@ interface StravaClient
     public function refreshToken(string $refreshToken): array;
 
     /**
-     * Listet die letzten Activities des verbundenen Athleten.
+     * Listet eine Seite der Activities des verbundenen Athleten (neueste zuerst).
      *
+     * @param int $page 1-basierte Seitennummer (Strava-Paginierung). Liefert ein
+     *                  leeres Array, sobald keine weiteren Aktivitäten existieren.
      * @return list<array{id:string, name:string, type:string, start_date:?string}>
      */
-    public function listActivities(string $accessToken, int $perPage = 30): array;
+    public function listActivities(string $accessToken, int $perPage = 30, int $page = 1): array;
 
     /**
      * Liefert die GPS-Spur einer Activity.
