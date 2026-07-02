@@ -37,16 +37,21 @@ final class WebView
         $partial = $base . $view . '.php';
         $layout  = $base . 'layout.php';
 
-        // --- Parallelbetrieb Alt/Cyber (pro-View-Migration) ------------------
-        // Ist das Cyber-Design aktiv UND existiert eine migrierte Variante
-        // views/web/cyber/<view>.php, rendern wir diese in der Cyber-Schale.
-        // Fehlt sie, bleibt es beim klassischen Layout — nahtlose Migration.
-        if (\App\Support\Theme::wantsCyber()) {
-            $cyberPartial = $base . 'cyber/' . $view . '.php';
+        // --- Cyber-Design ist Standard --------------------------------------
+        // Jede View rendert in der Cyber-Schale (layout_cyber.php); das
+        // vorhandene Markup wird per app.css global umgeskinnt. Existiert eine
+        // handpolierte Variante views/web/cyber/<view>.php, wird diese bevorzugt.
+        // Ausnahmen: Views mit '_classicLayout' => true (z. B. Marketing-Landing
+        // mit eigenem Design) und die Escape-Hatch ?theme=classic bleiben alt.
+        $forceClassic = !empty($vars['_classicLayout']);
+        if (!$forceClassic && \App\Support\Theme::wantsCyber()) {
             $cyberLayout  = $base . 'layout_cyber.php';
-            if (is_file($cyberPartial) && is_file($cyberLayout)) {
-                $partial = $cyberPartial;
-                $layout  = $cyberLayout;
+            if (is_file($cyberLayout)) {
+                $layout       = $cyberLayout;
+                $cyberPartial = $base . 'cyber/' . $view . '.php';
+                if (is_file($cyberPartial)) {
+                    $partial = $cyberPartial;
+                }
             }
         }
 

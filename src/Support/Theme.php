@@ -17,11 +17,15 @@ final class Theme
 {
     public const COOKIE = 'theme';
 
-    /** Löst den Theme-Wunsch auf und persistiert ihn bei ?theme=…. */
+    /**
+     * Löst den Theme-Wunsch auf und persistiert ihn bei ?theme=….
+     * Cyber ist der Standard; `?theme=classic` ist die Escape-Hatch zurück
+     * auf das alte Layout (für Vergleich/Rollback).
+     */
     public static function wantsCyber(): bool
     {
-        $theme = $_GET[self::COOKIE] ?? ($_COOKIE[self::COOKIE] ?? 'classic');
-        $theme = $theme === 'cyber' ? 'cyber' : 'classic';
+        $theme = $_GET[self::COOKIE] ?? ($_COOKIE[self::COOKIE] ?? 'cyber');
+        $theme = $theme === 'classic' ? 'classic' : 'cyber';
 
         if (isset($_GET[self::COOKIE])) {
             $secure = (($_SERVER['HTTPS'] ?? '') !== '')

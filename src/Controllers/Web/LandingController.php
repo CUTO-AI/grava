@@ -19,19 +19,15 @@ class LandingController
 
     public function home(): never
     {
-        // --- Parallelbetrieb Alt/Cyber-Design ---------------------------------
-        // Opt-in per ?theme=cyber (setzt 30-Tage-Cookie); ?theme=classic zurück.
-        // Solange nur die Landing migriert ist, greift der Schalter genau hier.
-        if (\App\Support\Theme::wantsCyber()) {
-            $this->renderCyberLanding();
-        }
-
         // Hole aktuelle öffentliche Fahrten für die Gallery
         $recentRoutes = $this->getRecentPublicRoutes(10);
 
         $this->view->render('landing/home', [
             '_title' => 'GRAVA — Oberfläche, Verkehr & Hinweise: Community-Map für Radfahrer',
             '_authedUser' => null, // Anonymer Besucher
+            // Marketing-Landing behält ihr eigenes Design (landing.css) und wird
+            // NICHT auf die Cyber-Schale umgestellt — separater Redesign-Pass folgt.
+            '_classicLayout' => true,
             '_pageStyles' => [
                 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
                 '/assets/landing/landing.css'
@@ -52,23 +48,6 @@ class LandingController
             '_ogImage' => '/assets/landing/screenshot-game-map.webp',
             '_ogUrl' => '/landing',
         ]);
-    }
-
-    /**
-     * Rendert die eigenständige Cyber-Landing (public/cyber/index.php) mit
-     * eigenem Layout/Assets. Bricht die Anfrage danach ab.
-     */
-    private function renderCyberLanding(): void
-    {
-        $entry = dirname(__DIR__, 3) . '/public/cyber/index.php';
-        if (is_file($entry)) {
-            http_response_code(200);
-            header('Content-Type: text/html; charset=utf-8');
-            $CR_ASSETS = '/cyber/assets';
-            require $entry;
-            exit;
-        }
-        // Fallback: fehlt das Bundle, normal weiter mit der klassischen Seite.
     }
 
     private function getRecentPublicRoutes(int $limit): array
