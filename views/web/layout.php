@@ -11,9 +11,9 @@ $mainClass    = 'container' . ($_layoutWide ? ' container--wide' : '');
 $_pageStyles  = $_pageStyles  ?? [];
 $_pageScripts = $_pageScripts ?? [];
 // SEO & Social Meta-Tags
-$_metaDescription = $_metaDescription ?? 'GRAVA — Finde, fahre und erobere deine Gravel- und Bikepacking-Touren. Objektive Wegqualität, Community-Power und Territorialspiel in einer App.';
+$_metaDescription = $_metaDescription ?? 'CYBERRIDE — Finde, fahre und erobere deine Gravel- und Bikepacking-Touren. Objektive Wegqualität, Community-Power und Territorialspiel in einer App.';
 $_metaKeywords    = $_metaKeywords    ?? 'Gravel, Bikepacking, Radtouren, Wegqualität, Schotter, Rennrad, Community, GPS';
-$_ogTitle         = $_ogTitle         ?? ($_title ?? 'GRAVA');
+$_ogTitle         = $_ogTitle         ?? ($_title ?? 'CYBERRIDE');
 $_ogDescription   = $_ogDescription   ?? $_metaDescription;
 $_ogImage         = $_ogImage         ?? '/assets/brand/icon-512.png';
 $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
@@ -22,12 +22,12 @@ $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= htmlspecialchars($_title ?? 'GRAVA', ENT_QUOTES, 'UTF-8') ?></title>
+    <title><?= htmlspecialchars($_title ?? 'CYBERRIDE', ENT_QUOTES, 'UTF-8') ?></title>
 
     <!-- SEO Meta-Tags -->
     <meta name="description" content="<?= htmlspecialchars($_metaDescription, ENT_QUOTES, 'UTF-8') ?>">
     <meta name="keywords" content="<?= htmlspecialchars($_metaKeywords, ENT_QUOTES, 'UTF-8') ?>">
-    <meta name="author" content="GRAVA">
+    <meta name="author" content="CYBERRIDE">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="<?= htmlspecialchars($_ogUrl, ENT_QUOTES, 'UTF-8') ?>">
 
@@ -38,7 +38,7 @@ $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
     <meta property="og:description" content="<?= htmlspecialchars($_ogDescription, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:image" content="<?= htmlspecialchars($_ogImage, ENT_QUOTES, 'UTF-8') ?>">
     <meta property="og:locale" content="de_DE">
-    <meta property="og:site_name" content="GRAVA">
+    <meta property="og:site_name" content="CYBERRIDE">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
@@ -61,7 +61,7 @@ $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
 </head>
 <body>
     <header class="site-header">
-        <a href="/" class="brand"><img src="/assets/brand/icon-512.png" alt="GRAVA" class="brand-icon"><span class="brand-word">GRAVA</span></a>
+        <a href="/" class="brand"><img src="/assets/brand/icon-512.png" alt="CYBERRIDE" class="brand-icon"><span class="brand-word">CYBERRIDE</span></a>
         <nav>
         <?php $_surfaceCheck = \App\Config\Config::instance()->bool('SURFACE_CHECK_ENABLED', true); ?>
         <?php if ($_authedUser !== null): ?>
@@ -123,7 +123,7 @@ $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
             </div>
 
             <div class="footer-section">
-                <h4 class="footer-heading">GRAVA</h4>
+                <h4 class="footer-heading">CYBERRIDE</h4>
                 <p class="footer-tagline">
                     Fahre, erobere, baue die Map.<br>
                     Oberfläche · Verkehr · Hinweise
@@ -132,7 +132,7 @@ $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
         </div>
 
         <div class="footer-bottom">
-            <small>&copy; <?= date('Y') ?> GRAVA. Alle Rechte vorbehalten.</small>
+            <small>&copy; <?= date('Y') ?> CYBERRIDE. Alle Rechte vorbehalten.</small>
         </div>
     </footer>
     <?php foreach ($_pageScripts as $_src): ?>

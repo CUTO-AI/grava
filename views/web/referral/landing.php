@@ -5,8 +5,8 @@
 $code = htmlspecialchars($referral_code, ENT_QUOTES, 'UTF-8');
 ?>
 <section class="card">
-    <h1><?= t('Du wurdest zu GRAVA eingeladen') ?></h1>
-    <p><?= t('GRAVA ist deine App für Gravel-Touren: Routen entdecken, aufzeichnen und teilen.') ?></p>
+    <h1><?= t('Du wurdest zu CYBERRIDE eingeladen') ?></h1>
+    <p><?= t('CYBERRIDE ist deine App für Gravel-Touren: Routen entdecken, aufzeichnen und teilen.') ?></p>
 
     <p class="muted"><?= t('Dein Einlade-Code:') ?></p>
     <p style="font-size:1.6rem;font-weight:700;letter-spacing:.04em;">

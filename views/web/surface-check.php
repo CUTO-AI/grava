@@ -35,7 +35,7 @@ $_pageScripts = [
 <header class="page-header">
     <h1><?= t('Belag prüfen') ?></h1>
     <p class="muted">
-        <?= t('Lade eine fremde Route (z. B. Strava-GPX) hoch — GRAVA gleicht sie mit den
+        <?= t('Lade eine fremde Route (z. B. Strava-GPX) hoch — CYBERRIDE gleicht sie mit den
         vorhandenen Crowd-Belagsdaten ab und zeigt dir, wie die Strecke wirklich ist.
         Die Datei wird') ?> <strong><?= t('nicht gespeichert') ?></strong>.
     </p>

@@ -144,7 +144,7 @@ return [
     'Distanz aufsteigend' => 'Distance ascending',
     'Du hast noch keine Routen angelegt.' => 'You haven\'t created any routes yet.',
     'Du kannst dein Konto jederzeit in der App löschen.' => 'You can delete your account at any time in the app.',
-    'Du wurdest zu GRAVA eingeladen' => 'You\'ve been invited to GRAVA',
+    'Du wurdest zu CYBERRIDE eingeladen' => 'You\'ve been invited to CYBERRIDE',
     'E-Mail' => 'Email',
     'E-Mail noch nicht bestätigt.' => 'Email not yet confirmed.',
     'E-Mail oder @handle' => 'Email or @handle',
@@ -193,7 +193,7 @@ return [
     'Für diese Route liegen noch keine Crowd-Daten vor. Die Karte zeigt die Strecke neutral.' => 'There is no crowd data for this route yet. The map shows the route neutrally.',
     'GPX- oder GeoJSON-Datei' => 'GPX or GeoJSON file',
     'GPX-Import und GPX-Export inklusive Wegqualität' => 'GPX import and GPX export including surface quality',
-    'GRAVA ist deine App für Gravel-Touren: Routen entdecken, aufzeichnen und teilen.' => 'GRAVA is your app for gravel tours: discover, record and share routes.',
+    'CYBERRIDE ist deine App für Gravel-Touren: Routen entdecken, aufzeichnen und teilen.' => 'CYBERRIDE is your app for gravel tours: discover, record and share routes.',
     'Geliked' => 'Liked',
     'Gemischt' => 'Mixed',
     'Geometrie ist je Version unveränderlich — eine neue Geometrie liefert die
@@ -290,9 +290,9 @@ return [
     'Kuration' => 'Curation',
     'Lade eine GPX- oder GeoJSON-Datei hoch. Höhenmeter, Distanz und
             Bounding-Box werden automatisch berechnet.' => 'Upload a GPX or GeoJSON file. Elevation, distance and bounding box are calculated automatically.',
-    'Lade eine fremde Route (z. B. Strava-GPX) hoch — GRAVA gleicht sie mit den
+    'Lade eine fremde Route (z. B. Strava-GPX) hoch — CYBERRIDE gleicht sie mit den
         vorhandenen Crowd-Belagsdaten ab und zeigt dir, wie die Strecke wirklich ist.
-        Die Datei wird' => 'Upload someone else\'s route (e.g. a Strava GPX) — GRAVA matches it against the
+        Die Datei wird' => 'Upload someone else\'s route (e.g. a Strava GPX) — CYBERRIDE matches it against the
         existing crowd surface data and shows you what the route is really like.
         The file is',
     'Leeres BBox-Feld → voller Recompute. Format: minLon,minLat,maxLon,maxLat.' => 'Empty BBox field → full recompute. Format: minLon,minLat,maxLon,maxLat.',
@@ -487,7 +487,7 @@ return [
     'Veröffentlicht' => 'Published',
     'Von' => 'From',
     'Vorherige' => 'Previous',
-    'Was GRAVA heute alles kann — und was als Nächstes kommt.' => 'Everything GRAVA can do today — and what\'s coming next.',
+    'Was CYBERRIDE heute alles kann — und was als Nächstes kommt.' => 'Everything CYBERRIDE can do today — and what\'s coming next.',
     'Was grava alles kann und was als Nächstes kommt.' => 'What grava can do and what\'s coming next.',
     'Was kommt als Nächstes' => 'What\'s coming next',
     'Wegqualität-Score (1–5) aus Vibration und Geschwindigkeit' => 'Surface quality score (1–5) from vibration and speed',
@@ -497,7 +497,7 @@ return [
     'Welche Daten wir verarbeiten' => 'What data we process',
     'Werber' => 'Referrer',
     'Wert' => 'Value',
-    'Willkommen im GRAVA Dashboard.' => 'Welcome to the GRAVA dashboard.',
+    'Willkommen im CYBERRIDE Dashboard.' => 'Welcome to the CYBERRIDE dashboard.',
     'Wirkt auch rückwirkend' => 'Applies retroactively too',
     'Wochen-Serie (Streak): Flammen-Chip für Wochen in Folge mit Fahrt' => 'Weekly streak: flame chip for consecutive weeks with a ride',
     'Zeige' => 'Showing',

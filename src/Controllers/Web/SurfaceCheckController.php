@@ -54,7 +54,7 @@ final class SurfaceCheckController
         $stored = $token !== '' ? $this->loadFromSession($token) : null;
 
         $this->render('surface-check', $user, [
-            '_title'          => 'Belag prüfen · GRAVA',
+            '_title'          => 'Belag prüfen · CYBERRIDE',
             'verified'        => (bool)$user['email_verified'],
             'errors'          => [],
             'token'           => $stored !== null ? $token : null,
@@ -189,7 +189,7 @@ final class SurfaceCheckController
     private function renderError(array $user, array $errors, int $status): never
     {
         $this->render('surface-check', $user, [
-            '_title'          => 'Belag prüfen · GRAVA',
+            '_title'          => 'Belag prüfen · CYBERRIDE',
             'verified'        => (bool)($user['email_verified'] ?? false),
             'errors'          => $errors,
             'token'           => null,

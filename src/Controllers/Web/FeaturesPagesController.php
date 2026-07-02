@@ -39,7 +39,7 @@ final class FeaturesPagesController
         }
 
         $this->view->render('features', [
-            '_title'      => 'Funktionen & Neuigkeiten · GRAVA',
+            '_title'      => 'Funktionen & Neuigkeiten · CYBERRIDE',
             '_authedUser' => $user,
             '_pageStyles' => ['/assets/landing/landing.css'],
             '_layoutWide' => true,

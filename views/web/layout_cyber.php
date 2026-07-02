@@ -26,9 +26,9 @@ $_notifUnread     = $_notifUnread ?? 0;
 $_surfaceCheck    = \App\Config\Config::instance()->bool('SURFACE_CHECK_ENABLED', true);
 
 // SEO & Social Meta
-$_metaDescription = $_metaDescription ?? 'GRAVA — Finde, fahre und erobere deine Gravel- und Bikepacking-Touren. Objektive Wegqualität, Community-Power und Territorialspiel in einer App.';
+$_metaDescription = $_metaDescription ?? 'CYBERRIDE — Finde, fahre und erobere deine Gravel- und Bikepacking-Touren. Objektive Wegqualität, Community-Power und Territorialspiel in einer App.';
 $_metaKeywords    = $_metaKeywords    ?? 'Gravel, Bikepacking, Radtouren, Wegqualität, Schotter, Rennrad, Community, GPS';
-$_ogTitle         = $_ogTitle         ?? ($_title ?? 'GRAVA');
+$_ogTitle         = $_ogTitle         ?? ($_title ?? 'CYBERRIDE');
 $_ogDescription   = $_ogDescription   ?? $_metaDescription;
 $_ogImage         = $_ogImage         ?? '/assets/brand/icon-512.png';
 $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
@@ -39,11 +39,11 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= htmlspecialchars($_title ?? 'GRAVA', ENT_QUOTES, 'UTF-8') ?></title>
+<title><?= htmlspecialchars($_title ?? 'CYBERRIDE', ENT_QUOTES, 'UTF-8') ?></title>
 
 <meta name="description" content="<?= htmlspecialchars($_metaDescription, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="keywords" content="<?= htmlspecialchars($_metaKeywords, ENT_QUOTES, 'UTF-8') ?>">
-<meta name="author" content="GRAVA">
+<meta name="author" content="CYBERRIDE">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="<?= htmlspecialchars($_ogUrl, ENT_QUOTES, 'UTF-8') ?>">
 
@@ -53,7 +53,7 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <meta property="og:description" content="<?= htmlspecialchars($_ogDescription, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:image" content="<?= htmlspecialchars($_ogImage, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:locale" content="de_DE">
-<meta property="og:site_name" content="GRAVA">
+<meta property="og:site_name" content="CYBERRIDE">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="<?= htmlspecialchars($_ogTitle, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="twitter:description" content="<?= htmlspecialchars($_ogDescription, ENT_QUOTES, 'UTF-8') ?>">
@@ -74,8 +74,8 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <body>
 <header class="site-header" id="siteHeader">
   <a class="brand" href="/">
-    <span class="glyph"><b>G</b></span>
-    <span class="word">GRA<span class="r">VA</span></span>
+    <span class="glyph"><b>C</b></span>
+    <span class="word">CYBER<span class="r">RIDE</span></span>
   </a>
   <nav class="site-nav">
     <div class="navlinks">
@@ -128,8 +128,8 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
     <div class="cols">
       <div class="about">
         <a class="brand" href="/" style="margin-bottom:16px">
-          <span class="glyph" style="width:30px;height:30px"><b style="font-size:16px">G</b></span>
-          <span class="word" style="font-size:20px">GRA<span class="r">VA</span></span>
+          <span class="glyph" style="width:30px;height:30px"><b style="font-size:16px">C</b></span>
+          <span class="word" style="font-size:20px">CYBER<span class="r">RIDE</span></span>
         </a>
         <p><?= te('Fahre, erobere, baue die Map. Oberfläche · Verkehr · Hinweise.') ?></p>
       </div>
@@ -149,7 +149,7 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
       <?php endforeach; ?>
     </div>
     <div class="legal">
-      <span>© <?= date('Y') ?> GRAVA · <?= te('ALLE RECHTE VORBEHALTEN') ?></span>
+      <span>© <?= date('Y') ?> CYBERRIDE · <?= te('ALLE RECHTE VORBEHALTEN') ?></span>
       <span><?= te('MADE FOR RIDERS · DE / AT / CH') ?></span>
     </div>
   </div>

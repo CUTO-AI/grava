@@ -33,7 +33,7 @@ class LandingController
 
         // Fallback (sollte nicht eintreten): alte klassische Landing.
         $this->view->render('landing/home', [
-            '_title'         => 'GRAVA',
+            '_title'         => 'CYBERRIDE',
             '_authedUser'    => null,
             '_classicLayout' => true,
             '_pageStyles'    => ['/assets/landing/landing.css'],

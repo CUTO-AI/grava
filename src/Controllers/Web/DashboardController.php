@@ -43,7 +43,7 @@ final class DashboardController
         }
 
         $this->view->render('dashboard', [
-            '_title'      => 'Dashboard · GRAVA',
+            '_title'      => 'Dashboard · CYBERRIDE',
             '_authedUser' => $user,
             'user'        => $user,
             'flash'       => $flash,

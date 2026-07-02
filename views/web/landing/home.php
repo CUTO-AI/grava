@@ -18,7 +18,7 @@
 
         <p class="hero-subtitle">
             Wie rau ist die Strecke? Wie viel Verkehr? Durchfahrt blockiert?
-            Mit GRAVA können wir die Karten ergänzen — automatisch mit Handy, Fahrradcomputer und Radarrücklicht.
+            Mit CYBERRIDE können wir die Karten ergänzen — automatisch mit Handy, Fahrradcomputer und Radarrücklicht.
             Und während Du die Informationen ergänzt, eroberst Du und Deine Crew auch noch die Region und stehst im Duell mit anderen.
         </p>
 
@@ -38,7 +38,7 @@
 <!-- Live Community Gallery Section -->
 <section class="community-gallery-section">
     <div class="community-gallery-container">
-        <h2 class="gallery-heading">Live aus der GRAVA-Community</h2>
+        <h2 class="gallery-heading">Live aus der CYBERRIDE-Community</h2>
         <p class="gallery-subheading">🚀 Launch-Phase: Gemeinsam bauen wir die Datenbank auf</p>
 
         <div class="gallery">
@@ -100,10 +100,10 @@
 
                 <!-- Slide 3: App Screenshots -->
                 <div class="gallery-slide" data-slide="2">
-                    <h3 class="slide-title">📱 Die GRAVA App</h3>
+                    <h3 class="slide-title">📱 Die CYBERRIDE App</h3>
                     <div class="app-screenshots">
                         <div class="screenshot-item">
-                            <img src="/assets/landing/IMG_1320.PNG" alt="GRAVA Territorialspiel" class="screenshot-img">
+                            <img src="/assets/landing/IMG_1320.PNG" alt="CYBERRIDE Territorialspiel" class="screenshot-img">
                         </div>
                         <div class="screenshot-box">
                             <p class="screenshot-placeholder-text">Screenshot 2<br>Wegqualität-Score</p>
@@ -112,7 +112,7 @@
                             <p class="screenshot-placeholder-text">Screenshot 3<br>Route-Details</p>
                         </div>
                     </div>
-                    <p class="slide-note">Einblick in die GRAVA iOS-App</p>
+                    <p class="slide-note">Einblick in die CYBERRIDE iOS-App</p>
                 </div>
             </div>
         </div>
@@ -140,7 +140,7 @@
             <div class="feature-icon">📡</div>
             <h3 class="feature-title">Automatisch: Oberfläche & Verkehr messen</h3>
             <p class="feature-description">
-                Starte die Aufzeichnung und fahre. GRAVA misst per Radarlicht
+                Starte die Aufzeichnung und fahre. CYBERRIDE misst per Radarlicht
                 automatisch Oberflächenqualität und Verkehr. Keine Eingabe nötig —
                 alles passiert im Hintergrund.
             </p>
@@ -176,7 +176,7 @@
                 <h3 class="step-title">App laden & losfahren</h3>
                 <p class="step-description">
                     Starte die Aufzeichnung und fahre deine Lieblingsstrecke.
-                    GRAVA misst automatisch Oberfläche, Verkehr und Erschütterungen.
+                    CYBERRIDE misst automatisch Oberfläche, Verkehr und Erschütterungen.
                 </p>
             </div>
             <div class="step">
@@ -205,7 +205,7 @@
         <h2 class="section-heading">Gut zu wissen</h2>
         <div class="faq-grid">
             <div class="faq-item">
-                <h3 class="faq-question">Lohnt sich GRAVA, wenn noch wenige Daten vorhanden sind?</h3>
+                <h3 class="faq-question">Lohnt sich CYBERRIDE, wenn noch wenige Daten vorhanden sind?</h3>
                 <p class="faq-answer">
                     Ja! Erstens macht das Territorialspiel jetzt schon Spaß.
                     Zweitens: Je früher du dabei bist, desto mehr Gebiet kannst du erobern.
@@ -221,9 +221,9 @@
                 </p>
             </div>
             <div class="faq-item">
-                <h3 class="faq-question">Kostet GRAVA etwas?</h3>
+                <h3 class="faq-question">Kostet CYBERRIDE etwas?</h3>
                 <p class="faq-answer">
-                    Nein, GRAVA ist kostenlos. Alle Features — Aufzeichnung, Scores, Territorialspiel —
+                    Nein, CYBERRIDE ist kostenlos. Alle Features — Aufzeichnung, Scores, Territorialspiel —
                     sind ohne Abo nutzbar.
                 </p>
             </div>
@@ -238,7 +238,7 @@
             <div class="faq-item">
                 <h3 class="faq-question">Ist meine Heimatadresse sicher?</h3>
                 <p class="faq-answer">
-                    Absolut. GRAVA hat eine Privacy-Zone: Deine Start- und Endpunkte bleiben privat
+                    Absolut. CYBERRIDE hat eine Privacy-Zone: Deine Start- und Endpunkte bleiben privat
                     und werden nicht veröffentlicht.
                 </p>
             </div>

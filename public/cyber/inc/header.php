@@ -20,8 +20,8 @@ $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 <body>
 <header class="site-header" id="siteHeader">
   <a class="brand" href="/">
-    <span class="glyph"><b>G</b></span>
-    <span class="word">GRA<span class="r">VA</span></span>
+    <span class="glyph"><b>C</b></span>
+    <span class="word">CYBER<span class="r">RIDE</span></span>
   </a>
   <nav class="site-nav">
     <div class="navlinks">

@@ -5,8 +5,8 @@
     <div class="cols">
       <div class="about">
         <a class="brand" href="/" style="margin-bottom:16px">
-          <span class="glyph" style="width:30px;height:30px"><b style="font-size:16px">G</b></span>
-          <span class="word" style="font-size:20px">GRA<span class="r">VA</span></span>
+          <span class="glyph" style="width:30px;height:30px"><b style="font-size:16px">C</b></span>
+          <span class="word" style="font-size:20px">CYBER<span class="r">RIDE</span></span>
         </a>
         <p><?= $e($T['footer']['tagline']) ?></p>
         <div class="socials">
@@ -45,7 +45,7 @@
         <div class="cap"><?= $e($T['trailerCaption']) ?></div>
       </div>
     </div>
-    <div class="badge-pos"><?= cr_badge('GRAVA // 02:14', 'cyan', true) ?></div>
+    <div class="badge-pos"><?= cr_badge('CYBERRIDE // 02:14', 'cyan', true) ?></div>
     <button class="cr-iconbtn close" id="trailerClose" aria-label="Close"><?= cr_icon('x', 18) ?></button>
   </div>
 </div>

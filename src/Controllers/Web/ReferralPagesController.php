@@ -40,7 +40,7 @@ final class ReferralPagesController
         $code = strtolower($code);
 
         $this->view->render('referral/landing', [
-            '_title'        => 'Einladung zu GRAVA',
+            '_title'        => 'Einladung zu CYBERRIDE',
             'referral_code' => $code,
             'app_store_url' => (string)$this->config->get('APP_STORE_URL', ''),
             'register_url'  => '/register?ref=' . rawurlencode($code),

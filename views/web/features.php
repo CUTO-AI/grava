@@ -23,7 +23,7 @@ $badge = static function (string $label, string $kind = 'ok'): string {
     <div class="hero-content">
         <h1 class="hero-title" style="font-size: 42px;"><?= t('Funktionen &amp; Neuigkeiten') ?></h1>
         <p class="hero-subtitle">
-            <?= t('Was GRAVA heute alles kann — und was als Nächstes kommt.') ?>
+            <?= t('Was CYBERRIDE heute alles kann — und was als Nächstes kommt.') ?>
             <br><strong><?= t('Version 0.1.0') ?></strong> · 2026-06-30
         </p>
     </div>

@@ -95,7 +95,7 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
                 <tr>
                     <td>
                         <?php if ($r['public_id'] !== null): ?>
-                            <a href="https://grava.world/routes/<?= $e($r['public_id']) ?>" target="_blank" rel="noopener">
+                            <a href="https://cyberride.world/routes/<?= $e($r['public_id']) ?>" target="_blank" rel="noopener">
                                 <?= $e($r['title'] ?? $r['public_id']) ?>
                             </a>
                         <?php else: ?>
@@ -138,7 +138,7 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
             <tbody>
             <?php foreach ($detail['unscored_routes'] as $r): ?>
                 <tr>
-                    <td><a href="https://grava.world/routes/<?= $e($r['public_id']) ?>" target="_blank" rel="noopener"><?= $e($r['title']) ?></a></td>
+                    <td><a href="https://cyberride.world/routes/<?= $e($r['public_id']) ?>" target="_blank" rel="noopener"><?= $e($r['title']) ?></a></td>
                     <td><?= $r['km'] !== null ? number_format($r['km'], 1) : '—' ?></td>
                     <td><?= $e($r['visibility']) ?></td>
                     <td><?= $e($r['source']) ?></td>

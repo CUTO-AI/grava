@@ -25,7 +25,7 @@ final class LegalPagesController
     public function privacy(Request $req): void
     {
         $this->view->render('legal/privacy', [
-            '_title' => 'Datenschutzerklärung · GRAVA',
+            '_title' => 'Datenschutzerklärung · CYBERRIDE',
             '_pageStyles' => ['/assets/landing/landing.css'],
             '_layoutWide' => true,
             'flash'  => null,
@@ -35,7 +35,7 @@ final class LegalPagesController
     public function terms(Request $req): void
     {
         $this->view->render('legal/terms', [
-            '_title' => 'Nutzungsbedingungen · GRAVA',
+            '_title' => 'Nutzungsbedingungen · CYBERRIDE',
             '_pageStyles' => ['/assets/landing/landing.css'],
             '_layoutWide' => true,
             'flash'  => null,
@@ -45,7 +45,7 @@ final class LegalPagesController
     public function imprint(Request $req): void
     {
         $this->view->render('legal/imprint', [
-            '_title' => 'Impressum · GRAVA',
+            '_title' => 'Impressum · CYBERRIDE',
             '_pageStyles' => ['/assets/landing/landing.css'],
             '_layoutWide' => true,
             'flash'  => null,

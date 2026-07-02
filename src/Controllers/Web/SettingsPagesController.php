@@ -39,7 +39,7 @@ final class SettingsPagesController
     {
         [$user] = $this->resolveOrRefresh('/settings/handle');
         $this->render('settings/handle', $user, [
-            '_title'  => 'Profil-Handle · GRAVA',
+            '_title'  => 'Profil-Handle · CYBERRIDE',
             'errors'  => [],
             'value'   => '',
             'flash'   => $this->popFlash(),
@@ -64,7 +64,7 @@ final class SettingsPagesController
         $handle = $v->publicHandle('public_handle', $raw);
         if ($v->fails()) {
             $this->render('settings/handle', $user, [
-                '_title'   => 'Profil-Handle · GRAVA',
+                '_title'   => 'Profil-Handle · CYBERRIDE',
                 'errors'   => $v->errors(),
                 'value'    => $raw,
                 'flash'    => null,
@@ -76,7 +76,7 @@ final class SettingsPagesController
             $this->auth->setPublicHandle((int)$user['internal_id'], (string)$handle);
         } catch (AuthException $e) {
             $this->render('settings/handle', $user, [
-                '_title'   => 'Profil-Handle · GRAVA',
+                '_title'   => 'Profil-Handle · CYBERRIDE',
                 'errors'   => ['public_handle' => [$e->getMessage()]],
                 'value'    => $raw,
                 'flash'    => null,
@@ -95,7 +95,7 @@ final class SettingsPagesController
     {
         [$user] = $this->resolveOrRefresh('/settings/avatar');
         $this->render('settings/avatar', $user, [
-            '_title'   => 'Profilbild · GRAVA',
+            '_title'   => 'Profilbild · CYBERRIDE',
             'flash'    => $this->popFlash(),
             'verified' => (bool)$user['email_verified'],
             'hasAvatar' => !empty($user['public_handle']),

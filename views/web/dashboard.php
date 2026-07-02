@@ -45,7 +45,7 @@ if ($createdAt !== '') {
 ?>
 <section class="card">
     <h1><?= t('Hallo') ?>, <?= htmlspecialchars((string)$greeting, ENT_QUOTES, 'UTF-8') ?>!</h1>
-    <p><?= t('Willkommen im GRAVA Dashboard.') ?></p>
+    <p><?= t('Willkommen im CYBERRIDE Dashboard.') ?></p>
 
     <dl class="profile">
         <dt><?= t('E-Mail') ?></dt>

@@ -104,7 +104,7 @@ final class DiscoveryPagesController
         $res = $this->discovery->searchRoutes($filters, $viewerId);
 
         $this->renderPage('discover/routes', $authedUser, [
-            '_title'     => 'Routen entdecken · GRAVA',
+            '_title'     => 'Routen entdecken · CYBERRIDE',
             'routes'     => $res['routes'],
             'pagination' => $res['pagination'],
             'filters'    => [
@@ -138,7 +138,7 @@ final class DiscoveryPagesController
         $res = $this->discovery->searchUsers($filters, $viewerId);
 
         $this->renderPage('discover/users', $authedUser, [
-            '_title'     => 'User entdecken · GRAVA',
+            '_title'     => 'User entdecken · CYBERRIDE',
             'users'      => $res['users'],
             'pagination' => $res['pagination'],
             'filters'    => ['q' => $qStr],
@@ -156,7 +156,7 @@ final class DiscoveryPagesController
         $profile = $this->profile->getProfile($handle, $viewerId);
         if ($profile === null) {
             $this->renderPage('profile/not_found', $authedUser, [
-                '_title' => 'Profil nicht gefunden · GRAVA',
+                '_title' => 'Profil nicht gefunden · CYBERRIDE',
             ], 404);
         }
 
@@ -174,7 +174,7 @@ final class DiscoveryPagesController
         $isSelf = $profile['is_self'] ?? false;
 
         $this->renderPage('profile/show', $authedUser, [
-            '_title'     => '@' . $profile['handle'] . ' · GRAVA',
+            '_title'     => '@' . $profile['handle'] . ' · CYBERRIDE',
             'profile'    => $profile,
             'routes'     => $routes['routes'] ?? [],
             'pagination' => $routes['pagination'] ?? ['total' => 0, 'has_more' => false, 'limit' => 20, 'offset' => 0],
@@ -196,7 +196,7 @@ final class DiscoveryPagesController
         $profile = $this->profile->getProfile($handle, $viewerId);
         if ($profile === null) {
             $this->renderPage('profile/not_found', $authedUser, [
-                '_title' => 'Profil nicht gefunden · GRAVA',
+                '_title' => 'Profil nicht gefunden · CYBERRIDE',
             ], 404);
         }
 
@@ -217,7 +217,7 @@ final class DiscoveryPagesController
         }
         if ($route === null) {
             $this->renderPage('profile/not_found', $authedUser, [
-                '_title' => 'Route nicht gefunden · GRAVA',
+                '_title' => 'Route nicht gefunden · CYBERRIDE',
             ], 404);
         }
 
@@ -326,7 +326,7 @@ final class DiscoveryPagesController
         $res = $this->feed->getFeed($viewerId, $limit, $offset);
 
         $this->renderPage('feed', $user, [
-            '_title'     => 'Feed · GRAVA',
+            '_title'     => 'Feed · CYBERRIDE',
             'routes'     => $res['routes'],
             'pagination' => $res['pagination'],
             '_layoutWide' => true,
@@ -353,7 +353,7 @@ final class DiscoveryPagesController
         $this->notifications?->markAllRead($viewerId);
 
         $this->renderPage('notifications', $user, [
-            '_title'     => 'Mitteilungen · GRAVA',
+            '_title'     => 'Mitteilungen · CYBERRIDE',
             'items'      => $res['notifications'],
             'pagination' => $res['pagination'],
         ]);
@@ -386,7 +386,7 @@ final class DiscoveryPagesController
         $linesEnabled = \App\Config\Config::instance()->bool('HEATMAP_LINES_ENABLED', false);
 
         $this->renderPage('heatmap', $authedUser, [
-            '_title'       => 'Heatmap · GRAVA',
+            '_title'       => 'Heatmap · CYBERRIDE',
             'cells'        => $cells,
             'meta'         => $fc['meta'],
             'linesEnabled' => $linesEnabled,

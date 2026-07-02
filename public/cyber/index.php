@@ -1,6 +1,6 @@
 <?php
 /**
- * GRAVA Landing — plain-PHP entry (zweisprachig EN/DE, Standard EN).
+ * CYBERRIDE Landing — plain-PHP entry (zweisprachig EN/DE, Standard EN).
  * Wird von LandingController::home() als „/" gerendert; direkter Aufruf /cyber/
  * funktioniert ebenfalls (lang.php ist self-contained).
  */

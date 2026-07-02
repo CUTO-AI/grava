@@ -1,12 +1,12 @@
 <?php
 /**
- * Landing-Texte — Deutsch. Marke: GRAVA. Nur abweichende Keys nötig
+ * Landing-Texte — Deutsch. Marke: CYBERRIDE. Nur abweichende Keys nötig
  * (fehlende fallen via inc/lang.php auf en.php zurück).
  */
 return [
     'meta' => [
-        'title' => 'GRAVA — Fahr echte Wege. Erobere das Grid.',
-        'description' => 'GRAVA macht deine Stadt zum umkämpften Revier. Fahr echte Straßen, erobere Sektoren und kartiere Untergrund, Verkehr und Gefahren für alle.',
+        'title' => 'CYBERRIDE — Fahr echte Wege. Erobere das Grid.',
+        'description' => 'CYBERRIDE macht deine Stadt zum umkämpften Revier. Fahr echte Straßen, erobere Sektoren und kartiere Untergrund, Verkehr und Gefahren für alle.',
     ],
     'nav' => [
         'features' => 'Funktionen',
@@ -20,7 +20,7 @@ return [
         'badge'     => 'Launch-Phase // Season 03',
         'title1'    => 'Fahr echte Wege.',
         'title2'    => 'Erobere das Grid.',
-        'lead'      => 'GRAVA macht deine Stadt zum umkämpften Revier. Jeder gefahrene Kilometer erobert Sektoren für deine Crew — und kartiert Untergrund, Verkehr und Gefahren für alle, die nach dir kommen. Ingress, angetrieben von deinem Rad.',
+        'lead'      => 'CYBERRIDE macht deine Stadt zum umkämpften Revier. Jeder gefahrene Kilometer erobert Sektoren für deine Crew — und kartiert Untergrund, Verkehr und Gefahren für alle, die nach dir kommen. Ingress, angetrieben von deinem Rad.',
         'ctaApp'    => 'iOS-App laden',
         'trailer'   => 'Trailer ansehen',
         'trailerMeta' => '02:14 // SEASON 03',
@@ -35,7 +35,7 @@ return [
     'features' => [
         'kicker' => '// ZWEI SYSTEME, EINE FAHRT',
         'h2'     => 'Ein Spiel über der echten Welt',
-        'lead'   => 'GRAVA läuft mit, während du fährst. Spiel um Reviere — und hinterlasse bessere Karten.',
+        'lead'   => 'CYBERRIDE läuft mit, während du fährst. Spiel um Reviere — und hinterlasse bessere Karten.',
         'items'  => [
             [
                 'kicker' => '// 01 — REVIER',
@@ -46,7 +46,7 @@ return [
             [
                 'kicker' => '// 02 — INTEL',
                 'title'  => 'Straßen automatisch kartieren',
-                'body'   => 'Aufnahme starten und einfach fahren. GRAVA erfasst Untergrund und Verkehr automatisch über dein Radar-Rücklicht — ganz ohne Eingabe. Die Daten, die überall sonst fehlen, gebaut von der Community.',
+                'body'   => 'Aufnahme starten und einfach fahren. CYBERRIDE erfasst Untergrund und Verkehr automatisch über dein Radar-Rücklicht — ganz ohne Eingabe. Die Daten, die überall sonst fehlen, gebaut von der Community.',
                 'points' => ['Untergrund & Verkehr, freihändig', 'Community-Gefahren-Pins', 'Jede Route vorab prüfen'],
             ],
         ],
@@ -64,7 +64,7 @@ return [
         'read'    => 'Lesen',
         'items'   => [
             ['tag' => 'Community', 'tone' => 'cyan',    'date' => '30. Juni 2026', 'icon' => 'users',  'title' => 'Waldkraiburg fällt an Crew NEONWOLVES', 'excerpt' => 'Nach einer 116-km-Nachtfahrt kippten die NEONWOLVES den kompletten Ost-Sektor. So umkämpft war die Karte seit dem Launch nicht mehr.'],
-            ['tag' => 'Feature',   'tone' => 'magenta', 'date' => '24. Juni 2026', 'icon' => 'route',  'title' => 'Importiere deine Komoot-Routen', 'excerpt' => 'Zieh eine beliebige GPX in GRAVA und sieh Community-Untergrunddaten, Verkehr und Gefahren, bevor du losrollst.'],
+            ['tag' => 'Feature',   'tone' => 'magenta', 'date' => '24. Juni 2026', 'icon' => 'route',  'title' => 'Importiere deine Komoot-Routen', 'excerpt' => 'Zieh eine beliebige GPX in CYBERRIDE und sieh Community-Untergrunddaten, Verkehr und Gefahren, bevor du losrollst.'],
             ['tag' => 'Meilenstein','tone'=> 'lime',    'date' => '18. Juni 2026', 'icon' => 'trophy', 'title' => '4.000 Fahrer jetzt im Grid', 'excerpt' => 'Die Launch-Region überschritt diese Woche 4.000 aktive Fahrer — fast 900.000 km Straße kartiert, Tendenz steigend.'],
         ],
     ],
@@ -88,7 +88,7 @@ return [
         'badge'  => 'Gratis im Launch',
         'title1' => 'Bereit, deinen',
         'title2' => 'ersten Sektor zu erobern?',
-        'lead'   => 'Lade GRAVA, starte die Aufnahme und mach die heutige Fahrt zum Revier. Kein Abo — das Grid wartet.',
+        'lead'   => 'Lade CYBERRIDE, starte die Aufnahme und mach die heutige Fahrt zum Revier. Kein Abo — das Grid wartet.',
         'ctaApp' => 'Für iOS laden',
         'ctaHeatmap' => 'Heatmap erkunden',
         'fine'   => 'IOS 16+ · ANDROID BALD · DE · AT · CH',
@@ -101,7 +101,7 @@ return [
             'Community'   => [['Crews', '#'], ['Ranglisten', '#'], ['News', '#news'], ['Strava-Club', 'https://www.strava.com/clubs/gravaworld']],
             'Rechtliches' => [['Datenschutz', '/privacy'], ['Nutzungsbedingungen', '/terms'], ['Impressum', '/imprint'], ['DSGVO', '/privacy']],
         ],
-        'legalL' => '© 2026 GRAVA · ALLE SEKTOREN VORBEHALTEN',
+        'legalL' => '© 2026 CYBERRIDE · ALLE SEKTOREN VORBEHALTEN',
         'legalR' => 'GEBAUT FÜR FAHRER · DE / AT / CH',
     ],
 ];
