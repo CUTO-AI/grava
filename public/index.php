@@ -133,6 +133,10 @@ require_once $basePath . '/vendor/autoload.php';
 Config::boot($basePath);
 $config = Config::instance();
 
+// Site-weite Zwei-Sprachigkeit (EN/DE, Standard EN) für die Web-Views.
+require_once $basePath . '/src/Support/i18n_functions.php';
+\App\Support\I18n::boot($basePath);
+
 date_default_timezone_set('UTC');
 
 // In production we never leak details. In dev we surface them to speed up

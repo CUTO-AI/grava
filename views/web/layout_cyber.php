@@ -14,7 +14,9 @@
  * @var ?string $_csrf
  */
 require_once dirname(__DIR__, 2) . '/public/cyber/inc/components.php';
+require_once dirname(__DIR__, 2) . '/src/Support/i18n_functions.php';
 
+$CR_LANG          = \App\Support\I18n::locale();
 $CR_ASSETS        = '/cyber/assets';
 $_authedUser      = $_authedUser  ?? null;
 $_layoutWide      = $_layoutWide  ?? false;
@@ -33,7 +35,7 @@ $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
 
 $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 ?><!doctype html>
-<html lang="de" data-theme="cyber">
+<html lang="<?= htmlspecialchars($CR_LANG, ENT_QUOTES, 'UTF-8') ?>" data-theme="cyber">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -78,31 +80,36 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
   <nav class="site-nav">
     <div class="navlinks">
     <?php if ($_authedUser !== null): ?>
-      <a href="/dashboard">Dashboard</a>
-      <a href="/features">Funktionen</a>
-      <a href="/routes">Routen</a>
-      <a href="/discover">Entdecken</a>
-      <a href="/heatmap">Heatmap</a>
-      <?php if ($_surfaceCheck): ?><a href="/surface-check">Belag prüfen</a><?php endif; ?>
-      <a href="/feed">Feed</a>
-      <a href="/notifications">Mitteilungen<?php if ((int)$_notifUnread > 0): ?> <span class="notif-badge"><?= (int)$_notifUnread ?></span><?php endif; ?></a>
+      <a href="/dashboard"><?= te('Dashboard') ?></a>
+      <a href="/features"><?= te('Funktionen') ?></a>
+      <a href="/routes"><?= te('Routen') ?></a>
+      <a href="/discover"><?= te('Entdecken') ?></a>
+      <a href="/heatmap"><?= te('Heatmap') ?></a>
+      <?php if ($_surfaceCheck): ?><a href="/surface-check"><?= te('Belag prüfen') ?></a><?php endif; ?>
+      <a href="/feed"><?= te('Feed') ?></a>
+      <a href="/notifications"><?= te('Mitteilungen') ?><?php if ((int)$_notifUnread > 0): ?> <span class="notif-badge"><?= (int)$_notifUnread ?></span><?php endif; ?></a>
       <?php if (!empty($_authedUser['public_handle'])): ?>
         <a href="/u/<?= htmlspecialchars((string)$_authedUser['public_handle'], ENT_QUOTES, 'UTF-8') ?>">@<?= htmlspecialchars((string)$_authedUser['public_handle'], ENT_QUOTES, 'UTF-8') ?></a>
       <?php endif; ?>
     <?php else: ?>
-      <a href="/features">Funktionen</a>
-      <a href="/discover">Entdecken</a>
-      <a href="/heatmap">Heatmap</a>
+      <a href="/features"><?= te('Funktionen') ?></a>
+      <a href="/discover"><?= te('Entdecken') ?></a>
+      <a href="/heatmap"><?= te('Heatmap') ?></a>
     <?php endif; ?>
     </div>
+    <span class="lang-switch">
+      <a href="?lang=en" class="<?= $CR_LANG === 'en' ? 'is-active' : '' ?>">EN</a>
+      <span class="sep">/</span>
+      <a href="?lang=de" class="<?= $CR_LANG === 'de' ? 'is-active' : '' ?>">DE</a>
+    </span>
     <?php if ($_authedUser !== null): ?>
       <form method="post" action="/logout" class="nav-form">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars((string)($_csrf ?? ''), ENT_QUOTES, 'UTF-8') ?>">
-        <button type="submit" class="nav-button">Abmelden</button>
+        <button type="submit" class="nav-button"><?= te('Abmelden') ?></button>
       </form>
     <?php else: ?>
-      <a class="login" href="/login">Login</a>
-      <?= cr_button('Registrieren', ['size' => 'sm', 'variant' => 'primary', 'href' => '/register']) ?>
+      <a class="login" href="/login"><?= te('Login') ?></a>
+      <?= cr_button(t('Registrieren'), ['size' => 'sm', 'variant' => 'primary', 'href' => '/register']) ?>
     <?php endif; ?>
   </nav>
 </header>
@@ -124,7 +131,7 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
           <span class="glyph" style="width:30px;height:30px"><b style="font-size:16px">G</b></span>
           <span class="word" style="font-size:20px">GRA<span class="r">VA</span></span>
         </a>
-        <p>Fahre, erobere, baue die Map. Oberfläche &middot; Verkehr &middot; Hinweise.</p>
+        <p><?= te('Fahre, erobere, baue die Map. Oberfläche · Verkehr · Hinweise.') ?></p>
       </div>
       <?php
       $cols = [
@@ -134,16 +141,16 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
       ];
       foreach ($cols as $h => $links): ?>
         <div class="col">
-          <h4 class="cr-kicker" style="color:var(--text-muted)"><?= htmlspecialchars($h) ?></h4>
+          <h4 class="cr-kicker" style="color:var(--text-muted)"><?= te($h) ?></h4>
           <ul>
-            <?php foreach ($links as $l): ?><li><a href="<?= htmlspecialchars($l[1]) ?>"><?= htmlspecialchars($l[0]) ?></a></li><?php endforeach; ?>
+            <?php foreach ($links as $l): ?><li><a href="<?= htmlspecialchars($l[1]) ?>"><?= te($l[0]) ?></a></li><?php endforeach; ?>
           </ul>
         </div>
       <?php endforeach; ?>
     </div>
     <div class="legal">
-      <span>© <?= date('Y') ?> GRAVA · ALLE RECHTE VORBEHALTEN</span>
-      <span>MADE FOR RIDERS · DE / AT / CH</span>
+      <span>© <?= date('Y') ?> GRAVA · <?= te('ALLE RECHTE VORBEHALTEN') ?></span>
+      <span><?= te('MADE FOR RIDERS · DE / AT / CH') ?></span>
     </div>
   </div>
 </footer>
