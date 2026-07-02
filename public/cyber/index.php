@@ -1,10 +1,11 @@
 <?php
 /**
- * CyberRide landing page — plain-PHP entry.
- * Drop this folder into your public root (e.g. public/cyber/) and point your
- * theme switch at it. Set $CR_ASSETS to the URL path where the 3 asset files live.
+ * GRAVA Landing — plain-PHP entry (zweisprachig EN/DE, Standard EN).
+ * Wird von LandingController::home() als „/" gerendert; direkter Aufruf /cyber/
+ * funktioniert ebenfalls (lang.php ist self-contained).
  */
-$CR_ASSETS = $CR_ASSETS ?? '/cyber/assets';   // Assets liegen unter public/cyber/assets/
+$CR_ASSETS = $CR_ASSETS ?? '/cyber/assets';   // Assets unter public/cyber/assets/
+require __DIR__ . '/inc/lang.php';             // exponiert $CR_LANG + $T
 $SEC = __DIR__ . '/sections/';
 require __DIR__ . '/inc/header.php';
 require $SEC . 'hero.php';

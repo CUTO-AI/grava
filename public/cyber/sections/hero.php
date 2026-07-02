@@ -1,12 +1,7 @@
 <?php
-/** Hero + stat strip. Expects components.php already included. */
-
-$stats = [
-  ['4,127', 'Riders Online', 'cyan', '+18% wk'],
-  ['892,304', 'KM Conquered', 'lime', null],
-  ['1,204', 'Territories', 'magenta', '+37 today'],
-  ['216', 'Active Crews', 'neutral', null],
-];
+/** Hero + stat strip. Erwartet components.php + $T (inc/lang.php) im Scope. */
+$e = $e ?? (static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8'));
+$H = $T['hero'];
 ?>
 <section class="hero" id="top">
   <div class="hero__bg">
@@ -22,25 +17,21 @@ $stats = [
   </div>
   <div class="hero__inner">
     <div class="hero__col">
-      <div style="margin-bottom:22px"><?= cr_badge('Launch Phase // Season 03', 'cyan', true) ?></div>
-      <h1 class="cr-display">Ride real roads.<br /><span class="cr-neon">Claim the grid.</span></h1>
-      <p class="cr-lead">CyberRide turns your city into contested territory. Every kilometer you ride
-        captures sectors for your crew — and maps surface, traffic and hazards for every rider
-        behind you. Ingress, powered by your bike.</p>
+      <div style="margin-bottom:22px"><?= cr_badge($H['badge'], 'cyan', true) ?></div>
+      <h1 class="cr-display"><?= $e($H['title1']) ?><br /><span class="cr-neon"><?= $e($H['title2']) ?></span></h1>
+      <p class="cr-lead"><?= $e($H['lead']) ?></p>
       <div class="hero__ctas">
-        <?= cr_button('Get the iOS App', ['size' => 'lg', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#']) ?>
+        <?= cr_button($H['ctaApp'], ['size' => 'lg', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#']) ?>
         <button class="trailer-box" id="trailerOpen">
           <span class="play"><?= cr_icon('play', 18) ?></span>
           <span style="text-align:left">
-            <span class="t1">Watch Trailer</span>
-            <span class="t2">02:14 // SEASON 03</span>
+            <span class="t1"><?= $e($H['trailer']) ?></span>
+            <span class="t2"><?= $e($H['trailerMeta']) ?></span>
           </span>
         </button>
       </div>
       <div class="hero__badges">
-        <span>✓ FREE — NO SUBSCRIPTION</span>
-        <span>✓ WORKS OFFLINE</span>
-        <span>✓ GDPR-SAFE</span>
+        <?php foreach ($H['badges'] as $b): ?><span><?= $e($b) ?></span><?php endforeach; ?>
       </div>
     </div>
   </div>
@@ -49,7 +40,7 @@ $stats = [
 
 <section class="cr-wrap" style="position:relative;z-index:5;margin-top:-40px">
   <div class="stat-strip">
-    <?php foreach ($stats as $s): ?>
+    <?php foreach ($H['stats'] as $s): ?>
       <div class="cell"><?= cr_stat($s[0], $s[1], $s[2], $s[3]) ?></div>
     <?php endforeach; ?>
   </div>

@@ -1,29 +1,42 @@
-<?php require __DIR__ . '/components.php'; $CR_ASSETS = $CR_ASSETS ?? 'assets'; ?>
+<?php
+require __DIR__ . '/components.php';
+$CR_ASSETS = $CR_ASSETS ?? 'assets';
+$CR_LANG = $CR_LANG ?? 'en';
+$T = $T ?? (require __DIR__ . '/../lang/en.php');
+$e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+?>
 <!DOCTYPE html>
-<html lang="en" data-theme="cyber">
+<html lang="<?= $e($CR_LANG) ?>" data-theme="cyber">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>CyberRide — Ride Real Roads. Claim the Grid.</title>
-<meta name="description" content="CyberRide turns your city into contested territory. Ride real roads to claim sectors and map surface, traffic and hazards for every rider." />
-<link rel="stylesheet" href="<?= $CR_ASSETS ?>/cyberride.css" />
-<link rel="stylesheet" href="<?= $CR_ASSETS ?>/site.css" />
+<title><?= $e($T['meta']['title']) ?></title>
+<meta name="description" content="<?= $e($T['meta']['description']) ?>" />
+<link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/cyberride.css" />
+<link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/site.css" />
+<link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/app.css" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 </head>
 <body>
 <header class="site-header" id="siteHeader">
-  <a class="brand" href="#top">
-    <span class="glyph"><b>C</b></span>
-    <span class="word">CYBER<span class="r">RIDE</span></span>
+  <a class="brand" href="/">
+    <span class="glyph"><b>G</b></span>
+    <span class="word">GRA<span class="r">VA</span></span>
   </a>
   <nav class="site-nav">
     <div class="navlinks">
-      <a href="#features">Features</a>
-      <a href="#news">News</a>
-      <a href="#updates">Updates</a>
-      <a href="#">Heatmap</a>
+      <a href="#features"><?= $e($T['nav']['features']) ?></a>
+      <a href="#news"><?= $e($T['nav']['news']) ?></a>
+      <a href="#updates"><?= $e($T['nav']['updates']) ?></a>
+      <a href="/heatmap"><?= $e($T['nav']['heatmap']) ?></a>
     </div>
-    <a class="login" href="#">Login</a>
-    <?= cr_button('Get the App', ['size' => 'sm', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#']) ?>
+    <span class="lang-switch">
+      <a href="?lang=en" class="<?= $CR_LANG === 'en' ? 'is-active' : '' ?>"><?= $e($T['lang']['en']) ?></a>
+      <span class="sep">/</span>
+      <a href="?lang=de" class="<?= $CR_LANG === 'de' ? 'is-active' : '' ?>"><?= $e($T['lang']['de']) ?></a>
+    </span>
+    <a class="login" href="/login"><?= $e($T['nav']['login']) ?></a>
+    <?= cr_button($T['nav']['getApp'], ['size' => 'sm', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#']) ?>
   </nav>
 </header>
 <main>

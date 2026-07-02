@@ -314,6 +314,13 @@ code {
 .legal p, .legal li { line-height: 1.6; }
 .legal ul { padding-left: 20px; }
 
+/* ============================ Sprach-Umschalter ============================ */
+.lang-switch { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: var(--track-wide); }
+.lang-switch a { color: var(--text-muted); text-decoration: none; transition: color 160ms; }
+.lang-switch a:hover { color: var(--cyan-500); }
+.lang-switch a.is-active { color: var(--cyan-500); text-shadow: var(--text-glow-cyan); }
+.lang-switch .sep { color: var(--line-cyan); }
+
 /* ============================ Header-Logout ============================ */
 .nav-form { display: inline; margin: 0; }
 .nav-button { background: none; border: none; padding: 0; cursor: pointer; font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: var(--track-wide); text-transform: uppercase; color: var(--text-muted); transition: color 160ms; }

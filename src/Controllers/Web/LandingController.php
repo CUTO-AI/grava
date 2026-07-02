@@ -19,34 +19,25 @@ class LandingController
 
     public function home(): never
     {
-        // Hole aktuelle öffentliche Fahrten für die Gallery
-        $recentRoutes = $this->getRecentPublicRoutes(10);
+        // Startseite = zweisprachige Cyber-Landing (public/cyber). Die Sprache
+        // (EN Standard, ?lang=de/en + Cookie) wird in public/cyber/inc/lang.php
+        // aufgelöst. Eigenständiges Layout/Assets — bricht danach ab.
+        $entry = dirname(__DIR__, 3) . '/public/cyber/index.php';
+        if (is_file($entry)) {
+            http_response_code(200);
+            header('Content-Type: text/html; charset=utf-8');
+            $CR_ASSETS = '/cyber/assets';
+            require $entry;
+            exit;
+        }
 
+        // Fallback (sollte nicht eintreten): alte klassische Landing.
         $this->view->render('landing/home', [
-            '_title' => 'GRAVA — Oberfläche, Verkehr & Hinweise: Community-Map für Radfahrer',
-            '_authedUser' => null, // Anonymer Besucher
-            // Marketing-Landing behält ihr eigenes Design (landing.css) und wird
-            // NICHT auf die Cyber-Schale umgestellt — separater Redesign-Pass folgt.
+            '_title'         => 'GRAVA',
+            '_authedUser'    => null,
             '_classicLayout' => true,
-            '_pageStyles' => [
-                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-                '/assets/landing/landing.css'
-            ],
-            '_pageScripts' => [
-                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-                '/assets/js/landing-map.js',
-                '/assets/js/landing-gallery.js'
-            ],
-            '_layoutWide' => true,
-            'recentRoutes' => $recentRoutes,
-
-            // SEO Meta-Tags
-            '_metaDescription' => 'GRAVA misst automatisch Oberflächenqualität und Verkehr (Radarlicht). Speichere Hinweise wie Blockierungen oder Gefahrenstellen. Sammle dein Gebiet, hilf der Community die Datenbank aufzubauen. Die Daten, die in Komoot fehlen.',
-            '_metaKeywords' => 'Gravel, Bikepacking, Radfahren, Oberflächenqualität, Straßenbelag, Schotter, Verkehr, Radarlicht, Community-Hinweise, GPS-Tracking, Gamification, Territorialspiel, Rennrad, MTB, Komoot Alternative',
-            '_ogTitle' => 'GRAVA — Oberfläche, Verkehr & Community-Hinweise für Radfahrer',
-            '_ogDescription' => 'Automatisch per Radarlicht: Oberfläche & Verkehr. Manuell: Hinweise für alle. Erobere dein Gebiet, baue die Map auf. Launch-Phase — sei dabei!',
-            '_ogImage' => '/assets/landing/screenshot-game-map.webp',
-            '_ogUrl' => '/landing',
+            '_pageStyles'    => ['/assets/landing/landing.css'],
+            'recentRoutes'   => $this->getRecentPublicRoutes(10),
         ]);
     }
 
