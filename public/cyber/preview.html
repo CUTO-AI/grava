@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cyber">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CyberRide — static preview of the PHP port</title>
+<link rel="stylesheet" href="assets/cyberride.css" />
+<link rel="stylesheet" href="assets/site.css" />
+</head>
+<body>
+<header class="site-header" id="siteHeader">
+  <a class="brand" href="#top"><span class="glyph"><b>C</b></span><span class="word">CYBER<span class="r">RIDE</span></span></a>
+  <nav class="site-nav">
+    <div class="navlinks"><a href="#features">Features</a><a href="#news">News</a><a href="#updates">Updates</a><a href="#">Heatmap</a></div>
+    <a class="login" href="#">Login</a>
+    <a class="cr-btn cr-btn--primary cr-btn--sm" href="#"><i data-lucide="apple" style="width:15px;height:15px"></i><span>Get the App</span></a>
+  </nav>
+</header>
+<main>
+  <!-- HERO -->
+  <section class="hero" id="top">
+    <div class="hero__bg">
+      <div class="hero__grid cr-grid-bg"></div>
+      <div class="hero__floor"><div class="cr-grid-bg"></div></div>
+      <span class="hero__sector" style="left:58%;top:44%;width:120px;height:120px;background:var(--fill-lime);border:1.5px solid var(--lime-500);box-shadow:var(--glow-lime)"></span>
+      <span class="hero__sector" style="left:72%;top:30%;width:84px;height:84px;background:var(--fill-cyan);border:1.5px solid var(--cyan-500);box-shadow:var(--glow-cyan-sm);animation-delay:.8s"></span>
+      <span class="hero__sector" style="left:64%;top:60%;width:70px;height:70px;background:var(--fill-magenta);border:1.5px solid var(--magenta-500);animation-delay:1.6s"></span>
+      <div class="hero__sweep"></div>
+      <div class="cr-floor-glow" style="position:absolute;inset:0"></div>
+      <div class="hero__scrim"></div>
+      <div class="cr-scanlines" style="position:absolute;inset:0;opacity:.6"></div>
+    </div>
+    <div class="hero__inner">
+      <div class="hero__col">
+        <div style="margin-bottom:22px"><span class="cr-badge is-cyan"><span class="dot"></span>Launch Phase // Season 03</span></div>
+        <h1 class="cr-display">Ride real roads.<br /><span class="cr-neon">Claim the grid.</span></h1>
+        <p class="cr-lead">CyberRide turns your city into contested territory. Every kilometer you ride captures sectors for your crew — and maps surface, traffic and hazards for every rider behind you. Ingress, powered by your bike.</p>
+        <div class="hero__ctas">
+          <a class="cr-btn cr-btn--primary cr-btn--lg" href="#"><i data-lucide="apple" style="width:18px;height:18px"></i><span>Get the iOS App</span></a>
+          <button class="trailer-box" id="trailerOpen">
+            <span class="play"><i data-lucide="play" style="width:18px;height:18px"></i></span>
+            <span style="text-align:left"><span class="t1">Watch Trailer</span><span class="t2">02:14 // SEASON 03</span></span>
+          </button>
+        </div>
+        <div class="hero__badges"><span>✓ FREE — NO SUBSCRIPTION</span><span>✓ WORKS OFFLINE</span><span>✓ GDPR-SAFE</span></div>
+      </div>
+    </div>
+    <div class="hero__fade"></div>
+  </section>
+
+  <section class="cr-wrap" style="position:relative;z-index:5;margin-top:-40px">
+    <div class="stat-strip">
+      <div class="cell"><div class="stat"><span class="lab">Riders Online</span><span class="val is-cyan">4,127</span><span class="delta">+18% wk</span></div></div>
+      <div class="cell"><div class="stat"><span class="lab">KM Conquered</span><span class="val is-lime">892,304</span></div></div>
+      <div class="cell"><div class="stat"><span class="lab">Territories</span><span class="val is-magenta">1,204</span><span class="delta">+37 today</span></div></div>
+      <div class="cell"><div class="stat"><span class="lab">Active Crews</span><span class="val is-neutral">216</span></div></div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="cr-section cr-wrap" id="features">
+    <div class="cr-sechead">
+      <div class="cr-kicker" style="margin-bottom:14px">// TWO SYSTEMS, ONE RIDE</div>
+      <h2 class="cr-h2" style="margin:0 0 14px">A game layered over the real world</h2>
+      <p class="cr-lead" style="margin:0;color:var(--text-muted)">CyberRide runs while you ride. Play for territory; leave better maps behind you.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="cr-card is-magenta is-interactive feature-card"><span class="brk tl"></span><span class="brk bl"></span><span class="brk br"></span>
+        <div class="body">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px"><span class="ico"><i data-lucide="swords" style="width:22px;height:22px"></i></span><div class="cr-kicker" style="color:var(--magenta-500)">// 01 — TERRITORY</div></div>
+          <h3>Conquer Your Region</h3>
+          <p style="margin:0 0 20px;color:var(--text-body);font-size:16px;line-height:1.6">Ride real streets to claim their sectors. Join a crew, defend your turf, climb the leaderboard. Every ride redraws the map — solo or in a duel with the crew across town.</p>
+          <ul><li><i data-lucide="chevron-right" style="width:16px;height:16px"></i>Claim sectors by riding</li><li><i data-lucide="chevron-right" style="width:16px;height:16px"></i>Crews &amp; live leaderboards</li><li><i data-lucide="chevron-right" style="width:16px;height:16px"></i>Seasonal territory resets</li></ul>
+        </div>
+        <div class="visual-wrap">
+          <div class="hud-visual">
+            <div class="cr-grid-bg" style="position:absolute;inset:0;background-size:32px 32px;opacity:.6"></div>
+            <span style="position:absolute;left:18%;top:30%;width:90px;height:70px;background:var(--fill-lime);border:1.5px solid var(--lime-500);box-shadow:var(--glow-lime);transform:skewX(-14deg)"></span>
+            <span style="position:absolute;left:46%;top:50%;width:74px;height:60px;background:var(--fill-cyan);border:1.5px solid var(--cyan-500);transform:skewX(-14deg)"></span>
+            <span style="position:absolute;left:62%;top:22%;width:60px;height:50px;background:var(--fill-magenta);border:1.5px solid var(--magenta-500);transform:skewX(-14deg)"></span>
+            <div style="position:absolute;left:16px;right:16px;bottom:16px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span class="cr-kicker" style="color:var(--text-muted)">Region Control — Waldkraiburg</span><span style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--lime-500)">68%</span></div>
+              <div style="position:relative;height:10px;background:var(--void-600);border:1px solid var(--line-cyan);overflow:hidden;clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px))"><div style="position:absolute;inset:0;width:68%;background:var(--lime-500);box-shadow:var(--glow-lime);background-image:repeating-linear-gradient(90deg,rgba(4,6,11,.55) 0 2px,transparent 2px 9px)"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="cr-card is-cyan is-interactive feature-card"><span class="brk tl"></span><span class="brk bl"></span><span class="brk br"></span>
+        <div class="body">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px"><span class="ico"><i data-lucide="radio" style="width:22px;height:22px"></i></span><div class="cr-kicker" style="color:var(--cyan-500)">// 02 — INTEL</div></div>
+          <h3>Auto-Map the Roads</h3>
+          <p style="margin:0 0 20px;color:var(--text-body);font-size:16px;line-height:1.6">Start recording and just ride. CyberRide reads surface quality and traffic automatically via your radar taillight — no input needed. The data everyone else is missing, built by the community.</p>
+          <ul><li><i data-lucide="chevron-right" style="width:16px;height:16px"></i>Surface &amp; traffic, hands-free</li><li><i data-lucide="chevron-right" style="width:16px;height:16px"></i>Community hazard pins</li><li><i data-lucide="chevron-right" style="width:16px;height:16px"></i>Check any route before you go</li></ul>
+        </div>
+        <div class="visual-wrap">
+          <div class="hud-visual">
+            <div class="cr-scanlines" style="position:absolute;inset:0"></div>
+            <svg viewBox="0 0 400 200" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%"><polyline points="10,150 90,120 150,140 220,70 300,90 390,40" fill="none" stroke="var(--cyan-500)" stroke-width="2.5" style="filter:drop-shadow(0 0 6px var(--cyan-500))"></polyline></svg>
+            <span class="hud-tag" style="left:52%;top:30%;border:1px solid var(--amber-500);color:var(--amber-500)"><i data-lucide="triangle-alert" style="width:13px;height:13px"></i> ROUGH SURFACE</span>
+            <span class="hud-tag" style="left:20%;top:62%;border:1px solid var(--lime-500);color:var(--lime-500)"><i data-lucide="check" style="width:13px;height:13px"></i> SMOOTH</span>
+            <div style="position:absolute;right:14px;bottom:14px;display:flex;align-items:center;gap:8px;color:var(--text-muted);font-family:var(--font-mono);font-size:11px"><i data-lucide="radio" style="width:14px;height:14px;color:var(--cyan-500)"></i> RADAR TAILLIGHT · AUTO</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NEWS -->
+  <section class="news-band" id="news">
+    <div class="cr-wrap cr-section">
+      <div class="news-head">
+        <div class="cr-sechead" style="margin-bottom:0"><div class="cr-kicker" style="margin-bottom:14px">// LIVE FROM THE GRID</div><h2 class="cr-h2" style="margin:0">News from the field</h2></div>
+        <a class="cr-btn cr-btn--ghost cr-btn--sm" href="#"><span>All News</span><i data-lucide="arrow-right" style="width:15px;height:15px"></i></a>
+      </div>
+      <div class="news-grid">
+        <div class="cr-card is-cyan is-interactive news-card"><span class="brk tl"></span><span class="brk bl"></span><span class="brk br"></span>
+          <div class="thumb"><div class="cr-grid-bg" style="position:absolute;inset:0;background-size:28px 28px;opacity:.5"></div><div style="position:absolute;inset:0;background:radial-gradient(80% 80% at 70% 30%,var(--fill-cyan),transparent 70%)"></div><span class="ico" style="color:var(--cyan-500)"><i data-lucide="users" style="width:54px;height:54px"></i></span><span class="badge-pos"><span class="cr-badge is-cyan">Community</span></span></div>
+          <div class="inner"><div class="date">30 JUN 2026</div><h3>Waldkraiburg Falls to Crew NEONWOLVES</h3><p>After a 116km overnight push, NEONWOLVES flipped the entire eastern sector. The map hasn’t looked this contested since launch.</p><a class="more" href="#" style="color:var(--cyan-500)">Read <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a></div>
+        </div>
+        <div class="cr-card is-magenta is-interactive news-card"><span class="brk tl"></span><span class="brk bl"></span><span class="brk br"></span>
+          <div class="thumb"><div class="cr-grid-bg" style="position:absolute;inset:0;background-size:28px 28px;opacity:.5"></div><div style="position:absolute;inset:0;background:radial-gradient(80% 80% at 70% 30%,var(--fill-magenta),transparent 70%)"></div><span class="ico" style="color:var(--magenta-500)"><i data-lucide="route" style="width:54px;height:54px"></i></span><span class="badge-pos"><span class="cr-badge is-magenta">Feature</span></span></div>
+          <div class="inner"><div class="date">24 JUN 2026</div><h3>Import Your Komoot Routes</h3><p>Pull any GPX into CyberRide and see community surface data, traffic and hazards before you roll out.</p><a class="more" href="#" style="color:var(--magenta-500)">Read <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a></div>
+        </div>
+        <div class="cr-card is-lime is-interactive news-card"><span class="brk tl"></span><span class="brk bl"></span><span class="brk br"></span>
+          <div class="thumb"><div class="cr-grid-bg" style="position:absolute;inset:0;background-size:28px 28px;opacity:.5"></div><div style="position:absolute;inset:0;background:radial-gradient(80% 80% at 70% 30%,var(--fill-lime),transparent 70%)"></div><span class="ico" style="color:var(--lime-500)"><i data-lucide="trophy" style="width:54px;height:54px"></i></span><span class="badge-pos"><span class="cr-badge is-lime">Milestone</span></span></div>
+          <div class="inner"><div class="date">18 JUN 2026</div><h3>4,000 Riders Now on the Grid</h3><p>The launch region crossed 4k active riders this week — nearly 900,000 km of roads mapped and counting.</p><a class="more" href="#" style="color:var(--lime-500)">Read <i data-lucide="arrow-right" style="width:14px;height:14px"></i></a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- UPDATES -->
+  <section class="cr-section cr-wrap cr-wrap--slim" id="updates">
+    <div class="cr-sechead"><div class="cr-kicker" style="margin-bottom:14px">// PATCH NOTES</div><h2 class="cr-h2" style="margin:0 0 14px">Updates from the game</h2><p class="cr-lead" style="margin:0;color:var(--text-muted)">What shipped, what changed. Rider-facing changelog for every release.</p></div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div class="cr-card update-row" style="padding:0"><div class="grid">
+        <div class="ver"><div class="v">v2.4</div><div class="d">01 JUL 2026</div></div>
+        <div class="notes"><h3>Season 03 — The Reclamation</h3><ul>
+          <li><span><span class="cr-badge is-lime">NEW</span></span><span class="txt">Seasonal territory reset — the map is wide open again.</span></li>
+          <li><span><span class="cr-badge is-lime">NEW</span></span><span class="txt">Crew war rooms with live sector heat.</span></li>
+          <li><span><span class="cr-badge is-cyan">BALANCE</span></span><span class="txt">Night rides now grant +25% capture bonus.</span></li>
+        </ul></div>
+      </div></div>
+      <div class="cr-card update-row" style="padding:0"><div class="grid">
+        <div class="ver"><div class="v">v2.3</div><div class="d">12 JUN 2026</div></div>
+        <div class="notes"><h3>Radar Intel Overhaul</h3><ul>
+          <li><span><span class="cr-badge is-lime">NEW</span></span><span class="txt">Auto surface scoring from radar taillight.</span></li>
+          <li><span><span class="cr-badge is-magenta">FIX</span></span><span class="txt">Offline uploads no longer drop hazard pins.</span></li>
+        </ul></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final-cta">
+    <div class="bg cr-grid-bg cr-floor-glow"></div>
+    <div class="cr-scanlines" style="position:absolute;inset:0"></div>
+    <div class="glow"></div>
+    <div class="inner">
+      <div style="display:flex;justify-content:center;margin-bottom:22px"><span class="cr-badge is-lime"><span class="dot"></span>Free during launch</span></div>
+      <h2 class="cr-display">Ready to claim<br /><span class="cr-neon">your first sector?</span></h2>
+      <p class="cr-lead">Download CyberRide, start recording, and turn tonight’s ride into territory. No subscription — the grid is waiting.</p>
+      <div class="ctas">
+        <a class="cr-btn cr-btn--primary cr-btn--lg" href="#"><i data-lucide="apple" style="width:19px;height:19px"></i><span>Download for iOS</span></a>
+        <a class="cr-btn cr-btn--ghost cr-btn--lg" href="#"><span>Explore the Heatmap</span><i data-lucide="arrow-right" style="width:17px;height:17px"></i></a>
+      </div>
+      <div class="fine">IOS 16+ · ANDROID SOON · DE · AT · CH</div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="cr-wrap">
+    <div class="cols">
+      <div class="about">
+        <a class="brand" href="#top" style="margin-bottom:16px"><span class="glyph" style="width:30px;height:30px"><b style="font-size:16px">C</b></span><span class="word" style="font-size:20px">CYBER<span class="r">RIDE</span></span></a>
+        <p>Ride, conquer, build the map. Surface · Traffic · Hazards — the data Komoot is missing.</p>
+        <div class="socials"><a class="cr-iconbtn" href="#" aria-label="Instagram"><i data-lucide="camera" style="width:17px;height:17px"></i></a><a class="cr-iconbtn" href="#" aria-label="X"><i data-lucide="at-sign" style="width:17px;height:17px"></i></a><a class="cr-iconbtn" href="#" aria-label="Strava"><i data-lucide="activity" style="width:17px;height:17px"></i></a></div>
+      </div>
+      <div class="col"><h4 class="cr-kicker" style="color:var(--text-muted)">Product</h4><ul><li><a href="#">Features</a></li><li><a href="#">Heatmap</a></li><li><a href="#">Discover</a></li><li><a href="#">Get the App</a></li></ul></div>
+      <div class="col"><h4 class="cr-kicker" style="color:var(--text-muted)">Community</h4><ul><li><a href="#">Crews</a></li><li><a href="#">Leaderboards</a></li><li><a href="#">News</a></li><li><a href="#">Strava Club</a></li></ul></div>
+      <div class="col"><h4 class="cr-kicker" style="color:var(--text-muted)">Legal</h4><ul><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li><li><a href="#">Imprint</a></li><li><a href="#">GDPR</a></li></ul></div>
+    </div>
+    <div class="legal"><span>© 2026 CYBERRIDE · ALL SECTORS RESERVED</span><span>MADE FOR RIDERS · DE / AT / CH</span></div>
+  </div>
+</footer>
+
+<div class="modal" id="trailerModal" aria-hidden="true">
+  <div class="frame">
+    <div class="hero__bg"><div class="hero__grid cr-grid-bg"></div><div class="cr-floor-glow" style="position:absolute;inset:0"></div><div class="cr-scanlines" style="position:absolute;inset:0;opacity:.6"></div></div>
+    <div class="center"><div><span class="play-lg"><i data-lucide="play" style="width:32px;height:32px"></i></span><div class="cap">Trailer placeholder — drop the Season 03 film here</div></div></div>
+    <div class="badge-pos"><span class="cr-badge is-cyan"><span class="dot"></span>CYBERRIDE // 02:14</span></div>
+    <button class="cr-iconbtn close" id="trailerClose" aria-label="Close"><i data-lucide="x" style="width:18px;height:18px"></i></button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

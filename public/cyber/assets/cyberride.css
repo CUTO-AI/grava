@@ -1,0 +1,318 @@
+/* ==========================================================================
+   CyberRide — portable single-file stylesheet (generated from the design system).
+   Drop into a PHP/static app: <link rel="stylesheet" href="/assets/cyberride.css">
+   Contains: Google-Fonts import, all tokens, effect utilities, base classes.
+   ========================================================================== */
+
+
+/* ---------- tokens/fonts.css ---------- */
+/* ==========================================================================
+   CyberRide — Fonts
+   Chakra Petch  → display / headings (angular techno)
+   Rajdhani      → UI / body (condensed, HUD-readable)
+   JetBrains Mono→ data, labels, kickers (monospace signal)
+   Loaded from Google Fonts. See readme.md → these ARE the brand fonts
+   (from-scratch brand); swap to self-hosted binaries if you need offline.
+   ========================================================================== */
+
+/* Self-hosted (CSP-strikt): @font-face + woff2 liegen lokal in fonts.css / fonts/.
+   Ersetzt den früheren Google-Fonts-CDN-@import (fonts.googleapis.com). */
+@import url('fonts.css');
+
+/* ---------- tokens/colors.css ---------- */
+/* ==========================================================================
+   CyberRide — Color System
+   Neon-on-void cyberpunk. Deep near-black surfaces, electric accents.
+   ========================================================================== */
+
+:root {
+  /* --- Void / surface ramp (cool near-black) --- */
+  --void-900: #04060B;   /* page base — deepest */
+  --void-800: #080B13;   /* raised base */
+  --void-700: #0D111B;   /* panel / surface-1 */
+  --void-600: #141A28;   /* surface-2 / inset */
+  --void-500: #1E2637;   /* hover surface */
+  --void-400: #2B3547;   /* hairlines on dark */
+
+  /* --- Neon accents (the brand's voltage) --- */
+  --cyan-500:   #00E5FF;  /* primary — signal cyan */
+  --cyan-400:   #4DEFFF;  /* lighter, hover */
+  --cyan-700:   #00A6B8;  /* pressed / deep */
+  --magenta-500:#FF1E6F;  /* secondary — hot magenta */
+  --magenta-400:#FF5A93;
+  --magenta-700:#C40E52;
+  --lime-500:   #B6FF2E;  /* territory / conquered / success */
+  --lime-400:   #CBFF66;
+  --amber-500:  #FFB020;  /* caution / traffic */
+  --red-500:    #FF3B57;  /* danger / blocked */
+
+  /* --- Text (cool whites & greys) --- */
+  --ink-900: #EAF6FF;   /* highest-contrast heading */
+  --ink-700: #B6C6DA;   /* body */
+  --ink-500: #7C8CA3;   /* muted / captions */
+  --ink-300: #4C5A70;   /* disabled / faint */
+
+  /* --- HUD lines & fills --- */
+  --line-cyan:    rgba(0, 229, 255, 0.22);
+  --line-cyan-hi: rgba(0, 229, 255, 0.55);
+  --line-soft:    rgba(150, 180, 210, 0.14);
+  --fill-cyan:    rgba(0, 229, 255, 0.08);
+  --fill-magenta: rgba(255, 30, 111, 0.08);
+  --fill-lime:    rgba(182, 255, 46, 0.10);
+
+  /* ======================================================================
+     Semantic aliases — reach for these in components
+     ====================================================================== */
+  --bg-base:        var(--void-900);
+  --bg-raised:      var(--void-800);
+  --surface-1:      var(--void-700);
+  --surface-2:      var(--void-600);
+  --surface-hover:  var(--void-500);
+
+  --text-hi:        var(--ink-900);
+  --text-body:      var(--ink-700);
+  --text-muted:     var(--ink-500);
+  --text-disabled:  var(--ink-300);
+
+  --accent:            var(--cyan-500);   /* primary voltage */
+  --accent-hover:      var(--cyan-400);
+  --accent-press:      var(--cyan-700);
+  --accent-secondary:  var(--magenta-500);
+  --accent-territory:  var(--lime-500);   /* conquered zones */
+  --accent-caution:    var(--amber-500);
+  --accent-danger:     var(--red-500);
+
+  --on-accent:      var(--void-900);       /* text sitting on neon fills */
+
+  --border-hud:     var(--line-cyan);
+  --border-strong:  var(--line-cyan-hi);
+  --border-soft:    var(--line-soft);
+}
+
+/* ---------- tokens/typography.css ---------- */
+/* ==========================================================================
+   CyberRide — Typography tokens
+   ========================================================================== */
+
+:root {
+  /* --- Families --- */
+  --font-display: 'Chakra Petch', 'Rajdhani', system-ui, sans-serif;
+  --font-body:    'Rajdhani', 'Chakra Petch', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* --- Weights --- */
+  --fw-regular: 400; /* @kind font */
+  --fw-medium:  500; /* @kind font */
+  --fw-semibold:600; /* @kind font */
+  --fw-bold:    700; /* @kind font */
+
+  /* --- Type scale (fluid where it counts) --- */
+  --text-hero:   clamp(3rem, 6.5vw, 6rem);      /* 48 → 96  display */
+  --text-h1:     clamp(2.25rem, 4vw, 3.5rem);   /* 36 → 56  */
+  --text-h2:     clamp(1.75rem, 2.6vw, 2.5rem); /* 28 → 40  */
+  --text-h3:     1.5rem;    /* 24 */
+  --text-h4:     1.25rem;   /* 20 */
+  --text-lg:     1.125rem;  /* 18 body-lead */
+  --text-base:   1rem;      /* 16 body */
+  --text-sm:     0.875rem;  /* 14 */
+  --text-xs:     0.75rem;   /* 12 labels */
+  --text-2xs:    0.6875rem; /* 11 micro-HUD */
+
+  /* --- Line heights --- */
+  --leading-tight:  1.02;
+  --leading-snug:   1.18;
+  --leading-normal: 1.5;
+  --leading-relaxed:1.65;
+
+  /* --- Tracking (cyberpunk loves wide caps) --- */
+  --track-tight:  -0.02em;
+  --track-normal: 0; /* @kind font */
+  --track-wide:   0.08em;
+  --track-wider:  0.16em;   /* mono kickers / labels */
+  --track-widest: 0.3em;
+}
+
+/* ---------- tokens/spacing.css ---------- */
+/* ==========================================================================
+   CyberRide — Spacing, radii, borders, layout
+   ========================================================================== */
+
+:root {
+  /* --- Spacing scale (4px base) --- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+  --space-10: 128px;
+
+  /* --- Radii — sharp & technical, not soft --- */
+  --radius-0:  0px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* --- Chamfer sizes (for clip-path cut corners) --- */
+  --cut-sm: 8px;
+  --cut-md: 14px;
+  --cut-lg: 22px;
+
+  /* --- Borders --- */
+  --bw-hair: 1px;
+  --bw-line: 1.5px;
+  --bw-bold: 2px;
+
+  /* --- Layout --- */
+  --container: 1200px;
+  --container-wide: 1400px;
+  --gutter: clamp(16px, 4vw, 48px); /* @kind spacing */
+  --header-h: 68px;
+}
+
+/* Chamfered corners — the core CyberRide panel silhouette.
+   Apply .cr-chamfer (top-right + bottom-left cut) to any block. */
+.cr-chamfer {
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--cut-md)) 0,
+    100% var(--cut-md),
+    100% 100%,
+    var(--cut-md) 100%,
+    0 calc(100% - var(--cut-md))
+  );
+}
+.cr-chamfer-sm { --cut-md: var(--cut-sm); }
+.cr-chamfer-lg { --cut-md: var(--cut-lg); }
+
+/* ---------- tokens/effects.css ---------- */
+/* ==========================================================================
+   CyberRide — Effects: glows, shadows, gradients, textures, motion
+   Cyberpunk = light emission. Shadows are neon "glow" not soft grey drop.
+   ========================================================================== */
+
+:root {
+  /* --- Neon glows (outer emission) --- */
+  --glow-cyan:    0 0 12px rgba(0,229,255,.45), 0 0 34px rgba(0,229,255,.20);
+  --glow-cyan-sm: 0 0 8px rgba(0,229,255,.40);
+  --glow-magenta: 0 0 12px rgba(255,30,111,.50), 0 0 34px rgba(255,30,111,.22);
+  --glow-lime:    0 0 12px rgba(182,255,46,.45), 0 0 30px rgba(182,255,46,.18);
+
+  /* --- Text glow --- */
+  --text-glow-cyan:    0 0 10px rgba(0,229,255,.55);
+  --text-glow-magenta: 0 0 10px rgba(255,30,111,.55);
+
+  /* --- Structural shadows (depth on void) --- */
+  --shadow-panel: 0 2px 0 rgba(0,0,0,.5), 0 18px 40px rgba(0,0,0,.55);
+  --shadow-lift:  0 24px 60px rgba(0,0,0,.65);
+
+  /* --- Inset (recessed HUD wells) --- */
+  --inset-well: inset 0 0 0 1px var(--line-cyan), inset 0 2px 18px rgba(0,0,0,.55);
+
+  /* --- Gradients --- */
+  --grad-voltage: linear-gradient(120deg, var(--cyan-500), var(--magenta-500));
+  --grad-territory: linear-gradient(120deg, var(--lime-500), var(--cyan-500));
+  --grad-fade-up: linear-gradient(180deg, transparent 0%, var(--void-900) 90%);
+  --grad-scrim: linear-gradient(180deg, rgba(4,6,11,.15) 0%, rgba(4,6,11,.85) 100%); /* @kind other */
+
+  /* --- Motion --- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* @kind other */
+  --ease-snap: cubic-bezier(0.5, 0, 0, 1); /* @kind other */
+  --dur-fast: 120ms; /* @kind other */
+  --dur-base: 200ms; /* @kind other */
+  --dur-slow: 420ms; /* @kind other */
+}
+
+/* --- Grid floor / HUD backdrop utilities --- */
+.cr-grid-bg {
+  background-image:
+    linear-gradient(var(--line-cyan) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-cyan) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.cr-scanlines {
+  background-image: repeating-linear-gradient(
+    0deg, rgba(0,229,255,.035) 0px, rgba(0,229,255,.035) 1px,
+    transparent 1px, transparent 3px);
+}
+
+/* Perspective grid — cyberpunk "map floor" glow at the base of a hero. */
+.cr-floor-glow {
+  background:
+    radial-gradient(120% 80% at 50% 120%, rgba(0,229,255,.20), transparent 60%),
+    radial-gradient(90% 60% at 80% 0%, rgba(255,30,111,.14), transparent 55%);
+}
+
+/* ---------- tokens/base.css ---------- */
+/* ==========================================================================
+   CyberRide — base element defaults & helper typography classes.
+   Opt-in: applied to elements, not a heavy reset.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg-base);
+  color: var(--text-body);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection { background: var(--cyan-500); color: var(--void-900); }
+
+/* --- Heading / display helpers --- */
+.cr-display {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--track-tight);
+  color: var(--text-hi);
+  text-transform: uppercase;
+}
+.cr-h2 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--text-h2);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--track-tight);
+  color: var(--text-hi);
+  text-transform: uppercase;
+}
+.cr-h3 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-h3);
+  color: var(--text-hi);
+}
+
+/* --- Mono kicker / eyebrow / HUD label --- */
+.cr-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--track-wider);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.cr-lead {
+  font-size: var(--text-lg);
+  line-height: var(--leading-relaxed);
+  color: var(--text-body);
+}
+
+/* --- Accent text --- */
+.cr-neon      { color: var(--accent); text-shadow: var(--text-glow-cyan); }
+.cr-neon-pink { color: var(--accent-secondary); text-shadow: var(--text-glow-magenta); }
+.cr-neon-lime { color: var(--accent-territory); }
+
+a { color: var(--accent); text-decoration: none; }

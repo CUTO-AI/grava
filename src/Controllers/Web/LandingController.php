@@ -19,6 +19,13 @@ class LandingController
 
     public function home(): never
     {
+        // --- Parallelbetrieb Alt/Cyber-Design ---------------------------------
+        // Opt-in per ?theme=cyber (setzt 30-Tage-Cookie); ?theme=classic zurück.
+        // Solange nur die Landing migriert ist, greift der Schalter genau hier.
+        if ($this->wantsCyberTheme()) {
+            $this->renderCyberLanding();
+        }
+
         // Hole aktuelle öffentliche Fahrten für die Gallery
         $recentRoutes = $this->getRecentPublicRoutes(10);
 
@@ -45,6 +52,48 @@ class LandingController
             '_ogImage' => '/assets/landing/screenshot-game-map.webp',
             '_ogUrl' => '/landing',
         ]);
+    }
+
+    /**
+     * Löst den Theme-Wunsch auf. ?theme=… überschreibt und persistiert das
+     * Cookie; ohne Query zählt das zuvor gesetzte Cookie. Default: classic.
+     */
+    private function wantsCyberTheme(): bool
+    {
+        $theme = $_GET['theme'] ?? ($_COOKIE['theme'] ?? 'classic');
+        $theme = $theme === 'cyber' ? 'cyber' : 'classic';
+
+        if (isset($_GET['theme'])) {
+            $secure = (($_SERVER['HTTPS'] ?? '') !== '')
+                || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+            setcookie('theme', $theme, [
+                'expires'  => time() + 2592000, // 30 Tage
+                'path'     => '/',
+                'secure'   => $secure,
+                'httponly' => false,            // rein kosmetisch, kein Secret
+                'samesite' => 'Lax',
+            ]);
+            $_COOKIE['theme'] = $theme;
+        }
+
+        return $theme === 'cyber';
+    }
+
+    /**
+     * Rendert die eigenständige Cyber-Landing (public/cyber/index.php) mit
+     * eigenem Layout/Assets. Bricht die Anfrage danach ab.
+     */
+    private function renderCyberLanding(): void
+    {
+        $entry = dirname(__DIR__, 3) . '/public/cyber/index.php';
+        if (is_file($entry)) {
+            http_response_code(200);
+            header('Content-Type: text/html; charset=utf-8');
+            $CR_ASSETS = '/cyber/assets';
+            require $entry;
+            exit;
+        }
+        // Fallback: fehlt das Bundle, normal weiter mit der klassischen Seite.
     }
 
     private function getRecentPublicRoutes(int $limit): array
