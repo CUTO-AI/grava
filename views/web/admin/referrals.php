@@ -10,36 +10,36 @@ $toV   = $to !== null ? $e($to) : '';
 $csvQuery = http_build_query(array_filter(['from' => $from, 'to' => $to], static fn($v) => $v !== null && $v !== ''));
 ?>
 <section class="card">
-    <h1>Empfehlungen – Auswertung</h1>
+    <h1><?= t('Empfehlungen – Auswertung') ?></h1>
 
     <form method="get" action="/admin/referrals" class="inline-form">
-        <label>Von <input type="date" name="from" value="<?= $fromV ?>"></label>
-        <label>Bis <input type="date" name="to" value="<?= $toV ?>"></label>
-        <button type="submit">Filtern</button>
-        <a class="button" href="/admin/referrals.csv<?= $csvQuery !== '' ? '?' . $e($csvQuery) : '' ?>">CSV-Export</a>
+        <label><?= t('Von') ?> <input type="date" name="from" value="<?= $fromV ?>"></label>
+        <label><?= t('Bis') ?> <input type="date" name="to" value="<?= $toV ?>"></label>
+        <button type="submit"><?= t('Filtern') ?></button>
+        <a class="button" href="/admin/referrals.csv<?= $csvQuery !== '' ? '?' . $e($csvQuery) : '' ?>"><?= t('CSV-Export') ?></a>
     </form>
 
     <p class="muted">
-        Werber: <strong><?= (int)$totals['referrers'] ?></strong> ·
-        Registriert: <strong><?= (int)$totals['registered'] ?></strong> ·
-        Verifiziert: <strong><?= (int)$totals['verified'] ?></strong> ·
-        Aktiviert: <strong><?= (int)$totals['activated'] ?></strong>
+        <?= t('Werber') ?>: <strong><?= (int)$totals['referrers'] ?></strong> ·
+        <?= t('Registriert') ?>: <strong><?= (int)$totals['registered'] ?></strong> ·
+        <?= t('Verifiziert') ?>: <strong><?= (int)$totals['verified'] ?></strong> ·
+        <?= t('Aktiviert') ?>: <strong><?= (int)$totals['activated'] ?></strong>
     </p>
 
     <?php if ($rows === []): ?>
-        <p>Keine Empfehlungen im gewählten Zeitraum.</p>
+        <p><?= t('Keine Empfehlungen im gewählten Zeitraum.') ?></p>
     <?php else: ?>
     <table class="data-table">
         <thead>
             <tr>
                 <th>#</th>
-                <th>Werber</th>
-                <th>E-Mail</th>
-                <th>Registriert</th>
-                <th>Verifiziert</th>
-                <th>Aktiviert</th>
-                <th>Conversion</th>
-                <th>Letzte</th>
+                <th><?= t('Werber') ?></th>
+                <th><?= t('E-Mail') ?></th>
+                <th><?= t('Registriert') ?></th>
+                <th><?= t('Verifiziert') ?></th>
+                <th><?= t('Aktiviert') ?></th>
+                <th><?= t('Conversion') ?></th>
+                <th><?= t('Letzte') ?></th>
             </tr>
         </thead>
         <tbody>

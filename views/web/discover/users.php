@@ -8,33 +8,33 @@ $h = static fn(string|int|null $v): string => htmlspecialchars((string)($v ?? ''
 ?>
 
 <header class="page-header">
-    <h1>User entdecken</h1>
-    <p class="muted">User mit gesetztem Profil-Handle. <a href="/discover">Routen entdecken &rarr;</a></p>
+    <h1><?= t('User entdecken') ?></h1>
+    <p class="muted"><?= t('User mit gesetztem Profil-Handle.') ?> <a href="/discover"><?= t('Routen entdecken') ?> &rarr;</a></p>
 </header>
 
 <form method="get" action="/discover/users" class="filter-form">
     <label>
-        Suche
-        <input type="text" name="q" value="<?= $h($filters['q'] ?? '') ?>" placeholder="Handle oder Name…" maxlength="100">
+        <?= t('Suche') ?>
+        <input type="text" name="q" value="<?= $h($filters['q'] ?? '') ?>" placeholder="<?= te('Handle oder Name…') ?>" maxlength="100">
     </label>
     <div class="form-actions">
-        <button type="submit">Suchen</button>
-        <a href="/discover/users" class="btn-link">Zurücksetzen</a>
+        <button type="submit"><?= t('Suchen') ?></button>
+        <a href="/discover/users" class="btn-link"><?= t('Zurücksetzen') ?></a>
     </div>
 </form>
 
 <?php if (empty($users)): ?>
     <div class="empty-state">
-        <p>Keine User gefunden.</p>
+        <p><?= t('Keine User gefunden.') ?></p>
     </div>
 <?php else: ?>
     <table class="data-table">
         <thead>
             <tr>
-                <th>Handle</th>
-                <th>Name</th>
-                <th class="num">Public Routen</th>
-                <th>Beigetreten</th>
+                <th><?= t('Handle') ?></th>
+                <th><?= t('Name') ?></th>
+                <th class="num"><?= t('Public Routen') ?></th>
+                <th><?= t('Beigetreten') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -57,16 +57,16 @@ $h = static fn(string|int|null $v): string => htmlspecialchars((string)($v ?? ''
     $qs = $_GET; unset($qs['offset']);
     ?>
     <p class="muted">
-        Zeige <?= $h($offset + 1) ?>–<?= $h(min($offset + $limit, $total)) ?> von <?= $h($total) ?>
+        <?= t('Zeige') ?> <?= $h($offset + 1) ?>–<?= $h(min($offset + $limit, $total)) ?> <?= t('von') ?> <?= $h($total) ?>
     </p>
     <p class="pagination">
         <?php if ($offset > 0):
             $qs['offset'] = max(0, $offset - $limit); ?>
-            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">← Vorherige</a>
+            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">← <?= t('Vorherige') ?></a>
         <?php endif; ?>
         <?php if ($hasMore):
             $qs['offset'] = $offset + $limit; ?>
-            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">Nächste →</a>
+            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link"><?= t('Nächste') ?> →</a>
         <?php endif; ?>
     </p>
 <?php endif; ?>

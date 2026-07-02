@@ -10,50 +10,50 @@ $err = static function (string $field) use ($errors): string {
 };
 ?>
 <section class="card">
-    <h1>Neue Route hochladen</h1>
+    <h1><?= t('Neue Route hochladen') ?></h1>
 
     <?php if (!$verified): ?>
         <div class="alert alert-warn">
-            <p><strong>E-Mail noch nicht bestätigt.</strong></p>
+            <p><strong><?= t('E-Mail noch nicht bestätigt.') ?></strong></p>
             <p>
-                Bitte klick auf den Link in der Bestätigungs-E-Mail, die wir nach der
+                <?= t('Bitte klick auf den Link in der Bestätigungs-E-Mail, die wir nach der
                 Registrierung verschickt haben. Erst danach kannst du Routen
-                hochladen.
+                hochladen.') ?>
             </p>
             <p class="muted">
-                Keine Mail bekommen? Schau im Spam-Ordner nach oder fordere im Dashboard
-                eine neue an.
+                <?= t('Keine Mail bekommen? Schau im Spam-Ordner nach oder fordere im Dashboard
+                eine neue an.') ?>
             </p>
             <p>
-                <a href="/dashboard" class="btn-secondary">Zurück zum Dashboard</a>
+                <a href="/dashboard" class="btn-secondary"><?= t('Zurück zum Dashboard') ?></a>
             </p>
         </div>
     <?php else: ?>
         <p class="muted">
-            Lade eine GPX- oder GeoJSON-Datei hoch. Höhenmeter, Distanz und
-            Bounding-Box werden automatisch berechnet.
+            <?= t('Lade eine GPX- oder GeoJSON-Datei hoch. Höhenmeter, Distanz und
+            Bounding-Box werden automatisch berechnet.') ?>
         </p>
 
         <form method="post" action="/routes" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
 
             <label>
-                Titel
+                <?= t('Titel') ?>
                 <input type="text" name="title" maxlength="140" required
                        value="<?= htmlspecialchars($values['title'], ENT_QUOTES, 'UTF-8') ?>">
                 <?= $err('title') ?>
             </label>
 
             <label>
-                Beschreibung <span class="muted">(optional)</span>
+                <?= t('Beschreibung') ?> <span class="muted">(<?= t('optional') ?>)</span>
                 <textarea name="description" rows="4" maxlength="8000"><?= htmlspecialchars($values['description'], ENT_QUOTES, 'UTF-8') ?></textarea>
                 <?= $err('description') ?>
             </label>
 
             <label>
-                Sichtbarkeit
+                <?= t('Sichtbarkeit') ?>
                 <select name="visibility">
-                    <?php foreach (['private' => 'Privat', 'unlisted' => 'Mit Link teilbar', 'public' => 'Öffentlich (später)'] as $val => $label): ?>
+                    <?php foreach (['private' => t('Privat'), 'unlisted' => t('Mit Link teilbar'), 'public' => t('Öffentlich (später)')] as $val => $label): ?>
                         <option value="<?= $val ?>" <?= $values['visibility'] === $val ? 'selected' : '' ?>>
                             <?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?>
                         </option>
@@ -63,21 +63,21 @@ $err = static function (string $field) use ($errors): string {
             </label>
 
             <label>
-                Tags <span class="muted">(kommagetrennt, optional)</span>
+                <?= t('Tags') ?> <span class="muted">(<?= t('kommagetrennt, optional') ?>)</span>
                 <input type="text" name="tags" placeholder="gravel, alps, family"
                        value="<?= htmlspecialchars($values['tags'], ENT_QUOTES, 'UTF-8') ?>">
                 <?= $err('tags') ?>
             </label>
 
             <label>
-                Track-Datei
+                <?= t('Track-Datei') ?>
                 <input type="file" name="payload" accept=".gpx,.geojson,application/gpx+xml,application/geo+json" required>
                 <?= $err('payload') ?>
             </label>
 
             <div class="form-actions">
-                <button type="submit">Hochladen</button>
-                <a href="/routes" class="btn-link">Abbrechen</a>
+                <button type="submit"><?= t('Hochladen') ?></button>
+                <a href="/routes" class="btn-link"><?= t('Abbrechen') ?></a>
             </div>
         </form>
     <?php endif; ?>

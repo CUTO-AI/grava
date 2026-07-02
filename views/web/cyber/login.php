@@ -10,7 +10,7 @@
 ?>
 <div class="cyber-narrow">
     <p class="cyber-kicker">// Access Terminal</p>
-    <h1 class="cyber-h1">Anmelden</h1>
+    <h1 class="cyber-h1"><?= t('Anmelden') ?></h1>
 
     <?php if (!empty($error)): ?>
         <div class="cr-alert cr-alert--error"><?= htmlspecialchars((string)$error, ENT_QUOTES, 'UTF-8') ?></div>
@@ -24,15 +24,15 @@
                    value="<?= htmlspecialchars($email, ENT_QUOTES, 'UTF-8') ?>">
         </label>
         <label class="cr-field">
-            <span>Passwort</span>
+            <span><?= t('Passwort') ?></span>
             <input class="cr-input" type="password" name="password" autocomplete="current-password" required minlength="10">
         </label>
         <button type="submit" class="cr-btn cr-btn--primary cr-btn--lg cr-btn--block">
-            <span>Anmelden</span>
+            <span><?= t('Anmelden') ?></span>
         </button>
     </form>
 
     <p class="cr-formmeta">
-        <a href="/forgot-password">Passwort vergessen?</a> · <a href="/register">Neues Konto erstellen</a>
+        <a href="/forgot-password"><?= t('Passwort vergessen?') ?></a> · <a href="/register"><?= t('Neues Konto erstellen') ?></a>
     </p>
 </div>

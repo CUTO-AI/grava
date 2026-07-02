@@ -8,24 +8,24 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/uploads">Uploads</a>
     <a href="/admin/game/moderation">Moderation</a>
-    <a href="/admin/game/players">Spieler</a>
-    <a href="/admin/game/player">Spieler-Detail</a>
+    <a href="/admin/game/players"><?= t('Spieler') ?></a>
+    <a href="/admin/game/player"><?= t('Spieler-Detail') ?></a>
     <a href="/admin/game/crews">Crews</a>
     <a href="/admin/game/edge">Inspector</a>
-    <a href="/admin/game/map">Karte</a>
+    <a href="/admin/game/map"><?= t('Karte') ?></a>
 </nav>
 <section class="card">
-    <h1>Game · Spieler</h1>
-    <p class="muted">Alle aktiven Nutzer. <strong>Solo-Besitz</strong> (Kanten/Länge/Pioniert) zählt nur eigenes Revier — Crew-/Fraktions-Besitz erscheint auf der Crews-Seite. <strong>Aktivität</strong> zeigt befahrene Kanten unabhängig vom Besitz.</p>
+    <h1>Game · <?= t('Spieler') ?></h1>
+    <p class="muted"><?= t('Alle aktiven Nutzer.') ?> <strong><?= t('Solo-Besitz') ?></strong> <?= t('(Kanten/Länge/Pioniert) zählt nur eigenes Revier — Crew-/Fraktions-Besitz erscheint auf der Crews-Seite.') ?> <strong><?= t('Aktivität') ?></strong> <?= t('zeigt befahrene Kanten unabhängig vom Besitz.') ?></p>
     <?php if ($rows === []): ?>
-        <p class="muted">Keine aktiven Spieler.</p>
+        <p class="muted"><?= t('Keine aktiven Spieler.') ?></p>
     <?php else: ?>
     <table class="data-table">
         <thead>
             <tr>
-                <th>#</th><th>Fahrer</th>
-                <th>Solo-Kanten</th><th>Länge (km)</th><th>Pioniert</th>
-                <th>Pässe</th><th>Kanten gefahren</th>
+                <th>#</th><th><?= t('Fahrer') ?></th>
+                <th><?= t('Solo-Kanten') ?></th><th><?= t('Länge (km)') ?></th><th><?= t('Pioniert') ?></th>
+                <th><?= t('Pässe') ?></th><th><?= t('Kanten gefahren') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -37,7 +37,7 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
                         <a href="/admin/game/player?q=<?= urlencode((string)$r['handle']) ?>">@<?= $e($r['handle']) ?></a>
                     <?php else: ?>
                         <a href="/admin/game/player?q=<?= urlencode((string)($r['display_name'] ?? ('#' . $r['user_id']))) ?>"><?= $e($r['display_name'] ?? ('#' . $r['user_id'])) ?></a>
-                        <span class="muted" style="font-size:.8rem">(kein Handle)</span>
+                        <span class="muted" style="font-size:.8rem"><?= t('(kein Handle)') ?></span>
                     <?php endif; ?>
                 </td>
                 <td><?= (int)$r['held_edges'] ?></td>

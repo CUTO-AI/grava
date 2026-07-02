@@ -17,29 +17,28 @@ $fmtDate = static function (?string $iso): string {
 ?>
 <section class="card">
     <header class="page-header">
-        <h1>Meine Routen</h1>
-        <a href="/routes/new" class="btn-primary">+ Neue Route</a>
+        <h1><?= t('Meine Routen') ?></h1>
+        <a href="/routes/new" class="btn-primary"><?= t('+ Neue Route') ?></a>
     </header>
 
     <?php if (!$verified): ?>
         <div class="alert alert-warn">
-            Deine E-Mail-Adresse ist noch nicht bestätigt. Du kannst bestehende Routen
-            einsehen und verwalten, aber erst nach der Bestätigung neue hochladen.
+            <?= t('Deine E-Mail-Adresse ist noch nicht bestätigt. Du kannst bestehende Routen einsehen und verwalten, aber erst nach der Bestätigung neue hochladen.') ?>
         </div>
     <?php endif; ?>
 
     <?php if (empty($routes)): ?>
-        <p class="muted">Du hast noch keine Routen angelegt.</p>
+        <p class="muted"><?= t('Du hast noch keine Routen angelegt.') ?></p>
     <?php else: ?>
         <div class="table-wrap">
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Titel</th>
-                        <th>Distanz</th>
-                        <th>Höhenmeter</th>
-                        <th>Sichtbarkeit</th>
-                        <th>Aktualisiert</th>
+                        <th><?= t('Titel') ?></th>
+                        <th><?= t('Distanz') ?></th>
+                        <th><?= t('Höhenmeter') ?></th>
+                        <th><?= t('Sichtbarkeit') ?></th>
+                        <th><?= t('Aktualisiert') ?></th>
                         <th></th>
                     </tr>
                 </thead>
@@ -69,7 +68,7 @@ $fmtDate = static function (?string $iso): string {
                             </td>
                             <td class="muted"><?= $fmtDate($r['updated_at'] ?? $r['created_at'] ?? null) ?></td>
                             <td class="row-actions">
-                                <a href="/routes/<?= htmlspecialchars((string)$r['id'], ENT_QUOTES, 'UTF-8') ?>/edit" class="btn-link">Bearbeiten</a>
+                                <a href="/routes/<?= htmlspecialchars((string)$r['id'], ENT_QUOTES, 'UTF-8') ?>/edit" class="btn-link"><?= t('Bearbeiten') ?></a>
                             </td>
                         </tr>
                     <?php endforeach; ?>

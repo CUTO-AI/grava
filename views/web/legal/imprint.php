@@ -1,9 +1,9 @@
 <!-- Hero Section -->
 <section class="hero hero--single-column" style="padding: 80px 24px 48px;">
     <div class="hero-content">
-        <h1 class="hero-title" style="font-size: 42px;">Impressum</h1>
+        <h1 class="hero-title" style="font-size: 42px;"><?= t('Impressum') ?></h1>
         <p class="hero-subtitle" style="color: var(--muted);">
-            Angaben gemäß § 5 TMG
+            <?= t('Angaben gemäß § 5 TMG') ?>
         </p>
     </div>
 </section>
@@ -11,68 +11,68 @@
 <!-- Content Section -->
 <section class="legal-content">
     <div class="legal-container">
-        <h2>Verantwortlich für den Inhalt</h2>
+        <h2><?= t('Verantwortlich für den Inhalt') ?></h2>
         <p>
-            [Platzhalter – Name / Firma]<br>
-            [Platzhalter – Straße und Hausnummer]<br>
-            [Platzhalter – PLZ und Ort]<br>
-            [Platzhalter – Land]
+            <?= t('[Platzhalter – Name / Firma]') ?><br>
+            <?= t('[Platzhalter – Straße und Hausnummer]') ?><br>
+            <?= t('[Platzhalter – PLZ und Ort]') ?><br>
+            <?= t('[Platzhalter – Land]') ?>
         </p>
 
-        <h2>Kontakt</h2>
+        <h2><?= t('Kontakt') ?></h2>
         <p>
-            E-Mail: [Platzhalter – Kontakt-E-Mail]<br>
-            Telefon: [Platzhalter – optional]
+            <?= t('E-Mail:') ?> <?= t('[Platzhalter – Kontakt-E-Mail]') ?><br>
+            <?= t('Telefon:') ?> <?= t('[Platzhalter – optional]') ?>
         </p>
 
-        <h2>Handelsregister</h2>
+        <h2><?= t('Handelsregister') ?></h2>
         <p>
-            [Platzhalter – falls zutreffend: Registergericht, Registernummer]<br>
-            [Platzhalter – falls zutreffend: USt-IdNr.]
+            <?= t('[Platzhalter – falls zutreffend: Registergericht, Registernummer]') ?><br>
+            <?= t('[Platzhalter – falls zutreffend: USt-IdNr.]') ?>
         </p>
 
-        <h2>Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV</h2>
+        <h2><?= t('Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV') ?></h2>
         <p>
-            [Platzhalter – Name]<br>
-            [Platzhalter – Anschrift wie oben]
+            <?= t('[Platzhalter – Name]') ?><br>
+            <?= t('[Platzhalter – Anschrift wie oben]') ?>
         </p>
 
-        <h2>Haftungsausschluss</h2>
+        <h2><?= t('Haftungsausschluss') ?></h2>
 
-        <h3>Haftung für Inhalte</h3>
+        <h3><?= t('Haftung für Inhalte') ?></h3>
         <p>
-            Die Inhalte unserer Seiten wurden mit größter Sorgfalt erstellt. Für die Richtigkeit,
+            <?= t('Die Inhalte unserer Seiten wurden mit größter Sorgfalt erstellt. Für die Richtigkeit,
             Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen.
             Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten
-            nach den allgemeinen Gesetzen verantwortlich.
+            nach den allgemeinen Gesetzen verantwortlich.') ?>
         </p>
 
-        <h3>Haftung für Links</h3>
+        <h3><?= t('Haftung für Links') ?></h3>
         <p>
-            Unser Angebot enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir
+            <?= t('Unser Angebot enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir
             keinen Einfluss haben. Deshalb können wir für diese fremden Inhalte auch keine
             Gewähr übernehmen. Für die Inhalte der verlinkten Seiten ist stets der jeweilige
-            Anbieter oder Betreiber der Seiten verantwortlich.
+            Anbieter oder Betreiber der Seiten verantwortlich.') ?>
         </p>
 
-        <h3>Urheberrecht</h3>
+        <h3><?= t('Urheberrecht') ?></h3>
         <p>
-            Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten
+            <?= t('Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten
             unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung,
             Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes
-            bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.
+            bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.') ?>
         </p>
 
-        <h2>Online-Streitbeilegung</h2>
+        <h2><?= t('Online-Streitbeilegung') ?></h2>
         <p>
-            Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS)
-            bereit: <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener"
+            <?= t('Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS)
+            bereit:') ?> <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener"
             style="color: var(--primary);">https://ec.europa.eu/consumers/odr/</a>
         </p>
 
         <p style="margin-top: 40px; text-align: center;">
-            <a href="/privacy" style="color: var(--primary);">Datenschutzerklärung</a> ·
-            <a href="/terms" style="color: var(--primary);">Nutzungsbedingungen</a>
+            <a href="/privacy" style="color: var(--primary);"><?= t('Datenschutzerklärung') ?></a> ·
+            <a href="/terms" style="color: var(--primary);"><?= t('Nutzungsbedingungen') ?></a>
         </p>
     </div>
 </section>

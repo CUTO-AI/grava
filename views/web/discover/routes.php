@@ -40,56 +40,56 @@ if ($mapRoutes !== []) {
 ?>
 
 <header class="page-header">
-    <h1>Routen entdecken</h1>
-    <p class="muted">Öffentliche Routen aus der Community.
-        <a href="/discover/users">User entdecken &rarr;</a>
+    <h1><?= t('Routen entdecken') ?></h1>
+    <p class="muted"><?= t('Öffentliche Routen aus der Community.') ?>
+        <a href="/discover/users"><?= t('User entdecken') ?> &rarr;</a>
     </p>
 </header>
 
 <form method="get" action="/discover" class="filter-form">
     <label>
-        Suche
-        <input type="text" name="q" value="<?= $h($filters['q'] ?? '') ?>" placeholder="Titel enthält…" maxlength="100">
+        <?= t('Suche') ?>
+        <input type="text" name="q" value="<?= $h($filters['q'] ?? '') ?>" placeholder="<?= te('Titel enthält…') ?>" maxlength="100">
     </label>
     <label>
-        Sortierung
+        <?= t('Sortierung') ?>
         <select name="sort">
             <?php foreach ([
-                'newest' => 'Neueste zuerst',
-                'oldest' => 'Älteste zuerst',
-                'distance_asc'  => 'Distanz aufsteigend',
-                'distance_desc' => 'Distanz absteigend',
+                'newest' => t('Neueste zuerst'),
+                'oldest' => t('Älteste zuerst'),
+                'distance_asc'  => t('Distanz aufsteigend'),
+                'distance_desc' => t('Distanz absteigend'),
             ] as $val => $label): ?>
                 <option value="<?= $h($val) ?>" <?= ($filters['sort'] ?? '') === $val ? 'selected' : '' ?>><?= $h($label) ?></option>
             <?php endforeach; ?>
         </select>
     </label>
     <label>
-        BBox (minLat,minLon,maxLat,maxLon)
+        <?= t('BBox (minLat,minLon,maxLat,maxLon)') ?>
         <input type="text" name="bbox" value="<?= $h($filters['bbox'] ?? '') ?>" placeholder="48.0,8.0,50.0,10.0" maxlength="80">
     </label>
     <?php if (!empty($filters['tags'])): foreach ($filters['tags'] as $t): ?>
         <input type="hidden" name="tag[]" value="<?= $h($t) ?>">
     <?php endforeach; endif; ?>
     <div class="form-actions">
-        <button type="submit">Filtern</button>
-        <a href="/discover" class="btn-link">Zurücksetzen</a>
+        <button type="submit"><?= t('Filtern') ?></button>
+        <a href="/discover" class="btn-link"><?= t('Zurücksetzen') ?></a>
     </div>
 </form>
 
 <?php if (!empty($filters['tags'])): ?>
     <p class="tag-list">
-        Tags:
+        <?= t('Tags:') ?>
         <?php foreach ($filters['tags'] as $t): ?>
             <span class="tag">#<?= $h($t) ?></span>
         <?php endforeach; ?>
-        <a href="/discover" class="btn-link">× alle Tags entfernen</a>
+        <a href="/discover" class="btn-link">× <?= t('alle Tags entfernen') ?></a>
     </p>
 <?php endif; ?>
 
 <?php if (empty($routes)): ?>
     <div class="empty-state">
-        <p>Keine Routen passen zu deinen Filtern.</p>
+        <p><?= t('Keine Routen passen zu deinen Filtern.') ?></p>
     </div>
 <?php else: ?>
     <?php if ($mapRoutes !== []): ?>
@@ -98,12 +98,12 @@ if ($mapRoutes !== []) {
     <table class="data-table">
         <thead>
             <tr>
-                <th>Titel</th>
-                <th>Owner</th>
-                <th class="num">Distanz</th>
-                <th class="num">Höhenmeter</th>
-                <th>Tags</th>
-                <th>Erstellt</th>
+                <th><?= t('Titel') ?></th>
+                <th><?= t('Owner') ?></th>
+                <th class="num"><?= t('Distanz') ?></th>
+                <th class="num"><?= t('Höhenmeter') ?></th>
+                <th><?= t('Tags') ?></th>
+                <th><?= t('Erstellt') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -140,16 +140,16 @@ if ($mapRoutes !== []) {
     $qs = $_GET; unset($qs['offset']);
     ?>
     <p class="muted">
-        Zeige <?= $h($offset + 1) ?>–<?= $h(min($offset + $limit, $total)) ?> von <?= $h($total) ?>
+        <?= t('Zeige') ?> <?= $h($offset + 1) ?>–<?= $h(min($offset + $limit, $total)) ?> <?= t('von') ?> <?= $h($total) ?>
     </p>
     <p class="pagination">
         <?php if ($offset > 0):
             $qs['offset'] = max(0, $offset - $limit); ?>
-            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">← Vorherige</a>
+            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">← <?= t('Vorherige') ?></a>
         <?php endif; ?>
         <?php if ($hasMore):
             $qs['offset'] = $offset + $limit; ?>
-            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">Nächste →</a>
+            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link"><?= t('Nächste') ?> →</a>
         <?php endif; ?>
     </p>
 <?php endif; ?>

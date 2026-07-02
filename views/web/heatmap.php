@@ -19,12 +19,12 @@ $_pageScripts = [
 ?>
 
 <header class="page-header">
-    <h1>Crowd-Heatmap</h1>
+    <h1><?= t('Crowd-Heatmap') ?></h1>
     <p class="muted">
-        Aggregierte Dichte öffentlicher Routen in einem
+        <?= t('Aggregierte Dichte öffentlicher Routen in einem') ?>
         <?= $h($num((float)($meta['grid'] ?? 0))) ?>°-Raster
-        (~<?= $h(round(((float)($meta['grid'] ?? 0)) * 111)) ?> km pro Zelle).
-        Anonym &amp; vorberechnet.
+        (~<?= $h(round(((float)($meta['grid'] ?? 0)) * 111)) ?> <?= t('km pro Zelle') ?>).
+        <?= t('Anonym &amp; vorberechnet.') ?>
     </p>
 </header>
 
@@ -34,32 +34,29 @@ $_pageScripts = [
 <div id="map-legend" class="map-legend" hidden></div>
 <?php if ($linesEnabled): ?>
 <p class="muted map-hint">
-    Oben rechts umschaltbar: <strong>Dichte</strong> (Raster-Heatmap) und
-    <strong>Strecken</strong> — die tatsächlich gefahrenen Wege, aufs
-    Straßennetz gematcht. Linienfarbe = Ø Untergrund, Breite = Häufigkeit.
-    Die Strecken-Ebene lädt den jeweils sichtbaren Kartenausschnitt nach.
+    <?= t('Oben rechts umschaltbar:') ?> <strong><?= t('Dichte') ?></strong> <?= t('(Raster-Heatmap) und') ?>
+    <strong><?= t('Strecken') ?></strong> <?= t('— die tatsächlich gefahrenen Wege, aufs Straßennetz gematcht. Linienfarbe = Ø Untergrund, Breite = Häufigkeit. Die Strecken-Ebene lädt den jeweils sichtbaren Kartenausschnitt nach.') ?>
 </p>
 <?php else: ?>
 <p class="muted map-hint">
-    <strong>Dichte</strong> (Raster-Heatmap) der öffentlichen Routen.
+    <strong><?= t('Dichte') ?></strong> <?= t('(Raster-Heatmap) der öffentlichen Routen.') ?>
 </p>
 <?php endif; ?>
 
 <?php if (empty($cells)): ?>
     <div class="empty-state">
-        <p>Noch keine Daten. Sobald öffentliche Routen existieren und die
-        Aggregation lief (<code>cron:heatmap</code>), erscheinen hier die heißesten Regionen.</p>
+        <p><?= t('Noch keine Daten. Sobald öffentliche Routen existieren und die Aggregation lief') ?> (<code>cron:heatmap</code>)<?= t(', erscheinen hier die heißesten Regionen.') ?></p>
     </div>
 <?php else: ?>
-    <p class="muted"><?= $h((int)($meta['cell_count'] ?? 0)) ?> Zellen · stärkste Zelle: <?= $h($maxW) ?> Routen</p>
+    <p class="muted"><?= $h((int)($meta['cell_count'] ?? 0)) ?> <?= t('Zellen · stärkste Zelle:') ?> <?= $h($maxW) ?> <?= t('Routen') ?></p>
     <table class="data-table">
         <thead>
             <tr>
-                <th>Intensität</th>
-                <th class="num">Routen</th>
-                <th class="num">Breite (lat)</th>
-                <th class="num">Länge (lon)</th>
-                <th>Karte</th>
+                <th><?= t('Intensität') ?></th>
+                <th class="num"><?= t('Routen') ?></th>
+                <th class="num"><?= t('Breite (lat)') ?></th>
+                <th class="num"><?= t('Länge (lon)') ?></th>
+                <th><?= t('Karte') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -74,14 +71,14 @@ $_pageScripts = [
                 <td class="num"><?= $h($num($c['lon'])) ?></td>
                 <td>
                     <a href="/discover?bbox=<?= $h($num($c['lat'] - 0.05)) ?>,<?= $h($num($c['lon'] - 0.05)) ?>,<?= $h($num($c['lat'] + 0.05)) ?>,<?= $h($num($c['lon'] + 0.05)) ?>"
-                       class="btn-link">Routen hier →</a>
+                       class="btn-link"><?= t('Routen hier →') ?></a>
                 </td>
             </tr>
         <?php endforeach; ?>
         </tbody>
     </table>
     <p class="muted">
-        Maschinenlesbar als GeoJSON: <code>GET /api/v1/heatmap</code>
-        (optional <code>?bbox=minLon,minLat,maxLon,maxLat</code>).
+        <?= t('Maschinenlesbar als GeoJSON:') ?> <code>GET /api/v1/heatmap</code>
+        (<?= t('optional') ?> <code>?bbox=minLon,minLat,maxLon,maxLat</code>).
     </p>
 <?php endif; ?>

@@ -16,7 +16,7 @@ $_pageScripts = [
 ];
 ?>
 <section class="card">
-    <p class="muted shared-flag">Geteilte Route — schreibgeschützt</p>
+    <p class="muted shared-flag"><?= t('Geteilte Route — schreibgeschützt') ?></p>
     <h1><?= htmlspecialchars((string)$route['title'], ENT_QUOTES, 'UTF-8') ?></h1>
 
     <?php if (!empty($route['description'])): ?>
@@ -30,11 +30,11 @@ $_pageScripts = [
     <?php if (!empty($insights)) { include __DIR__ . '/partials/route-insights.php'; } ?>
 
     <dl class="profile profile--wide">
-        <dt>Distanz</dt>      <dd><?= $fmtKm($route['distance_meters'] ?? null) ?></dd>
-        <dt>Höhenmeter</dt>   <dd>↑ <?= $fmtElev($route['elevation_gain_meters'] ?? null) ?></dd>
-        <dt>Punkte</dt>       <dd><?= (int)($route['point_count'] ?? 0) ?></dd>
+        <dt><?= t('Distanz') ?></dt>      <dd><?= $fmtKm($route['distance_meters'] ?? null) ?></dd>
+        <dt><?= t('Höhenmeter') ?></dt>   <dd>↑ <?= $fmtElev($route['elevation_gain_meters'] ?? null) ?></dd>
+        <dt><?= t('Punkte') ?></dt>       <dd><?= (int)($route['point_count'] ?? 0) ?></dd>
         <?php if (!empty($route['tags'])): ?>
-            <dt>Tags</dt>
+            <dt><?= t('Tags') ?></dt>
             <dd>
                 <div class="tag-list">
                     <?php foreach ($route['tags'] as $t): ?>
@@ -44,14 +44,14 @@ $_pageScripts = [
             </dd>
         <?php endif; ?>
         <?php if ($bbox !== null): ?>
-            <dt>Bounding-Box</dt>
+            <dt><?= t('Bounding-Box') ?></dt>
             <dd class="muted">
                 <?= number_format((float)$bbox['min_lat'], 4, ',', '.') ?>, <?= number_format((float)$bbox['min_lon'], 4, ',', '.') ?>
                   – <?= number_format((float)$bbox['max_lat'], 4, ',', '.') ?>, <?= number_format((float)$bbox['max_lon'], 4, ',', '.') ?>
             </dd>
         <?php endif; ?>
         <?php if ($centroid !== null): ?>
-            <dt>Mittelpunkt</dt>
+            <dt><?= t('Mittelpunkt') ?></dt>
             <dd class="muted">
                 <?= number_format((float)$centroid['lat'], 5, ',', '.') ?>, <?= number_format((float)$centroid['lon'], 5, ',', '.') ?>
             </dd>
@@ -60,5 +60,5 @@ $_pageScripts = [
 </section>
 
 <p class="muted" style="text-align:center;">
-    Diese Route wurde mit dir geteilt. Du brauchst kein Konto, um sie anzusehen.
+    <?= t('Diese Route wurde mit dir geteilt. Du brauchst kein Konto, um sie anzusehen.') ?>
 </p>

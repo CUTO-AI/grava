@@ -8,24 +8,24 @@ $kmFromMeters = static fn(?int $m): string => $m === null ? '—' : number_forma
 ?>
 
 <header class="page-header">
-    <h1>Dein Feed</h1>
-    <p class="muted">Neue öffentliche Routen von Usern, denen du folgst.</p>
+    <h1><?= t('Dein Feed') ?></h1>
+    <p class="muted"><?= t('Neue öffentliche Routen von Usern, denen du folgst.') ?></p>
 </header>
 
 <?php if (empty($routes)): ?>
     <div class="empty-state">
-        <p>Noch keine Aktivität. <a href="/discover/users">User entdecken</a> und folgen!</p>
+        <p><?= t('Noch keine Aktivität.') ?> <a href="/discover/users"><?= t('User entdecken') ?></a> <?= t('und folgen!') ?></p>
     </div>
 <?php else: ?>
     <table class="data-table">
         <thead>
             <tr>
-                <th>Titel</th>
-                <th>User</th>
-                <th class="num">Distanz</th>
-                <th class="num">Höhenmeter</th>
-                <th>Tags</th>
-                <th>Veröffentlicht</th>
+                <th><?= t('Titel') ?></th>
+                <th><?= t('User') ?></th>
+                <th class="num"><?= t('Distanz') ?></th>
+                <th class="num"><?= t('Höhenmeter') ?></th>
+                <th><?= t('Tags') ?></th>
+                <th><?= t('Veröffentlicht') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -59,15 +59,15 @@ $kmFromMeters = static fn(?int $m): string => $m === null ? '—' : number_forma
     $hasMore = !empty($pagination['has_more']);
     $qs = $_GET; unset($qs['offset']);
     ?>
-    <p class="muted">Zeige <?= $h($offset + 1) ?>–<?= $h(min($offset + $limit, $total)) ?> von <?= $h($total) ?></p>
+    <p class="muted"><?= t('Zeige') ?> <?= $h($offset + 1) ?>–<?= $h(min($offset + $limit, $total)) ?> <?= t('von') ?> <?= $h($total) ?></p>
     <p class="pagination">
         <?php if ($offset > 0):
             $qs['offset'] = max(0, $offset - $limit); ?>
-            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">← Vorherige</a>
+            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">← <?= t('Vorherige') ?></a>
         <?php endif; ?>
         <?php if ($hasMore):
             $qs['offset'] = $offset + $limit; ?>
-            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link">Nächste →</a>
+            <a href="?<?= $h(http_build_query($qs)) ?>" class="btn-link"><?= t('Nächste') ?> →</a>
         <?php endif; ?>
     </p>
 <?php endif; ?>

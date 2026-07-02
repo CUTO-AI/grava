@@ -9,20 +9,20 @@ $f = static function (string $field) use ($errors): string {
 };
 ?>
 <section class="card">
-    <h1>Neues Passwort festlegen</h1>
+    <h1><?= t('Neues Passwort festlegen') ?></h1>
     <?php if ($token === ''): ?>
-        <div class="alert alert-error">Kein Token in der URL gefunden.</div>
+        <div class="alert alert-error"><?= t('Kein Token in der URL gefunden.') ?></div>
     <?php else: ?>
         <form method="post" action="/reset-password" novalidate>
             <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
             <input type="hidden" name="token" value="<?= htmlspecialchars($token, ENT_QUOTES, 'UTF-8') ?>">
             <label>
-                Neues Passwort
+                <?= t('Neues Passwort') ?>
                 <input type="password" name="new_password" autocomplete="new-password" required minlength="10" maxlength="200">
                 <?= $f('new_password') ?>
                 <?= $f('token') ?>
             </label>
-            <button type="submit">Passwort setzen</button>
+            <button type="submit"><?= t('Passwort setzen') ?></button>
         </form>
     <?php endif; ?>
 </section>

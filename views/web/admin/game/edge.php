@@ -10,21 +10,21 @@ $num = static fn($v): string => number_format((float)$v, 1);
     <a href="/admin/game/config">Config</a>
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/game/moderation">Moderation</a>
-    <a href="/admin/game/players">Spieler</a>
-    <a href="/admin/game/player">Spieler-Detail</a>
+    <a href="/admin/game/players"><?= t('Spieler') ?></a>
+    <a href="/admin/game/player"><?= t('Spieler-Detail') ?></a>
     <a href="/admin/game/crews">Crews</a>
-    <a href="/admin/game/map">Karte</a>
+    <a href="/admin/game/map"><?= t('Karte') ?></a>
 </nav>
 <section class="card">
-    <h1>Game · Kanten-Inspector</h1>
+    <h1>Game · <?= t('Kanten-Inspector') ?></h1>
     <form method="get" action="/admin/game/edge" class="inline-form">
-        <label>Kanten-ID <input type="number" name="id" value="<?= $e($edgeId) ?>"></label>
-        <button type="submit" class="btn-primary">Suchen</button>
+        <label><?= t('Kanten-ID') ?> <input type="number" name="id" value="<?= $e($edgeId) ?>"></label>
+        <button type="submit" class="btn-primary"><?= t('Suchen') ?></button>
     </form>
 </section>
 <?php if ($inspector === null): ?>
 <section class="card">
-    <p class="muted">Kante nicht gefunden.</p>
+    <p class="muted"><?= t('Kante nicht gefunden.') ?></p>
 </section>
 <?php else:
     $edge = $inspector['edge'];
@@ -33,33 +33,33 @@ $num = static fn($v): string => number_format((float)$v, 1);
     $edgeIdInt = (int)($edge['id'] ?? 0);
 ?>
 <section class="card">
-    <h2>Kante #<?= (int)($edge['id'] ?? 0) ?></h2>
+    <h2><?= t('Kante') ?> #<?= (int)($edge['id'] ?? 0) ?></h2>
     <p class="muted">
         Way-ID: <strong><?= $e($edge['way_id'] ?? '') ?></strong> ·
-        Länge: <strong><?= $num($edge['length_m'] ?? 0) ?>&nbsp;m</strong> ·
+        <?= t('Länge') ?>: <strong><?= $num($edge['length_m'] ?? 0) ?>&nbsp;m</strong> ·
         Owner: <strong><?= $owner !== null ? '@' . $e($owner['handle'] ?? '') : '—' ?></strong> ·
         n: <strong><?= (int)$inspector['n'] ?></strong> ·
         n90: <strong><?= (int)$inspector['n90'] ?></strong>
     </p>
     <p class="muted">
-        Pionier: <strong><?= $num($value['pioneer']) ?></strong> ·
-        Popularität: <strong><?= $num($value['popularity']) ?></strong> ·
-        Kuration: <strong><?= $num($value['curation']) ?></strong> ·
-        Gesamt: <strong><?= $num($value['total']) ?></strong> ·
-        Frische: <strong><?= $num($edge['freshness_cached'] ?? 0) ?></strong>
+        <?= t('Pionier') ?>: <strong><?= $num($value['pioneer']) ?></strong> ·
+        <?= t('Popularität') ?>: <strong><?= $num($value['popularity']) ?></strong> ·
+        <?= t('Kuration') ?>: <strong><?= $num($value['curation']) ?></strong> ·
+        <?= t('Gesamt') ?>: <strong><?= $num($value['total']) ?></strong> ·
+        <?= t('Frische') ?>: <strong><?= $num($edge['freshness_cached'] ?? 0) ?></strong>
     </p>
     <form method="post" action="/admin/game/edge/<?= $edgeIdInt ?>/recalc" class="inline-form">
         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
-        <button type="submit" class="btn-accent">Kante neu rechnen</button>
+        <button type="submit" class="btn-accent"><?= t('Kante neu rechnen') ?></button>
     </form>
 </section>
 <section class="card">
-    <h2>Kohorte (Erst-Pässe)</h2>
+    <h2><?= t('Kohorte (Erst-Pässe)') ?></h2>
     <?php if ($inspector['cohort'] === []): ?>
-        <p class="muted">Keine Pässe.</p>
+        <p class="muted"><?= t('Keine Pässe.') ?></p>
     <?php else: ?>
     <table class="data-table">
-        <thead><tr><th>Fahrer</th><th>User-ID</th><th>Erster Pass</th><th>Aktion</th></tr></thead>
+        <thead><tr><th><?= t('Fahrer') ?></th><th>User-ID</th><th><?= t('Erster Pass') ?></th><th><?= t('Aktion') ?></th></tr></thead>
         <tbody>
         <?php foreach ($inspector['cohort'] as $c): ?>
             <tr>
@@ -70,8 +70,8 @@ $num = static fn($v): string => number_format((float)$v, 1);
                     <form method="post" action="/admin/game/user/<?= (int)($c['user_id'] ?? 0) ?>/ban" class="inline-form">
                         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
                         <input type="hidden" name="edge_id" value="<?= $edgeIdInt ?>">
-                        <input type="text" name="reason" placeholder="Grund">
-                        <button type="submit" class="btn-accent">User sperren</button>
+                        <input type="text" name="reason" placeholder="<?= te('Grund') ?>">
+                        <button type="submit" class="btn-accent"><?= t('User sperren') ?></button>
                     </form>
                 </td>
             </tr>
@@ -81,13 +81,13 @@ $num = static fn($v): string => number_format((float)$v, 1);
     <?php endif; ?>
 </section>
 <section class="card">
-    <h2>Pässe</h2>
+    <h2><?= t('Pässe') ?></h2>
     <?php if ($inspector['passes'] === []): ?>
-        <p class="muted">Keine Pässe.</p>
+        <p class="muted"><?= t('Keine Pässe.') ?></p>
     <?php else: ?>
     <table class="data-table">
         <thead>
-            <tr><th>ID</th><th>Fahrer</th><th>Geritten am</th><th>Invalidiert</th><th>Aktion</th></tr>
+            <tr><th>ID</th><th><?= t('Fahrer') ?></th><th><?= t('Geritten am') ?></th><th><?= t('Invalidiert') ?></th><th><?= t('Aktion') ?></th></tr>
         </thead>
         <tbody>
         <?php foreach ($inspector['passes'] as $p): ?>
@@ -101,14 +101,14 @@ $num = static fn($v): string => number_format((float)$v, 1);
                     <form method="post" action="/admin/game/pass/<?= (int)($p['id'] ?? 0) ?>/invalidate" class="inline-form">
                         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
                         <input type="hidden" name="edge_id" value="<?= $edgeIdInt ?>">
-                        <input type="text" name="reason" placeholder="Grund">
-                        <button type="submit" class="btn-accent">Invalidieren</button>
+                        <input type="text" name="reason" placeholder="<?= te('Grund') ?>">
+                        <button type="submit" class="btn-accent"><?= t('Invalidieren') ?></button>
                     </form>
                     <?php else: ?>
                     <form method="post" action="/admin/game/pass/<?= (int)($p['id'] ?? 0) ?>/reactivate" class="inline-form">
                         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
                         <input type="hidden" name="edge_id" value="<?= $edgeIdInt ?>">
-                        <button type="submit" class="btn-primary">Reaktivieren</button>
+                        <button type="submit" class="btn-primary"><?= t('Reaktivieren') ?></button>
                     </form>
                     <?php endif; ?>
                 </td>

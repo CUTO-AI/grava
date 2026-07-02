@@ -16,15 +16,15 @@ $fmtHintKm = static function ($m): string {
 };
 ?>
 <section class="route-hints">
-    <h2>Hinweise zur Strecke</h2>
+    <h2><?= t('Hinweise zur Strecke') ?></h2>
     <div class="table-wrap">
         <table class="data-table hint-table">
             <thead>
                 <tr>
                     <th>km</th>
-                    <th>Typ</th>
-                    <th>Bezeichnung</th>
-                    <th>Notiz</th>
+                    <th><?= t('Typ') ?></th>
+                    <th><?= t('Bezeichnung') ?></th>
+                    <th><?= t('Notiz') ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -38,7 +38,7 @@ $fmtHintKm = static function ($m): string {
                         <td class="hint-km-cell"><?= htmlspecialchars($fmtHintKm($h['distance_m'] ?? null), ENT_QUOTES, 'UTF-8') ?></td>
                         <td>
                             <span class="hint-dot" style="background: <?= $color ?>;"></span>
-                            <?= $isNeg ? 'negativ' : 'positiv' ?>
+                            <?= $isNeg ? t('negativ') : t('positiv') ?>
                         </td>
                         <td><?= htmlspecialchars((string)($h['label'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                         <td class="muted"><?= empty($h['note']) ? '—' : htmlspecialchars((string)$h['note'], ENT_QUOTES, 'UTF-8') ?></td>

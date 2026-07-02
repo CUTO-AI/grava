@@ -11,11 +11,11 @@ $active = static fn(?string $s, ?string $cur): string => $s === $cur ? ' style="
     <a href="/admin/game/config">Config</a>
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/game/moderation">Moderation</a>
-    <a href="/admin/game/players">Spieler</a>
-    <a href="/admin/game/player">Spieler-Detail</a>
+    <a href="/admin/game/players"><?= t('Spieler') ?></a>
+    <a href="/admin/game/player"><?= t('Spieler-Detail') ?></a>
     <a href="/admin/game/crews">Crews</a>
     <a href="/admin/game/edge">Inspector</a>
-    <a href="/admin/game/map">Karte</a>
+    <a href="/admin/game/map"><?= t('Karte') ?></a>
 </nav>
 <section class="card">
     <h1>Game · Ingest</h1>
@@ -23,33 +23,33 @@ $active = static fn(?string $s, ?string $cur): string => $s === $cur ? ' style="
         ok: <strong><?= (int)$ingestHealth['ok'] ?></strong> ·
         pending: <strong><?= (int)$ingestHealth['pending'] ?></strong> ·
         failed: <strong><?= (int)$ingestHealth['failed'] ?></strong> ·
-        Match-Rate: <strong><?= number_format((float)$ingestHealth['match_rate'] * 100, 1) ?>&nbsp;%</strong>
+        <?= t('Match-Rate') ?>: <strong><?= number_format((float)$ingestHealth['match_rate'] * 100, 1) ?>&nbsp;%</strong>
     </p>
     <form method="post" action="/admin/game/ingest" class="inline-form" style="margin:.5rem 0">
         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
-        <label>Route ingestieren
-            <input type="text" name="route" placeholder="Route-ID oder Public-ID (UUID)" size="40">
+        <label><?= t('Route ingestieren') ?>
+            <input type="text" name="route" placeholder="<?= te('Route-ID oder Public-ID (UUID)') ?>" size="40">
         </label>
-        <button type="submit" class="btn-primary">Ingestieren</button>
+        <button type="submit" class="btn-primary"><?= t('Ingestieren') ?></button>
     </form>
     <p class="muted" style="margin-top:0">
-        Holt eine beliebige Route nachträglich ins Spiel — auch ohne bestehenden
-        Log-Eintrag. Akzeptiert die interne Route-ID (Zahl) oder die Public-ID.
+        <?= t('Holt eine beliebige Route nachträglich ins Spiel — auch ohne bestehenden
+        Log-Eintrag. Akzeptiert die interne Route-ID (Zahl) oder die Public-ID.') ?>
     </p>
     <p class="inline-form">
-        <a href="/admin/game/ingest"<?= $active(null, $status) ?>>Alle</a> ·
+        <a href="/admin/game/ingest"<?= $active(null, $status) ?>><?= t('Alle') ?></a> ·
         <a href="/admin/game/ingest?status=ok"<?= $active('ok', $status) ?>>ok</a> ·
         <a href="/admin/game/ingest?status=pending"<?= $active('pending', $status) ?>>pending</a> ·
         <a href="/admin/game/ingest?status=failed"<?= $active('failed', $status) ?>>failed</a>
     </p>
     <?php if ($rows === []): ?>
-        <p class="muted">Keine Ingest-Einträge.</p>
+        <p class="muted"><?= t('Keine Ingest-Einträge.') ?></p>
     <?php else: ?>
     <table class="data-table">
         <thead>
             <tr>
-                <th>Zeit</th><th>Route</th><th>User</th><th>Status</th>
-                <th>Kanten</th><th>Neue Pässe</th><th>Fehler</th><th>Aktion</th>
+                <th><?= t('Zeit') ?></th><th>Route</th><th>User</th><th>Status</th>
+                <th><?= t('Kanten') ?></th><th><?= t('Neue Pässe') ?></th><th><?= t('Fehler') ?></th><th><?= t('Aktion') ?></th>
             </tr>
         </thead>
         <tbody>
@@ -65,7 +65,7 @@ $active = static fn(?string $s, ?string $cur): string => $s === $cur ? ' style="
                 <td>
                     <form method="post" action="/admin/game/ingest/<?= (int)($r['route_id'] ?? 0) ?>" class="inline-form">
                         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
-                        <button type="submit" class="btn-accent">Erneut ingestieren</button>
+                        <button type="submit" class="btn-accent"><?= t('Erneut ingestieren') ?></button>
                     </form>
                 </td>
             </tr>

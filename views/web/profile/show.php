@@ -12,19 +12,19 @@ $handle = (string)$profile['handle'];
 ?>
 
 <header class="page-header profile-header">
-    <img class="profile-avatar" src="/u/<?= $h($handle) ?>/avatar" alt="Profilbild von @<?= $h($handle) ?>" width="96" height="96">
+    <img class="profile-avatar" src="/u/<?= $h($handle) ?>/avatar" alt="<?= te('Profilbild von') ?> @<?= $h($handle) ?>" width="96" height="96">
     <h1>@<?= $h($handle) ?></h1>
     <?php if (!empty($profile['display_name'])): ?>
         <p class="profile-display-name"><?= $h($profile['display_name']) ?></p>
     <?php endif; ?>
     <p class="muted">
-        Beigetreten am <?= $h(substr((string)$profile['joined_at'], 0, 10)) ?>
+        <?= t('Beigetreten am') ?> <?= $h(substr((string)$profile['joined_at'], 0, 10)) ?>
     </p>
 
     <ul class="profile-stats">
-        <li><strong><?= $h($profile['route_count_public']) ?></strong> Routen</li>
-        <li><strong><?= $h($profile['follower_count']) ?></strong> Follower</li>
-        <li><strong><?= $h($profile['following_count']) ?></strong> Folgt</li>
+        <li><strong><?= $h($profile['route_count_public']) ?></strong> <?= t('Routen') ?></li>
+        <li><strong><?= $h($profile['follower_count']) ?></strong> <?= t('Follower') ?></li>
+        <li><strong><?= $h($profile['following_count']) ?></strong> <?= t('Folgt') ?></li>
     </ul>
 
     <?php if ($_authedUser !== null && !$isSelf): ?>
@@ -32,42 +32,42 @@ $handle = (string)$profile['handle'];
             <?php if (!empty($profile['is_followed_by_viewer'])): ?>
                 <form method="post" action="/u/<?= $h($handle) ?>/unfollow" class="inline-form">
                     <input type="hidden" name="_csrf" value="<?= $h($_csrf) ?>">
-                    <button type="submit" class="btn-secondary">Nicht mehr folgen</button>
+                    <button type="submit" class="btn-secondary"><?= t('Nicht mehr folgen') ?></button>
                 </form>
             <?php else: ?>
                 <form method="post" action="/u/<?= $h($handle) ?>/follow" class="inline-form">
                     <input type="hidden" name="_csrf" value="<?= $h($_csrf) ?>">
-                    <button type="submit" class="btn-primary">Folgen</button>
+                    <button type="submit" class="btn-primary"><?= t('Folgen') ?></button>
                 </form>
             <?php endif; ?>
-            <form method="post" action="/u/<?= $h($handle) ?>/block" class="inline-form" onsubmit="return confirm('@<?= $h($handle) ?> wirklich blockieren? Bestehende Follow-Beziehungen werden entfernt.');">
+            <form method="post" action="/u/<?= $h($handle) ?>/block" class="inline-form" onsubmit="return confirm('@<?= $h($handle) ?> <?= te('wirklich blockieren? Bestehende Follow-Beziehungen werden entfernt.') ?>');">
                 <input type="hidden" name="_csrf" value="<?= $h($_csrf) ?>">
-                <button type="submit" class="btn-danger">Blockieren</button>
+                <button type="submit" class="btn-danger"><?= t('Blockieren') ?></button>
             </form>
         </div>
     <?php elseif ($isSelf): ?>
         <p class="muted profile-self-hint">
-            Das ist dein Profil. <a href="/routes">Routen verwalten</a> ·
-            <a href="/dashboard">Dashboard</a>
+            <?= t('Das ist dein Profil.') ?> <a href="/routes"><?= t('Routen verwalten') ?></a> ·
+            <a href="/dashboard"><?= t('Dashboard') ?></a>
         </p>
     <?php endif; ?>
 </header>
 
 <section>
-    <h2>Public Routen</h2>
+    <h2><?= t('Public Routen') ?></h2>
     <?php if (empty($routes)): ?>
         <div class="empty-state">
-            <p>Noch keine öffentlichen Routen.</p>
+            <p><?= t('Noch keine öffentlichen Routen.') ?></p>
         </div>
     <?php else: ?>
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Titel</th>
-                    <th class="num">Distanz</th>
-                    <th class="num">Höhenmeter</th>
-                    <th>Tags</th>
-                    <th>Erstellt</th>
+                    <th><?= t('Titel') ?></th>
+                    <th class="num"><?= t('Distanz') ?></th>
+                    <th class="num"><?= t('Höhenmeter') ?></th>
+                    <th><?= t('Tags') ?></th>
+                    <th><?= t('Erstellt') ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -87,7 +87,7 @@ $handle = (string)$profile['handle'];
             </tbody>
         </table>
         <?php if (!empty($pagination['total'])): ?>
-            <p class="muted">Zeige <?= $h(count($routes)) ?> von <?= $h($pagination['total']) ?></p>
+            <p class="muted"><?= t('Zeige') ?> <?= $h(count($routes)) ?> <?= t('von') ?> <?= $h($pagination['total']) ?></p>
         <?php endif; ?>
     <?php endif; ?>
 </section>

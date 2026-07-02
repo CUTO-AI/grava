@@ -29,9 +29,9 @@ $_pageScripts = [
 <header class="page-header">
     <h1><?= $h($route['title']) ?></h1>
     <p class="muted">
-        Von <a href="/u/<?= $h($handle) ?>">@<?= $h($handle) ?></a>
-        · erstellt am <?= $h(substr($route['created_at'] ?? '', 0, 10)) ?>
-        <span class="badge badge-public">public</span>
+        <?= t('Von') ?> <a href="/u/<?= $h($handle) ?>">@<?= $h($handle) ?></a>
+        · <?= t('erstellt am') ?> <?= $h(substr($route['created_at'] ?? '', 0, 10)) ?>
+        <span class="badge badge-public"><?= t('public') ?></span>
     </p>
 
     <div class="like-bar">
@@ -39,18 +39,18 @@ $_pageScripts = [
             <?php if (!empty($likes['liked_by_viewer'])): ?>
                 <form method="post" action="/u/<?= $h($handle) ?>/r/<?= $h($route['id']) ?>/unlike" class="inline-form">
                     <input type="hidden" name="_csrf" value="<?= $h($_csrf) ?>">
-                    <button type="submit" class="btn-secondary">♥ Geliked</button>
+                    <button type="submit" class="btn-secondary">♥ <?= t('Geliked') ?></button>
                 </form>
             <?php else: ?>
                 <form method="post" action="/u/<?= $h($handle) ?>/r/<?= $h($route['id']) ?>/like" class="inline-form">
                     <input type="hidden" name="_csrf" value="<?= $h($_csrf) ?>">
-                    <button type="submit" class="btn-primary">♡ Liken</button>
+                    <button type="submit" class="btn-primary">♡ <?= t('Liken') ?></button>
                 </form>
             <?php endif; ?>
         <?php endif; ?>
         <span class="like-count"><strong><?= $h((int)$likes['count']) ?></strong> Like<?= (int)$likes['count'] === 1 ? '' : 's' ?></span>
         <?php if (!empty($likes['recent'])): ?>
-            <span class="muted">— zuletzt:
+            <span class="muted">— <?= t('zuletzt:') ?>
                 <?php foreach ($likes['recent'] as $i => $rh): ?><?= $i > 0 ? ', ' : '' ?><a href="/u/<?= $h($rh) ?>">@<?= $h($rh) ?></a><?php endforeach; ?>
             </span>
         <?php endif; ?>
@@ -65,20 +65,20 @@ $_pageScripts = [
 
 <?php if (!empty($route['description'])): ?>
     <section class="route-description">
-        <h2>Beschreibung</h2>
+        <h2><?= t('Beschreibung') ?></h2>
         <p><?= nl2br($h($route['description'])) ?></p>
     </section>
 <?php endif; ?>
 
 <section>
-    <h2>Statistik</h2>
+    <h2><?= t('Statistik') ?></h2>
     <dl class="profile">
-        <dt>Distanz</dt>      <dd><?= $h($kmFromMeters($stats['distance_m'] ?? null)) ?></dd>
-        <dt>Höhenmeter</dt>   <dd><?= $h($stats['elevation_gain_m'] ?? '—') ?> m</dd>
-        <dt>Punkte</dt>       <dd><?= $h($stats['point_count'] ?? '—') ?></dd>
-        <dt>Format</dt>       <dd><?= $h($route['format'] ?? '—') ?></dd>
+        <dt><?= t('Distanz') ?></dt>      <dd><?= $h($kmFromMeters($stats['distance_m'] ?? null)) ?></dd>
+        <dt><?= t('Höhenmeter') ?></dt>   <dd><?= $h($stats['elevation_gain_m'] ?? '—') ?> m</dd>
+        <dt><?= t('Punkte') ?></dt>       <dd><?= $h($stats['point_count'] ?? '—') ?></dd>
+        <dt><?= t('Format') ?></dt>       <dd><?= $h($route['format'] ?? '—') ?></dd>
         <?php if ($bbox): ?>
-            <dt>Bounding Box</dt>
+            <dt><?= t('Bounding Box') ?></dt>
             <dd><code><?= $h(sprintf('%.4f, %.4f → %.4f, %.4f', $bbox['min_lat'], $bbox['min_lon'], $bbox['max_lat'], $bbox['max_lon'])) ?></code></dd>
         <?php endif; ?>
         <?php if ($cent): ?>
@@ -90,7 +90,7 @@ $_pageScripts = [
 
 <?php if (!empty($route['tags'])): ?>
     <section>
-        <h2>Tags</h2>
+        <h2><?= t('Tags') ?></h2>
         <p>
             <?php foreach ($route['tags'] as $t): ?>
                 <a href="/discover?tag=<?= $h($t) ?>" class="tag">#<?= $h($t) ?></a>
@@ -100,25 +100,25 @@ $_pageScripts = [
 <?php endif; ?>
 
 <section class="comments">
-    <h2>Kommentare (<?= $h((int)($commentsPagination['total'] ?? 0)) ?>)</h2>
+    <h2><?= t('Kommentare') ?> (<?= $h((int)($commentsPagination['total'] ?? 0)) ?>)</h2>
 
     <?php if ($_authedUser !== null): ?>
         <form method="post" action="/u/<?= $h($handle) ?>/r/<?= $h($pid) ?>/comment" class="comment-form">
             <input type="hidden" name="_csrf" value="<?= $h($_csrf) ?>">
             <label>
-                Kommentar schreiben
-                <textarea name="body" rows="3" maxlength="2000" required placeholder="Schöne Tour!"></textarea>
+                <?= t('Kommentar schreiben') ?>
+                <textarea name="body" rows="3" maxlength="2000" required placeholder="<?= te('Schöne Tour!') ?>"></textarea>
             </label>
             <div class="form-actions">
-                <button type="submit">Kommentieren</button>
+                <button type="submit"><?= t('Kommentieren') ?></button>
             </div>
         </form>
     <?php else: ?>
-        <p class="muted"><a href="/login">Melde dich an</a>, um zu kommentieren.</p>
+        <p class="muted"><a href="/login"><?= t('Melde dich an') ?></a><?= t(', um zu kommentieren.') ?></p>
     <?php endif; ?>
 
     <?php if (empty($comments)): ?>
-        <div class="empty-state"><p>Noch keine Kommentare.</p></div>
+        <div class="empty-state"><p><?= t('Noch keine Kommentare.') ?></p></div>
     <?php else: ?>
         <ul class="comment-list">
             <?php foreach ($comments as $c):
@@ -128,15 +128,15 @@ $_pageScripts = [
                         <?php if ($ah): ?>
                             <a href="/u/<?= $h($ah) ?>">@<?= $h($ah) ?></a>
                         <?php else: ?>
-                            <span class="muted"><?= $h($c['author']['display_name'] ?? 'Unbekannt') ?></span>
+                            <span class="muted"><?= $h($c['author']['display_name'] ?? t('Unbekannt')) ?></span>
                         <?php endif; ?>
                         <span class="muted comment-date"><?= $h(substr((string)$c['created_at'], 0, 10)) ?></span>
                     </div>
                     <div class="comment-body"><?= nl2br($h($c['body'])) ?></div>
                     <?php if (!empty($c['can_delete'])): ?>
-                        <form method="post" action="/u/<?= $h($handle) ?>/r/<?= $h($pid) ?>/comments/<?= $h($c['id']) ?>/delete" class="inline-form" onsubmit="return confirm('Kommentar löschen?');">
+                        <form method="post" action="/u/<?= $h($handle) ?>/r/<?= $h($pid) ?>/comments/<?= $h($c['id']) ?>/delete" class="inline-form" onsubmit="return confirm('<?= t('Kommentar löschen?') ?>');">
                             <input type="hidden" name="_csrf" value="<?= $h($_csrf) ?>">
-                            <button type="submit" class="btn-link comment-delete">löschen</button>
+                            <button type="submit" class="btn-link comment-delete"><?= t('löschen') ?></button>
                         </form>
                     <?php endif; ?>
                 </li>
@@ -146,5 +146,5 @@ $_pageScripts = [
 </section>
 
 <p>
-    <a href="/u/<?= $h($handle) ?>" class="btn-link">← Zurück zu @<?= $h($handle) ?>'s Profil</a>
+    <a href="/u/<?= $h($handle) ?>" class="btn-link">← <?= t('Zurück zu') ?> @<?= $h($handle) ?><?= t('\'s Profil') ?></a>
 </p>

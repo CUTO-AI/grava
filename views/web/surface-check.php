@@ -14,8 +14,8 @@
 $h = static fn(string|int|float|null $v): string => htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8');
 
 $scoreLabels = [
-    0 => 'sehr glatt', 1 => 'glatt', 2 => 'überwiegend fest',
-    3 => 'gemischt', 4 => 'ruppig', 5 => 'grob / Schotter',
+    0 => t('sehr glatt'), 1 => t('glatt'), 2 => t('überwiegend fest'),
+    3 => t('gemischt'), 4 => t('ruppig'), 5 => t('grob / Schotter'),
 ];
 
 $result   = $result ?? null;
@@ -33,22 +33,22 @@ $_pageScripts = [
 ?>
 
 <header class="page-header">
-    <h1>Belag prüfen</h1>
+    <h1><?= t('Belag prüfen') ?></h1>
     <p class="muted">
-        Lade eine fremde Route (z. B. Strava-GPX) hoch — GRAVA gleicht sie mit den
+        <?= t('Lade eine fremde Route (z. B. Strava-GPX) hoch — GRAVA gleicht sie mit den
         vorhandenen Crowd-Belagsdaten ab und zeigt dir, wie die Strecke wirklich ist.
-        Die Datei wird <strong>nicht gespeichert</strong>.
+        Die Datei wird') ?> <strong><?= t('nicht gespeichert') ?></strong>.
     </p>
 </header>
 
 <?php if (!$verified): ?>
-    <div class="flash">Bitte bestätige zuerst deine E-Mail-Adresse, um Routen zu analysieren.</div>
+    <div class="flash"><?= t('Bitte bestätige zuerst deine E-Mail-Adresse, um Routen zu analysieren.') ?></div>
 <?php endif; ?>
 
 <form method="post" action="/surface-check" enctype="multipart/form-data" class="upload-form">
     <input type="hidden" name="_csrf" value="<?= $h($_csrf) ?>">
     <div class="field">
-        <label for="payload">GPX- oder GeoJSON-Datei</label>
+        <label for="payload"><?= t('GPX- oder GeoJSON-Datei') ?></label>
         <input type="file" id="payload" name="payload" accept=".gpx,.geojson,.json,application/gpx+xml,application/geo+json">
         <?php if (!empty($errors['payload'])): ?>
             <?php foreach ($errors['payload'] as $msg): ?>
@@ -56,7 +56,7 @@ $_pageScripts = [
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
-    <button type="submit" class="btn">Analysieren</button>
+    <button type="submit" class="btn"><?= t('Analysieren') ?></button>
 </form>
 
 <?php if ($hasResult): ?>
@@ -71,31 +71,31 @@ $_pageScripts = [
     ?>
 
     <section class="surface-result">
-        <h2>Belags-Profil<?php if ($filename): ?> <span class="muted">· <?= $h($filename) ?></span><?php endif; ?></h2>
+        <h2><?= t('Belags-Profil') ?><?php if ($filename): ?> <span class="muted">· <?= $h($filename) ?></span><?php endif; ?></h2>
 
         <div class="surface-summary">
             <div class="surface-stat">
                 <span class="surface-stat-value"><?= $h(number_format($cov, 0, ',', '.')) ?> %</span>
-                <span class="surface-stat-label">mit Crowd-Daten abgedeckt</span>
+                <span class="surface-stat-label"><?= t('mit Crowd-Daten abgedeckt') ?></span>
                 <div class="coverage-bar"><span style="width: <?= $h(max(0, min(100, $cov))) ?>%"></span></div>
-                <span class="muted"><?= $h($km($covered)) ?> von <?= $h($km($total)) ?> km</span>
+                <span class="muted"><?= $h($km($covered)) ?> <?= t('von') ?> <?= $h($km($total)) ?> <?= t('km') ?></span>
             </div>
             <div class="surface-stat">
                 <span class="surface-stat-value">
                     <?= $avg !== null ? $h(number_format((float)$avg, 1, ',', '.')) : '–' ?>
                 </span>
-                <span class="surface-stat-label">Ø Untergrund<?php if ($avgLabel): ?> · <?= $h($avgLabel) ?><?php endif; ?></span>
+                <span class="surface-stat-label"><?= t('Ø Untergrund') ?><?php if ($avgLabel): ?> · <?= $h($avgLabel) ?><?php endif; ?></span>
             </div>
         </div>
 
         <ul class="bucket-list">
-            <li><span class="swatch swatch-paved"></span> Befestigt/glatt: <strong><?= $h(number_format((float)($buckets['paved'] ?? 0), 0, ',', '.')) ?> %</strong></li>
-            <li><span class="swatch swatch-mixed"></span> Gemischt: <strong><?= $h(number_format((float)($buckets['mixed'] ?? 0), 0, ',', '.')) ?> %</strong></li>
-            <li><span class="swatch swatch-gravel"></span> Schotter/grob: <strong><?= $h(number_format((float)($buckets['gravel'] ?? 0), 0, ',', '.')) ?> %</strong></li>
+            <li><span class="swatch swatch-paved"></span> <?= t('Befestigt/glatt') ?>: <strong><?= $h(number_format((float)($buckets['paved'] ?? 0), 0, ',', '.')) ?> %</strong></li>
+            <li><span class="swatch swatch-mixed"></span> <?= t('Gemischt') ?>: <strong><?= $h(number_format((float)($buckets['mixed'] ?? 0), 0, ',', '.')) ?> %</strong></li>
+            <li><span class="swatch swatch-gravel"></span> <?= t('Schotter/grob') ?>: <strong><?= $h(number_format((float)($buckets['gravel'] ?? 0), 0, ',', '.')) ?> %</strong></li>
         </ul>
 
         <?php if ($cov <= 0): ?>
-            <p class="muted">Für diese Route liegen noch keine Crowd-Daten vor. Die Karte zeigt die Strecke neutral.</p>
+            <p class="muted"><?= t('Für diese Route liegen noch keine Crowd-Daten vor. Die Karte zeigt die Strecke neutral.') ?></p>
         <?php endif; ?>
 
         <div id="map" class="map map--full"
@@ -105,7 +105,7 @@ $_pageScripts = [
 
         <?php if ($valhallaEnabled && $token !== null): ?>
             <p class="surface-actions">
-                <button type="button" id="surface-details-btn" class="btn-link">Details zur Wegbeschaffenheit (präzise)</button>
+                <button type="button" id="surface-details-btn" class="btn-link"><?= t('Details zur Wegbeschaffenheit (präzise)') ?></button>
                 <span id="surface-details-status" class="muted"></span>
             </p>
         <?php endif; ?>

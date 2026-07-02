@@ -10,18 +10,18 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     <a href="/admin/game/config">Config</a>
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/game/moderation">Moderation</a>
-    <a href="/admin/game/players">Spieler</a>
-    <a href="/admin/game/player">Spieler-Detail</a>
+    <a href="/admin/game/players"><?= t('Spieler') ?></a>
+    <a href="/admin/game/player"><?= t('Spieler-Detail') ?></a>
     <a href="/admin/game/crews">Crews</a>
     <a href="/admin/game/edge">Inspector</a>
-    <a href="/admin/game/map">Karte</a>
+    <a href="/admin/game/map"><?= t('Karte') ?></a>
 </nav>
 <section class="card">
     <h1>Game · Config</h1>
     <form method="post" action="/admin/game/config">
         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
         <table class="data-table">
-            <thead><tr><th>Parameter</th><th>Wert</th></tr></thead>
+            <thead><tr><th><?= t('Parameter') ?></th><th><?= t('Wert') ?></th></tr></thead>
             <tbody>
             <?php foreach ($config as $key => $val): ?>
                 <tr>
@@ -41,12 +41,12 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
             <?php endforeach; ?>
             </tbody>
         </table>
-        <button type="submit" class="btn-primary">Speichern</button>
+        <button type="submit" class="btn-primary"><?= t('Speichern') ?></button>
     </form>
 </section>
 <section class="card">
     <h2>Recompute</h2>
-    <p class="muted">Leeres BBox-Feld → voller Recompute. Format: minLon,minLat,maxLon,maxLat.</p>
+    <p class="muted"><?= t('Leeres BBox-Feld → voller Recompute. Format: minLon,minLat,maxLon,maxLat.') ?></p>
     <form method="post" action="/admin/game/recompute" class="inline-form">
         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
         <label>BBox <input type="text" name="bbox" placeholder="minLon,minLat,maxLon,maxLat"></label>
@@ -54,9 +54,9 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     </form>
 </section>
 <section class="card">
-    <h2>Pionier-Vorschau</h2>
+    <h2><?= t('Pionier-Vorschau') ?></h2>
     <table class="data-table">
-        <thead><tr><th>n (distinct riders)</th><th>Pionier-Wert</th></tr></thead>
+        <thead><tr><th>n (distinct riders)</th><th><?= t('Pionier-Wert') ?></th></tr></thead>
         <tbody>
         <?php foreach ($pioneerPreview as $row): ?>
             <tr>

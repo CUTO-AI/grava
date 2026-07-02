@@ -2,7 +2,7 @@
 /** @var array<string,mixed> $user */
 /** @var string $_csrf */
 $name = $user['display_name'] ?? null;
-$greeting = $name !== null && $name !== '' ? $name : ($user['email'] ?? 'Fahrer*in');
+$greeting = $name !== null && $name !== '' ? $name : ($user['email'] ?? t('Fahrer*in'));
 
 // L7: ISO-8601 lesbar formatieren. Wenn die intl-Extension geladen
 // ist, nutzen wir sie für Locale-korrekte Ausgabe — sonst eine
@@ -44,41 +44,41 @@ if ($createdAt !== '') {
 }
 ?>
 <section class="card">
-    <h1>Hallo, <?= htmlspecialchars((string)$greeting, ENT_QUOTES, 'UTF-8') ?>!</h1>
-    <p>Willkommen im GRAVA Dashboard.</p>
+    <h1><?= t('Hallo') ?>, <?= htmlspecialchars((string)$greeting, ENT_QUOTES, 'UTF-8') ?>!</h1>
+    <p><?= t('Willkommen im GRAVA Dashboard.') ?></p>
 
     <dl class="profile">
-        <dt>E-Mail</dt>
+        <dt><?= t('E-Mail') ?></dt>
         <dd><?= htmlspecialchars((string)($user['email'] ?? ''), ENT_QUOTES, 'UTF-8') ?>
             <?php if (empty($user['email_verified'])): ?>
-                <span class="badge badge-warn">nicht bestätigt</span>
+                <span class="badge badge-warn"><?= t('nicht bestätigt') ?></span>
             <?php else: ?>
-                <span class="badge badge-ok">bestätigt</span>
+                <span class="badge badge-ok"><?= t('bestätigt') ?></span>
             <?php endif; ?>
         </dd>
-        <dt>Profil-Handle</dt>
+        <dt><?= t('Profil-Handle') ?></dt>
         <dd>
             <?php $handle = (string)($user['public_handle'] ?? ''); if ($handle !== ''): ?>
                 <a href="/u/<?= htmlspecialchars($handle, ENT_QUOTES, 'UTF-8') ?>">@<?= htmlspecialchars($handle, ENT_QUOTES, 'UTF-8') ?></a>
             <?php else: ?>
-                <span class="muted">noch nicht gesetzt</span> ·
-                <a href="/settings/handle">jetzt festlegen</a>
+                <span class="muted"><?= t('noch nicht gesetzt') ?></span> ·
+                <a href="/settings/handle"><?= t('jetzt festlegen') ?></a>
             <?php endif; ?>
         </dd>
-        <dt>Konto seit</dt>
+        <dt><?= t('Konto seit') ?></dt>
         <dd><?= htmlspecialchars($createdAtDisplay, ENT_QUOTES, 'UTF-8') ?></dd>
-        <dt>User-ID</dt>
+        <dt><?= t('User-ID') ?></dt>
         <dd><code><?= htmlspecialchars((string)($user['id'] ?? ''), ENT_QUOTES, 'UTF-8') ?></code></dd>
     </dl>
 
     <form method="post" action="/logout">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
-        <button type="submit" class="btn-secondary">Abmelden</button>
+        <button type="submit" class="btn-secondary"><?= t('Abmelden') ?></button>
     </form>
 </section>
 
 <section class="card">
-    <h2>Funktionen &amp; Neuigkeiten</h2>
-    <p class="muted">Was grava alles kann und was als Nächstes kommt.</p>
-    <p><a class="btn-primary" href="/features">Funktionen &amp; Neuigkeiten ansehen</a></p>
+    <h2><?= t('Funktionen &amp; Neuigkeiten') ?></h2>
+    <p class="muted"><?= t('Was grava alles kann und was als Nächstes kommt.') ?></p>
+    <p><a class="btn-primary" href="/features"><?= t('Funktionen &amp; Neuigkeiten ansehen') ?></a></p>
 </section>

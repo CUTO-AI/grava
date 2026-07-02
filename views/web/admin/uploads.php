@@ -30,29 +30,29 @@ $pages = max(1, (int)ceil($total / max(1, $limit)));
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/uploads" style="font-weight:700">Uploads</a>
     <a href="/admin/game/moderation">Moderation</a>
-    <a href="/admin/game/players">Spieler</a>
-    <a href="/admin/game/player">Spieler-Detail</a>
+    <a href="/admin/game/players"><?= t('Spieler') ?></a>
+    <a href="/admin/game/player"><?= t('Spieler-Detail') ?></a>
     <a href="/admin/game/crews">Crews</a>
-    <a href="/admin/game/map">Karte</a>
+    <a href="/admin/game/map"><?= t('Karte') ?></a>
 </nav>
 <section class="card">
     <h1>Admin · Uploads</h1>
     <p class="muted">
-        Gesamt (aktiv): <strong><?= (int)$summary['total'] ?></strong> ·
+        <?= t('Gesamt (aktiv)') ?>: <strong><?= (int)$summary['total'] ?></strong> ·
         app: <strong><?= (int)$summary['by_source']['app'] ?></strong> ·
         strava: <strong><?= (int)$summary['by_source']['strava'] ?></strong> ·
         import: <strong><?= (int)$summary['by_source']['import'] ?></strong> ·
         manual: <strong><?= (int)$summary['by_source']['manual'] ?></strong> ·
-        gelöscht: <strong><?= (int)$summary['deleted'] ?></strong>
+        <?= t('gelöscht') ?>: <strong><?= (int)$summary['deleted'] ?></strong>
     </p>
 
     <form method="get" action="/admin/uploads" class="inline-form" style="margin:.5rem 0;display:flex;gap:.75rem;flex-wrap:wrap;align-items:end">
-        <label>Suche (Titel/User)
-            <input type="text" name="q" value="<?= $e($filters['q']) ?>" placeholder="Titel, Handle oder E-Mail" size="28">
+        <label><?= t('Suche (Titel/User)') ?>
+            <input type="text" name="q" value="<?= $e($filters['q']) ?>" placeholder="<?= te('Titel, Handle oder E-Mail') ?>" size="28">
         </label>
-        <label>Quelle
+        <label><?= t('Quelle') ?>
             <select name="source">
-                <option value="">alle</option>
+                <option value=""><?= t('alle') ?></option>
                 <?php foreach (['app','strava','import','manual'] as $s): ?>
                     <option value="<?= $s ?>"<?= $filters['source'] === $s ? ' selected' : '' ?>><?= $s ?></option>
                 <?php endforeach; ?>
@@ -60,34 +60,34 @@ $pages = max(1, (int)ceil($total / max(1, $limit)));
         </label>
         <label style="display:flex;gap:.35rem;align-items:center">
             <input type="checkbox" name="deleted" value="1"<?= $filters['deleted'] ? ' checked' : '' ?>>
-            gelöschte einblenden
+            <?= t('gelöschte einblenden') ?>
         </label>
-        <button type="submit" class="btn-primary">Filtern</button>
-        <a class="btn-secondary" href="/admin/uploads">Zurücksetzen</a>
+        <button type="submit" class="btn-primary"><?= t('Filtern') ?></button>
+        <a class="btn-secondary" href="/admin/uploads"><?= t('Zurücksetzen') ?></a>
     </form>
 
     <?php if ($rows === []): ?>
-        <p class="muted">Keine Uploads gefunden.</p>
+        <p class="muted"><?= t('Keine Uploads gefunden.') ?></p>
     <?php else: ?>
-    <p class="muted">Treffer: <strong><?= (int)$total ?></strong> · Seite <?= (int)$page ?>/<?= (int)$pages ?></p>
+    <p class="muted"><?= t('Treffer') ?>: <strong><?= (int)$total ?></strong> · <?= t('Seite') ?> <?= (int)$page ?>/<?= (int)$pages ?></p>
     <table class="data-table">
         <thead>
             <tr>
-                <th>Hochgeladen</th>
-                <th>Route</th>
+                <th><?= t('Hochgeladen') ?></th>
+                <th><?= t('Route') ?></th>
                 <th>User</th>
-                <th>Quelle</th>
-                <th>Sichtbarkeit</th>
-                <th>Distanz</th>
-                <th>Datei</th>
-                <th>Spiel</th>
-                <th>Aktion</th>
+                <th><?= t('Quelle') ?></th>
+                <th><?= t('Sichtbarkeit') ?></th>
+                <th><?= t('Distanz') ?></th>
+                <th><?= t('Datei') ?></th>
+                <th><?= t('Spiel') ?></th>
+                <th><?= t('Aktion') ?></th>
             </tr>
         </thead>
         <tbody>
         <?php foreach ($rows as $r): ?>
             <tr<?= $r['deleted_at'] !== null ? ' style="opacity:.55"' : '' ?>>
-                <td><?= $e($r['created_at']) ?><?= $r['deleted_at'] !== null ? ' <span class="badge" style="background:var(--error-bg);color:var(--error-text)">gelöscht</span>' : '' ?></td>
+                <td><?= $e($r['created_at']) ?><?= $r['deleted_at'] !== null ? ' <span class="badge" style="background:var(--error-bg);color:var(--error-text)">' . te('gelöscht') . '</span>' : '' ?></td>
                 <td>
                     <strong><?= $e($r['title']) ?></strong><br>
                     <span class="muted" style="font-size:.8rem"><?= $e($r['public_id']) ?> · #<?= (int)$r['route_id'] ?></span>
@@ -110,8 +110,8 @@ $pages = max(1, (int)ceil($total / max(1, $limit)));
                 </td>
                 <td>
                     <?php if ($r['game_ingested_at'] !== null): ?>
-                        <span class="badge badge-ok">im Spiel</span><br>
-                        <span class="muted" style="font-size:.75rem"><?= (int)$r['game_edges_count'] ?> Kanten · <?= $e($r['game_ingested_at']) ?></span>
+                        <span class="badge badge-ok"><?= t('im Spiel') ?></span><br>
+                        <span class="muted" style="font-size:.75rem"><?= (int)$r['game_edges_count'] ?> <?= t('Kanten') ?> · <?= $e($r['game_ingested_at']) ?></span>
                     <?php else: ?>
                         <span class="muted">—</span>
                     <?php endif; ?>
@@ -133,8 +133,8 @@ $pages = max(1, (int)ceil($total / max(1, $limit)));
     </table>
 
     <p class="inline-form" style="margin-top:1rem;display:flex;gap:1rem">
-        <?php if ($page > 1): ?><a class="btn-secondary" href="/admin/uploads<?= $qs(['page' => $page - 1]) ?>">← Zurück</a><?php endif; ?>
-        <?php if ($page < $pages): ?><a class="btn-secondary" href="/admin/uploads<?= $qs(['page' => $page + 1]) ?>">Weiter →</a><?php endif; ?>
+        <?php if ($page > 1): ?><a class="btn-secondary" href="/admin/uploads<?= $qs(['page' => $page - 1]) ?>">← <?= t('Zurück') ?></a><?php endif; ?>
+        <?php if ($page < $pages): ?><a class="btn-secondary" href="/admin/uploads<?= $qs(['page' => $page + 1]) ?>"><?= t('Weiter') ?> →</a><?php endif; ?>
     </p>
     <?php endif; ?>
 </section>

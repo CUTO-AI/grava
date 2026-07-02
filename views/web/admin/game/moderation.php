@@ -9,20 +9,20 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     <a href="/admin/game/config">Config</a>
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/game/moderation">Moderation</a>
-    <a href="/admin/game/players">Spieler</a>
-    <a href="/admin/game/player">Spieler-Detail</a>
+    <a href="/admin/game/players"><?= t('Spieler') ?></a>
+    <a href="/admin/game/player"><?= t('Spieler-Detail') ?></a>
     <a href="/admin/game/crews">Crews</a>
     <a href="/admin/game/edge">Inspector</a>
-    <a href="/admin/game/map">Karte</a>
+    <a href="/admin/game/map"><?= t('Karte') ?></a>
 </nav>
 <section class="card">
     <h1>Game · Moderation</h1>
-    <h2>Hohe Pass-Frequenz</h2>
+    <h2><?= t('Hohe Pass-Frequenz') ?></h2>
     <?php if ($highVolume === []): ?>
-        <p class="muted">Keine auffälligen Fahrer.</p>
+        <p class="muted"><?= t('Keine auffälligen Fahrer.') ?></p>
     <?php else: ?>
     <table class="data-table">
-        <thead><tr><th>Fahrer</th><th>User-ID</th><th>Datum</th><th>Pässe/Tag</th><th>Aktion</th></tr></thead>
+        <thead><tr><th><?= t('Fahrer') ?></th><th><?= t('User-ID') ?></th><th><?= t('Datum') ?></th><th><?= t('Pässe/Tag') ?></th><th><?= t('Aktion') ?></th></tr></thead>
         <tbody>
         <?php foreach ($highVolume as $r): ?>
             <tr>
@@ -33,8 +33,8 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
                 <td>
                     <form method="post" action="/admin/game/user/<?= (int)$r['user_id'] ?>/ban" class="inline-form">
                         <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
-                        <input type="text" name="reason" placeholder="Grund">
-                        <button type="submit" class="btn-accent">User sperren</button>
+                        <input type="text" name="reason" placeholder="<?= te('Grund') ?>">
+                        <button type="submit" class="btn-accent"><?= t('User sperren') ?></button>
                     </form>
                 </td>
             </tr>
@@ -44,12 +44,12 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     <?php endif; ?>
 </section>
 <section class="card">
-    <h2>Geschwindigkeits-Auffälligkeiten</h2>
+    <h2><?= t('Geschwindigkeits-Auffälligkeiten') ?></h2>
     <?php if ($suspiciousSpeed === []): ?>
-        <p class="muted">Keine Geschwindigkeits-Auffälligkeiten (Stufe 1).</p>
+        <p class="muted"><?= t('Keine Geschwindigkeits-Auffälligkeiten (Stufe 1).') ?></p>
     <?php else: ?>
     <table class="data-table">
-        <thead><tr><th>Fahrer</th><th>User-ID</th><th>Kante</th><th>Datum</th><th>Ø km/h</th></tr></thead>
+        <thead><tr><th><?= t('Fahrer') ?></th><th><?= t('User-ID') ?></th><th><?= t('Kante') ?></th><th><?= t('Datum') ?></th><th><?= t('Ø km/h') ?></th></tr></thead>
         <tbody>
         <?php foreach ($suspiciousSpeed as $r): ?>
             <tr>

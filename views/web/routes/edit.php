@@ -12,35 +12,35 @@ $err = static function (string $field) use ($errors): string {
 };
 ?>
 <section class="card">
-    <h1>Route bearbeiten</h1>
+    <h1><?= t('Route bearbeiten') ?></h1>
     <p class="muted">
-        Geometrie ist je Version unveränderlich — eine neue Geometrie liefert die
-        App über einen erneuten Upload mit derselben <code>client_route_uuid</code>.
-        Hier passt du nur Metadaten an.
+        <?= t('Geometrie ist je Version unveränderlich — eine neue Geometrie liefert die
+        App über einen erneuten Upload mit derselben') ?> <code>client_route_uuid</code>.
+        <?= t('Hier passt du nur Metadaten an.') ?>
     </p>
 
     <form method="post" action="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>/update" novalidate>
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
 
         <label>
-            Titel
+            <?= t('Titel') ?>
             <input type="text" name="title" maxlength="140" required
                    value="<?= htmlspecialchars($values['title'], ENT_QUOTES, 'UTF-8') ?>">
             <?= $err('title') ?>
         </label>
 
         <label>
-            Beschreibung <span class="muted">(optional)</span>
+            <?= t('Beschreibung') ?> <span class="muted">(<?= t('optional') ?>)</span>
             <textarea name="description" rows="4" maxlength="8000"><?= htmlspecialchars($values['description'], ENT_QUOTES, 'UTF-8') ?></textarea>
             <?= $err('description') ?>
         </label>
 
         <label>
-            Sichtbarkeit
+            <?= t('Sichtbarkeit') ?>
             <select name="visibility">
                 <?php foreach (['private' => 'Privat', 'unlisted' => 'Mit Link teilbar', 'public' => 'Öffentlich (später)'] as $val => $label): ?>
                     <option value="<?= $val ?>" <?= $values['visibility'] === $val ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?>
+                        <?= te($label) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -48,15 +48,15 @@ $err = static function (string $field) use ($errors): string {
         </label>
 
         <label>
-            Tags <span class="muted">(kommagetrennt)</span>
+            <?= t('Tags') ?> <span class="muted">(<?= t('kommagetrennt') ?>)</span>
             <input type="text" name="tags" placeholder="gravel, alps"
                    value="<?= htmlspecialchars($values['tags'], ENT_QUOTES, 'UTF-8') ?>">
             <?= $err('tags') ?>
         </label>
 
         <div class="form-actions">
-            <button type="submit">Speichern</button>
-            <a href="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>" class="btn-link">Abbrechen</a>
+            <button type="submit"><?= t('Speichern') ?></button>
+            <a href="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>" class="btn-link"><?= t('Abbrechen') ?></a>
         </div>
     </form>
 </section>

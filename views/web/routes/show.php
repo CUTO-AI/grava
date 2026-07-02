@@ -33,7 +33,7 @@ $_pageScripts = [
     <header class="page-header">
         <h1><?= htmlspecialchars((string)$route['title'], ENT_QUOTES, 'UTF-8') ?></h1>
         <div class="header-actions">
-            <a href="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>/edit" class="btn-secondary">Bearbeiten</a>
+            <a href="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>/edit" class="btn-secondary"><?= t('Bearbeiten') ?></a>
             <a href="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>/download" class="btn-secondary">Download</a>
         </div>
     </header>
@@ -51,17 +51,17 @@ $_pageScripts = [
     <?php $hints = $route['hints'] ?? []; include __DIR__ . '/../partials/route-hints.php'; ?>
 
     <dl class="profile profile--wide">
-        <dt>Distanz</dt>           <dd><?= $fmtKm($route['distance_meters'] ?? null) ?></dd>
-        <dt>Höhenmeter</dt>        <dd>↑ <?= $fmtElev($route['elevation_gain_meters'] ?? null) ?></dd>
-        <dt>Punkte</dt>            <dd><?= (int)($route['point_count'] ?? 0) ?></dd>
-        <dt>Versionen</dt>         <dd><?= (int)($route['version_count'] ?? 1) ?> (head v<?= (int)($route['head_version'] ?? 1) ?>)</dd>
-        <dt>Sichtbarkeit</dt>      <dd>
+        <dt><?= t('Distanz') ?></dt>           <dd><?= $fmtKm($route['distance_meters'] ?? null) ?></dd>
+        <dt><?= t('Höhenmeter') ?></dt>        <dd>↑ <?= $fmtElev($route['elevation_gain_meters'] ?? null) ?></dd>
+        <dt><?= t('Punkte') ?></dt>            <dd><?= (int)($route['point_count'] ?? 0) ?></dd>
+        <dt><?= t('Versionen') ?></dt>         <dd><?= (int)($route['version_count'] ?? 1) ?> (head v<?= (int)($route['head_version'] ?? 1) ?>)</dd>
+        <dt><?= t('Sichtbarkeit') ?></dt>      <dd>
             <span class="badge badge-<?= htmlspecialchars((string)$route['visibility'], ENT_QUOTES, 'UTF-8') ?>">
                 <?= htmlspecialchars((string)$route['visibility'], ENT_QUOTES, 'UTF-8') ?>
             </span>
         </dd>
         <?php if (!empty($route['tags'])): ?>
-            <dt>Tags</dt>
+            <dt><?= t('Tags') ?></dt>
             <dd>
                 <div class="tag-list">
                     <?php foreach ($route['tags'] as $t): ?>
@@ -71,65 +71,65 @@ $_pageScripts = [
             </dd>
         <?php endif; ?>
         <?php if ($bbox !== null): ?>
-            <dt>Bounding-Box</dt>
+            <dt><?= t('Bounding-Box') ?></dt>
             <dd class="muted">
                 <?= number_format((float)$bbox['min_lat'], 4, ',', '.') ?>, <?= number_format((float)$bbox['min_lon'], 4, ',', '.') ?>
                   – <?= number_format((float)$bbox['max_lat'], 4, ',', '.') ?>, <?= number_format((float)$bbox['max_lon'], 4, ',', '.') ?>
             </dd>
         <?php endif; ?>
         <?php if ($centroid !== null): ?>
-            <dt>Mittelpunkt</dt>
+            <dt><?= t('Mittelpunkt') ?></dt>
             <dd class="muted">
                 <?= number_format((float)$centroid['lat'], 5, ',', '.') ?>, <?= number_format((float)$centroid['lon'], 5, ',', '.') ?>
             </dd>
         <?php endif; ?>
-        <dt>Hochgeladen</dt>
+        <dt><?= t('Hochgeladen') ?></dt>
         <dd class="muted"><?= $fmtDate($route['created_at'] ?? null) ?></dd>
         <?php if (!empty($route['updated_at']) && $route['updated_at'] !== $route['created_at']): ?>
-            <dt>Aktualisiert</dt>
+            <dt><?= t('Aktualisiert') ?></dt>
             <dd class="muted"><?= $fmtDate($route['updated_at'] ?? null) ?></dd>
         <?php endif; ?>
     </dl>
 
     <form method="post" action="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>/delete"
-          onsubmit="return confirm('Diese Route wirklich löschen? Sie kann durch den Cleanup nach 30 Tagen endgültig entfernt werden.');"
+          onsubmit="return confirm('<?= te('Diese Route wirklich löschen? Sie kann durch den Cleanup nach 30 Tagen endgültig entfernt werden.') ?>');"
           class="inline-form">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
-        <button type="submit" class="btn-danger">Route löschen</button>
+        <button type="submit" class="btn-danger"><?= t('Route löschen') ?></button>
     </form>
 </section>
 
 <section class="card">
-    <h2>Teilen</h2>
+    <h2><?= t('Teilen') ?></h2>
     <p class="muted">
-        Erzeuge einen Link, mit dem du diese Route an andere weitergeben kannst.
+        <?= t('Erzeuge einen Link, mit dem du diese Route an andere weitergeben kannst.
         Der Token wird nach der Erzeugung nur einmal angezeigt — kopiere ihn dir
-        sofort weg, falls du ihn brauchst.
+        sofort weg, falls du ihn brauchst.') ?>
     </p>
 
     <?php if ($newShareToken !== null): ?>
         <div class="alert alert-success">
-            <p><strong>Neuer Share-Link:</strong></p>
+            <p><strong><?= t('Neuer Share-Link:') ?></strong></p>
             <p><code class="share-url"><?= htmlspecialchars($shareBaseUrl . $newShareToken, ENT_QUOTES, 'UTF-8') ?></code></p>
-            <p class="muted">Diese Anzeige verschwindet beim nächsten Reload.</p>
+            <p class="muted"><?= t('Diese Anzeige verschwindet beim nächsten Reload.') ?></p>
         </div>
     <?php endif; ?>
 
     <form method="post" action="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>/shares" class="inline-form">
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
-        <button type="submit">+ Neuen Share-Link erzeugen</button>
+        <button type="submit">+ <?= t('Neuen Share-Link erzeugen') ?></button>
     </form>
 
     <?php if (empty($shares)): ?>
-        <p class="muted" style="margin-top:16px;">Noch keine Share-Links erzeugt.</p>
+        <p class="muted" style="margin-top:16px;"><?= t('Noch keine Share-Links erzeugt.') ?></p>
     <?php else: ?>
         <div class="table-wrap" style="margin-top:16px;">
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Erstellt</th>
-                        <th>Aufrufe</th>
-                        <th>Status</th>
+                        <th><?= t('Erstellt') ?></th>
+                        <th><?= t('Aufrufe') ?></th>
+                        <th><?= t('Status') ?></th>
                         <th></th>
                     </tr>
                 </thead>
@@ -146,17 +146,17 @@ $_pageScripts = [
                             <td>
                                 <span class="badge badge-<?= $status ?>"><?= $status ?></span>
                                 <?php if (!empty($s['expires_at'])): ?>
-                                    <span class="muted"> – läuft <?= $fmtDate($s['expires_at']) ?></span>
+                                    <span class="muted"> – <?= t('läuft') ?> <?= $fmtDate($s['expires_at']) ?></span>
                                 <?php endif; ?>
                             </td>
                             <td class="row-actions">
                                 <?php if ($status === 'active'): ?>
                                     <form method="post"
                                           action="/routes/<?= htmlspecialchars($id, ENT_QUOTES, 'UTF-8') ?>/shares/<?= (int)$s['id'] ?>/revoke"
-                                          onsubmit="return confirm('Diesen Share-Link wirklich zurückziehen?');"
+                                          onsubmit="return confirm('<?= te('Diesen Share-Link wirklich zurückziehen?') ?>');"
                                           class="inline-form">
                                         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
-                                        <button type="submit" class="btn-link">Zurückziehen</button>
+                                        <button type="submit" class="btn-link"><?= t('Zurückziehen') ?></button>
                                     </form>
                                 <?php endif; ?>
                             </td>
@@ -169,5 +169,5 @@ $_pageScripts = [
 </section>
 
 <p class="muted" style="text-align:center;">
-    <a href="/routes">← Zurück zur Liste</a>
+    <a href="/routes">← <?= t('Zurück zur Liste') ?></a>
 </p>

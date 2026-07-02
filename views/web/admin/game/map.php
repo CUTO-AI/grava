@@ -14,28 +14,28 @@ $_pageScripts = [
     <a href="/admin/game/config">Config</a>
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/game/moderation">Moderation</a>
-    <a href="/admin/game/players">Spieler</a>
-    <a href="/admin/game/player">Spieler-Detail</a>
+    <a href="/admin/game/players"><?= t('Spieler') ?></a>
+    <a href="/admin/game/player"><?= t('Spieler-Detail') ?></a>
     <a href="/admin/game/crews">Crews</a>
     <a href="/admin/game/edge">Inspector</a>
-    <a href="/admin/game/map"><strong>Karte</strong></a>
+    <a href="/admin/game/map"><strong><?= t('Karte') ?></strong></a>
 </nav>
 <section class="card">
-    <h1>Game · Übersichtskarte</h1>
+    <h1>Game · <?= t('Übersichtskarte') ?></h1>
     <p class="muted">
-        Kanten des sichtbaren Ausschnitts, eingefärbt nach gewähltem Kriterium.
+        <?= t('Kanten des sichtbaren Ausschnitts, eingefärbt nach gewähltem Kriterium.
         Klick auf eine Kante öffnet den Inspector. Beim Verschieben/Zoomen
-        werden die Daten des Viewports nachgeladen.
+        werden die Daten des Viewports nachgeladen.') ?>
     </p>
     <label class="inline-form">
-        Einfärben nach
+        <?= t('Einfärben nach') ?>
         <select id="game-map-color">
-            <option value="value">Wert</option>
-            <option value="freshness">Frische</option>
-            <option value="vulnerability">Übernehmbarkeit</option>
+            <option value="value"><?= t('Wert') ?></option>
+            <option value="freshness"><?= t('Frische') ?></option>
+            <option value="vulnerability"><?= t('Übernehmbarkeit') ?></option>
             <option value="owner">Owner</option>
             <option value="crew">Crew</option>
-            <option value="faction">Fraktion</option>
+            <option value="faction"><?= t('Fraktion') ?></option>
         </select>
     </label>
 </section>
@@ -46,11 +46,11 @@ $_pageScripts = [
 <div id="map-legend" class="map-legend" hidden></div>
 
 <p class="muted map-hint">
-    <strong>Wert</strong>: hell → niedrig, kräftig → hoch (relativ zum Ausschnitt).
-    <strong>Frische</strong>: rot = alt, grün = frisch (0–1).
-    <strong>Übernehmbarkeit</strong>: grün = sicher (Owner klar vorn), rot =
-    übernahmereif (Verfolger nah an der Übernahme-Schwelle).
-    <strong>Owner</strong>: feste Farbe je Fahrer (der die Kante erradelt hat), grau = niemand.
-    <strong>Crew</strong>: feste Farbe je Crew, grau = solo / keine Crew.
-    <strong>Fraktion</strong>: echte Fraktionsfarbe, grau = keiner Fraktion zugeordnet.
+    <strong><?= t('Wert') ?></strong>: <?= t('hell → niedrig, kräftig → hoch (relativ zum Ausschnitt).') ?>
+    <strong><?= t('Frische') ?></strong>: <?= t('rot = alt, grün = frisch (0–1).') ?>
+    <strong><?= t('Übernehmbarkeit') ?></strong>: <?= t('grün = sicher (Owner klar vorn), rot =
+    übernahmereif (Verfolger nah an der Übernahme-Schwelle).') ?>
+    <strong>Owner</strong>: <?= t('feste Farbe je Fahrer (der die Kante erradelt hat), grau = niemand.') ?>
+    <strong>Crew</strong>: <?= t('feste Farbe je Crew, grau = solo / keine Crew.') ?>
+    <strong><?= t('Fraktion') ?></strong>: <?= t('echte Fraktionsfarbe, grau = keiner Fraktion zugeordnet.') ?>
 </p>

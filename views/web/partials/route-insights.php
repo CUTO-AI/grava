@@ -32,16 +32,16 @@ $fmtDist = static function (int $m): string {
 // hoher Score = grob/Gravel = rot.
 $scoreColors = [0 => '#15803d', 1 => '#84cc16', 2 => '#eab308', 3 => '#f97316', 4 => '#e11d48', 5 => '#b91c1c'];
 $scoreLabels = [
-    0 => 'sehr glatt',
-    1 => 'glatt',
-    2 => 'überwiegend fest',
-    3 => 'gemischt',
-    4 => 'ruppig',
-    5 => 'grob / Schotter',
+    0 => t('sehr glatt'),
+    1 => t('glatt'),
+    2 => t('überwiegend fest'),
+    3 => t('gemischt'),
+    4 => t('ruppig'),
+    5 => t('grob / Schotter'),
 ];
 ?>
 <section class="route-insights">
-    <h2>Analyse</h2>
+    <h2><?= t('Analyse') ?></h2>
 
     <?php if (!empty($elev['hasData'])):
         $pts   = $elev['points'];
@@ -79,13 +79,13 @@ $scoreLabels = [
     ?>
         <div class="insight-block">
             <div class="insight-head">
-                <h3>Höhenprofil</h3>
+                <h3><?= t('Höhenprofil') ?></h3>
                 <span class="muted">
-                    ↑ <?= $hh($elev['gain']) ?> m · <?= $hh($minE) ?>–<?= $hh($maxE) ?> m ü. NN · <?= $hh($fmtDist((int)$elev['distanceM'])) ?>
+                    ↑ <?= $hh($elev['gain']) ?> m · <?= $hh($minE) ?>–<?= $hh($maxE) ?> <?= t('m ü. NN') ?> · <?= $hh($fmtDist((int)$elev['distanceM'])) ?>
                 </span>
             </div>
             <svg class="elev-chart" viewBox="0 0 <?= $W ?> <?= $H ?>" preserveAspectRatio="none"
-                 role="img" aria-label="Höhenprofil der Route">
+                 role="img" aria-label="<?= te('Höhenprofil der Route') ?>">
                 <path d="<?= $hh($areaPath) ?>" class="elev-area"/>
                 <polyline points="<?= $hh(implode(' ', $linePoints)) ?>" class="elev-line"
                           vector-effect="non-scaling-stroke"/>
@@ -100,15 +100,15 @@ $scoreLabels = [
     <?php if (!empty($surf['hasData'])): ?>
         <div class="insight-block">
             <div class="insight-head">
-                <h3>Untergrund</h3>
-                <span class="muted">bewertet über <?= $hh($fmtDist((int)$surf['totalM'])) ?></span>
+                <h3><?= t('Untergrund') ?></h3>
+                <span class="muted"><?= t('bewertet über') ?> <?= $hh($fmtDist((int)$surf['totalM'])) ?></span>
             </div>
 
-            <div class="surface-bar" role="img" aria-label="Untergrund-Verteilung">
+            <div class="surface-bar" role="img" aria-label="<?= te('Untergrund-Verteilung') ?>">
                 <?php foreach ($surf['buckets'] as $b):
                     $score = $b['score'];
                     $color = $score === null ? '#9ca3af' : ($scoreColors[$score] ?? '#9ca3af');
-                    $label = $score === null ? 'ohne Bewertung' : ($scoreLabels[$score] ?? ('Score ' . $score));
+                    $label = $score === null ? t('ohne Bewertung') : ($scoreLabels[$score] ?? ('Score ' . $score));
                 ?>
                     <span class="surface-seg"
                           style="width: <?= $hh($b['percent']) ?>%; background: <?= $hh($color) ?>;"
@@ -120,7 +120,7 @@ $scoreLabels = [
                 <?php foreach ($surf['buckets'] as $b):
                     $score = $b['score'];
                     $color = $score === null ? '#9ca3af' : ($scoreColors[$score] ?? '#9ca3af');
-                    $label = $score === null ? 'ohne Bewertung' : ($scoreLabels[$score] ?? ('Score ' . $score));
+                    $label = $score === null ? t('ohne Bewertung') : ($scoreLabels[$score] ?? ('Score ' . $score));
                 ?>
                     <li>
                         <span class="swatch" style="background: <?= $hh($color) ?>;"></span>

@@ -12,58 +12,58 @@ $err = static function (string $field) use ($errors): string {
 };
 ?>
 <section class="card">
-    <h1>Profil-Handle</h1>
+    <h1><?= t('Profil-Handle') ?></h1>
 
     <p class="muted">
-        Dein Handle ist Teil deiner öffentlichen Profil-URL
-        (<code>/u/dein-handle</code>) und identifiziert dich in der
-        Discovery, wenn deine Routen auf <code>public</code> gestellt
-        sind.
+        <?= t('Dein Handle ist Teil deiner öffentlichen Profil-URL') ?>
+        (<code>/u/dein-handle</code>) <?= t('und identifiziert dich in der
+        Discovery, wenn deine Routen auf') ?> <code>public</code> <?= t('gestellt
+        sind.') ?>
     </p>
 
     <?php if ($existing !== null && $existing !== ''): ?>
         <div class="alert alert-success">
-            <p><strong>Dein Handle: @<?= htmlspecialchars((string)$existing, ENT_QUOTES, 'UTF-8') ?></strong></p>
-            <p>Profil-URL: <a href="/u/<?= htmlspecialchars((string)$existing, ENT_QUOTES, 'UTF-8') ?>">/u/<?= htmlspecialchars((string)$existing, ENT_QUOTES, 'UTF-8') ?></a></p>
+            <p><strong><?= t('Dein Handle:') ?> @<?= htmlspecialchars((string)$existing, ENT_QUOTES, 'UTF-8') ?></strong></p>
+            <p><?= t('Profil-URL:') ?> <a href="/u/<?= htmlspecialchars((string)$existing, ENT_QUOTES, 'UTF-8') ?>">/u/<?= htmlspecialchars((string)$existing, ENT_QUOTES, 'UTF-8') ?></a></p>
             <p class="muted">
-                Der Handle ist endgültig. Falls du ihn ändern willst,
-                schreib uns über die Support-Mail.
+                <?= t('Der Handle ist endgültig. Falls du ihn ändern willst,
+                schreib uns über die Support-Mail.') ?>
             </p>
         </div>
     <?php else: ?>
 
         <?php if (!$verified): ?>
             <div class="alert alert-warn">
-                Bitte bestätige zuerst deine E-Mail-Adresse, bevor du einen
-                Handle setzt.
+                <?= t('Bitte bestätige zuerst deine E-Mail-Adresse, bevor du einen
+                Handle setzt.') ?>
             </div>
         <?php else: ?>
 
             <p>
-                <strong>Achtung:</strong> Der Handle kann aktuell nur einmal
-                gesetzt werden. Wähl ihn mit Bedacht.
+                <strong><?= t('Achtung:') ?></strong> <?= t('Der Handle kann aktuell nur einmal
+                gesetzt werden. Wähl ihn mit Bedacht.') ?>
             </p>
 
             <form method="post" action="/settings/handle" novalidate>
                 <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
 
                 <label>
-                    Dein Handle
+                    <?= t('Dein Handle') ?>
                     <input type="text" name="public_handle"
                            pattern="[a-z0-9_]{2,30}"
                            minlength="2" maxlength="30"
                            required autocomplete="off"
-                           placeholder="z. B. gravelfan"
+                           placeholder="<?= te('z. B. gravelfan') ?>"
                            value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>">
                     <small class="muted">
-                        2–30 Zeichen, nur a–z, 0–9 und _. Kein Doppel-_.
+                        <?= t('2–30 Zeichen, nur a–z, 0–9 und _. Kein Doppel-_.') ?>
                     </small>
                     <?= $err('public_handle') ?>
                 </label>
 
                 <div class="form-actions">
-                    <button type="submit">Handle festlegen</button>
-                    <a href="/dashboard" class="btn-link">Abbrechen</a>
+                    <button type="submit"><?= t('Handle festlegen') ?></button>
+                    <a href="/dashboard" class="btn-link"><?= t('Abbrechen') ?></a>
                 </div>
             </form>
         <?php endif; ?>
@@ -71,5 +71,5 @@ $err = static function (string $field) use ($errors): string {
 </section>
 
 <p class="muted" style="text-align:center;">
-    <a href="/dashboard">← Zurück zum Dashboard</a>
+    <a href="/dashboard"><?= t('← Zurück zum Dashboard') ?></a>
 </p>

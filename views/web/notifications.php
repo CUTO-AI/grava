@@ -8,24 +8,24 @@ $items = $items ?? [];
 $pagination = $pagination ?? ['total' => 0, 'has_more' => false, 'limit' => 30, 'offset' => 0];
 
 $label = static function (array $n) use ($h): string {
-    $actor = $n['actor']['handle'] ?? $n['actor']['display_name'] ?? 'Jemand';
+    $actor = $n['actor']['handle'] ?? $n['actor']['display_name'] ?? t('Jemand');
     $actorHtml = $n['actor']['handle']
         ? '<a href="/u/' . $h($n['actor']['handle']) . '">@' . $h($n['actor']['handle']) . '</a>'
         : '<strong>' . $h($actor) . '</strong>';
     return match ((string)$n['type']) {
-        'follow'  => $actorHtml . ' folgt dir jetzt.',
-        'like'    => $actorHtml . ' hat deine Route geliked.',
-        'comment' => $actorHtml . ' hat deine Route kommentiert.',
-        default   => $actorHtml . ' hat interagiert.',
+        'follow'  => $actorHtml . t(' folgt dir jetzt.'),
+        'like'    => $actorHtml . t(' hat deine Route geliked.'),
+        'comment' => $actorHtml . t(' hat deine Route kommentiert.'),
+        default   => $actorHtml . t(' hat interagiert.'),
     };
 };
 ?>
 <section class="notifications-page">
-    <h1>Mitteilungen</h1>
+    <h1><?= t('Mitteilungen') ?></h1>
 
     <?php if (empty($items)): ?>
         <div class="empty-state">
-            <p>Noch keine Mitteilungen. Folge anderen oder teile Routen, dann tut sich hier was.</p>
+            <p><?= t('Noch keine Mitteilungen. Folge anderen oder teile Routen, dann tut sich hier was.') ?></p>
         </div>
     <?php else: ?>
         <ul class="notif-list">
@@ -49,7 +49,7 @@ $label = static function (array $n) use ($h): string {
 
         <?php if (!empty($pagination['has_more'])): ?>
             <div class="pagination">
-                <a href="/notifications?offset=<?= (int)$pagination['offset'] + (int)$pagination['limit'] ?>">Ältere →</a>
+                <a href="/notifications?offset=<?= (int)$pagination['offset'] + (int)$pagination['limit'] ?>"><?= t('Ältere →') ?></a>
             </div>
         <?php endif; ?>
     <?php endif; ?>

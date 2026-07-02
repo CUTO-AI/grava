@@ -10,28 +10,28 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     <a href="/admin/game/config">Config</a>
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/game/moderation">Moderation</a>
-    <a href="/admin/game/players">Spieler</a>
-    <a href="/admin/game/player">Spieler-Detail</a>
+    <a href="/admin/game/players"><?= t('Spieler') ?></a>
+    <a href="/admin/game/player"><?= t('Spieler-Detail') ?></a>
     <a href="/admin/game/crews">Crews</a>
     <a href="/admin/game/edge">Inspector</a>
-    <a href="/admin/game/map">Karte</a>
+    <a href="/admin/game/map"><?= t('Karte') ?></a>
 </nav>
 
 <section class="card">
-    <h1>Game · Spieler-Detail</h1>
+    <h1>Game · <?= t('Spieler-Detail') ?></h1>
     <form method="get" action="/admin/game/player" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-        <input type="text" name="q" value="<?= $e($q) ?>" placeholder="E-Mail oder @handle"
+        <input type="text" name="q" value="<?= $e($q) ?>" placeholder="<?= te('E-Mail oder @handle') ?>"
                style="flex:1;min-width:16rem" autofocus>
-        <button type="submit">Suchen</button>
+        <button type="submit"><?= t('Suchen') ?></button>
     </form>
     <p class="muted" style="margin-top:.5rem">
-        Zeigt, welche Strecken eines Spielers in die Wertung einfliessen — und ob
-        sie aktuell <strong>solo</strong> oder für die <strong>Crew</strong> gehalten werden.
+        <?= t('Zeigt, welche Strecken eines Spielers in die Wertung einfliessen — und ob') ?>
+        <?= t('sie aktuell') ?> <strong><?= t('solo') ?></strong> <?= t('oder für die') ?> <strong><?= t('Crew') ?></strong> <?= t('gehalten werden.') ?>
     </p>
 </section>
 
 <?php if ($q !== '' && $detail === null): ?>
-    <section class="card"><p class="muted">Kein Spieler mit „<?= $e($q) ?>" gefunden (E-Mail oder Handle).</p></section>
+    <section class="card"><p class="muted"><?= t('Kein Spieler mit') ?> „<?= $e($q) ?>" <?= t('gefunden (E-Mail oder Handle).') ?></p></section>
 <?php elseif ($detail !== null): ?>
     <?php
         $u = $detail['user'];
@@ -45,48 +45,48 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
             <tbody>
                 <tr><th>E-Mail</th><td><?= $e($u['email']) ?></td></tr>
                 <tr><th>User-ID</th><td><?= (int)$u['id'] ?> · Status: <?= $e($u['status']) ?></td></tr>
-                <tr><th>Solo-Claimant (Rider)</th><td><?= $detail['rider_claimant_id'] > 0 ? '#' . (int)$detail['rider_claimant_id'] : '— (noch keiner)' ?></td></tr>
+                <tr><th><?= t('Solo-Claimant (Rider)') ?></th><td><?= $detail['rider_claimant_id'] > 0 ? '#' . (int)$detail['rider_claimant_id'] : te('— (noch keiner)') ?></td></tr>
                 <tr>
                     <th>Crew</th>
                     <td>
                         <?php if ($crew !== null): ?>
                             <strong><?= $e($crew['name']) ?></strong> /<?= $e($crew['slug']) ?>
-                            (Claimant #<?= (int)$crew['claimant_id'] ?>, Rolle: <?= $e($crew['role']) ?>)
+                            (Claimant #<?= (int)$crew['claimant_id'] ?>, <?= t('Rolle:') ?> <?= $e($crew['role']) ?>)
                         <?php else: ?>
-                            <span class="muted">keine — fährt solo</span>
+                            <span class="muted"><?= t('keine — fährt solo') ?></span>
                         <?php endif; ?>
                     </td>
                 </tr>
                 <tr>
-                    <th>Effektive Wertung</th>
+                    <th><?= t('Effektive Wertung') ?></th>
                     <td>
                         <?php if ($isCrew): ?>
-                            Befahrungen zählen aktuell für die <strong>Crew</strong> (Claimant #<?= (int)$detail['effective_claimant_id'] ?>).
+                            <?= t('Befahrungen zählen aktuell für die') ?> <strong><?= t('Crew') ?></strong> (Claimant #<?= (int)$detail['effective_claimant_id'] ?>).
                         <?php else: ?>
-                            Befahrungen zählen <strong>solo</strong> (Claimant #<?= (int)$detail['effective_claimant_id'] ?>).
+                            <?= t('Befahrungen zählen') ?> <strong><?= t('solo') ?></strong> (Claimant #<?= (int)$detail['effective_claimant_id'] ?>).
                         <?php endif; ?>
                     </td>
                 </tr>
-                <tr><th>Präsenz-Fenster</th><td><?= (int)$detail['presence_window_days'] ?> Tage (ältere Befahrungen verlieren ihre Präsenz)</td></tr>
+                <tr><th><?= t('Präsenz-Fenster') ?></th><td><?= (int)$detail['presence_window_days'] ?> <?= t('Tage (ältere Befahrungen verlieren ihre Präsenz)') ?></td></tr>
             </tbody>
         </table>
     </section>
 
     <section class="card">
-        <h2>Strecken in der Wertung</h2>
+        <h2><?= t('Strecken in der Wertung') ?></h2>
         <?php if ($detail['routes'] === []): ?>
-            <p class="muted">Keine gewerteten Befahrungen (keine Passes). Diese:r Spieler:in hält aktuell keine Kanten.</p>
+            <p class="muted"><?= t('Keine gewerteten Befahrungen (keine Passes). Diese:r Spieler:in hält aktuell keine Kanten.') ?></p>
         <?php else: ?>
         <p class="muted">
-            „Solo/Crew/Fremd/Frei" = wie viele der vom Spieler befahrenen Kanten aktuell
-            vom Solo-Claimant, der Crew, einem fremden Claimant oder von niemandem gehalten werden.
+            <?= t('„Solo/Crew/Fremd/Frei" = wie viele der vom Spieler befahrenen Kanten aktuell') ?>
+            <?= t('vom Solo-Claimant, der Crew, einem fremden Claimant oder von niemandem gehalten werden.') ?>
         </p>
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Strecke</th><th>km</th><th>Letzte Fahrt</th>
-                    <th>Kanten</th><th>im Fenster</th>
-                    <th>Solo</th><th>Crew</th><th>Fremd</th><th>Frei</th>
+                    <th><?= t('Strecke') ?></th><th>km</th><th><?= t('Letzte Fahrt') ?></th>
+                    <th><?= t('Kanten') ?></th><th><?= t('im Fenster') ?></th>
+                    <th><?= t('Solo') ?></th><th><?= t('Crew') ?></th><th><?= t('Fremd') ?></th><th><?= t('Frei') ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -99,7 +99,7 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
                                 <?= $e($r['title'] ?? $r['public_id']) ?>
                             </a>
                         <?php else: ?>
-                            <span class="muted">Route #<?= (int)$r['route_id'] ?> (gelöscht)</span>
+                            <span class="muted">Route #<?= (int)$r['route_id'] ?> <?= t('(gelöscht)') ?></span>
                         <?php endif; ?>
                     </td>
                     <td><?= $r['km'] !== null ? number_format($r['km'], 1) : '—' ?></td>
@@ -116,7 +116,7 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
             <tfoot>
                 <?php $totalFree = $t['pass_edges'] - $t['held_solo'] - $t['held_crew'] - $t['held_other']; ?>
                 <tr>
-                    <th>Summe</th><th></th><th></th>
+                    <th><?= t('Summe') ?></th><th></th><th></th>
                     <th><?= (int)$t['pass_edges'] ?></th>
                     <th><?= (int)$t['in_window_edges'] ?></th>
                     <th><?= (int)$t['held_solo'] ?></th>
@@ -131,10 +131,10 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 
     <?php if ($detail['unscored_routes'] !== []): ?>
     <section class="card">
-        <h2>Hochgeladen, aber nicht in der Wertung</h2>
-        <p class="muted">Routen ohne (gültige) Game-Passes — z. B. nie ins Spiel ingestiert.</p>
+        <h2><?= t('Hochgeladen, aber nicht in der Wertung') ?></h2>
+        <p class="muted"><?= t('Routen ohne (gültige) Game-Passes — z. B. nie ins Spiel ingestiert.') ?></p>
         <table class="data-table">
-            <thead><tr><th>Strecke</th><th>km</th><th>Sichtbarkeit</th><th>Quelle</th><th>Erstellt</th></tr></thead>
+            <thead><tr><th><?= t('Strecke') ?></th><th>km</th><th><?= t('Sichtbarkeit') ?></th><th><?= t('Quelle') ?></th><th><?= t('Erstellt') ?></th></tr></thead>
             <tbody>
             <?php foreach ($detail['unscored_routes'] as $r): ?>
                 <tr>
