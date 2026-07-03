@@ -327,7 +327,8 @@ $routeSurface = new RouteSurfaceService(
 // CLI dispatch
 // ---------------------------------------------------------------------------
 if (PHP_SAPI === 'cli') {
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo));
+    $cliRegionRepo = new \App\Game\RegionRepository(Db::pdo());
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig));
     exit($cli->run($_SERVER['argv'] ?? []));
 }
 
@@ -432,6 +433,13 @@ $apiGame = new GameController($gameRead, $gameRepo, $gameIngest, $gameConfig, $r
 $apiEdgeRecords = new EdgeRecordController($edgeRecords);
 $apiPlayerBoard = new PlayerLeaderboardController(new PlayerLeaderboardService($gameRepo, $gameConfig));
 $apiSegment = new SegmentSpeedController(new SegmentSpeedService($gameRepo, $gameConfig));
+// Gebiets-Eroberung (CityConquest_Backend_Spec.md): eigener Repo + Read-Service.
+$regionRepo = new \App\Game\RegionRepository(Db::pdo());
+$regionImportSvc = new \App\Game\RegionImportService($regionRepo);
+$regionOwnershipSvc = new \App\Game\RegionOwnershipService($regionRepo, $gameConfig);
+$apiRegion = new \App\Controllers\Api\RegionController(
+    new \App\Game\RegionService($regionRepo, $gameRepo, $gameConfig), $gameRepo,
+);
 $apiPrivacyZone = new \App\Controllers\Api\PrivacyZoneController($privacyZoneSvc);
 // $gameCrewRepo, $gameFactionRepo, $gameCrewSvc wurden bereits oben (vor dem
 // CLI-Dispatch) verdrahtet.
@@ -635,6 +643,11 @@ $router->get("{$apiBase}/game/me/pioneered",       fn($r) => $apiGame->pioneered
 $router->get("{$apiBase}/game/challenges",         fn($r) => $apiGame->challenges($r), [$requireBearer]);
 $router->get("{$apiBase}/game/config",             fn($r) => $apiGame->config($r),   [$requireBearer]);
 $router->get("{$apiBase}/game/progression",        fn($r) => $apiGame->progression($r), [$requireBearer]);
+// Gebiets-Eroberung (CityConquest_Backend_Spec.md): Gebiete im Ausschnitt (zoom-
+// adaptiv), Detail mit Breadcrumb/Kindern/Bestenliste, eigene Gebiete.
+$router->get("{$apiBase}/game/regions",            fn($r) => $apiRegion->index($r),  [$optionalBearer]);
+$router->get("{$apiBase}/game/me/regions",         fn($r) => $apiRegion->mine($r),   [$requireBearer]);
+$router->get("{$apiBase}/game/regions/{id}",       fn($r) => $apiRegion->detail($r), [$optionalBearer]);
 // Solo-/Spieler-Rangliste (S7): world anonym, friends/me brauchen Bearer.
 $router->get("{$apiBase}/game/leaderboard",        fn($r) => $apiPlayerBoard->index($r), [$optionalBearer]);
 // Segment-Speed / Tempo-Wertung: Leaderboard je Kante (OptionalBearer; friends/me
@@ -802,7 +815,7 @@ $router->post('/u/{handle}/r/{id}/comments/{cid}/delete', fn($r) => $webEngage->
 // und verhalten sich wie eine unbekannte Route (404).
 $internalToken = (string)($config->get('INTERNAL_TOKEN', '') ?? '');
 $runInternal = function (Request $r, string $command)
-    use ($internalToken, $basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory) {
+    use ($internalToken, $basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc) {
     if ($internalToken === '') {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
@@ -810,9 +823,9 @@ $runInternal = function (Request $r, string $command)
     if ($provided === '' || !hash_equals($internalToken, $provided)) {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory);
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc);
     $argv = ['internal', $command];
-    foreach (['limit', 'sleep-ms', 'after-route-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge'] as $opt) {
+    foreach (['limit', 'sleep-ms', 'after-route-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {
             $argv[] = '--' . $opt . '=' . (string)$r->query[$opt];
         }
@@ -861,6 +874,9 @@ $router->get('/internal/cron/game-dispatch',  fn($r) => $runInternal($r, 'game:n
 $router->post('/internal/cron/game-dispatch', fn($r) => $runInternal($r, 'game:notify-dispatch'));
 $router->get('/internal/cron/game-snapshot',  fn($r) => $runInternal($r, 'game:snapshot-daily'));
 $router->post('/internal/cron/game-snapshot', fn($r) => $runInternal($r, 'game:snapshot-daily'));
+// Gebiets-Besitz neu rechnen (CityConquest_Backend_Spec.md).
+$router->get('/internal/cron/region-ownership',  fn($r) => $runInternal($r, 'regions:ownership-refresh'));
+$router->post('/internal/cron/region-ownership', fn($r) => $runInternal($r, 'regions:ownership-refresh'));
 // Einmaliger Push-Feldtest: erzeugt eine edge_taken-Mitteilung (Inbox + APNs).
 $router->get('/internal/game/test-push',  fn($r) => $runInternal($r, 'game:test-push'));
 $router->post('/internal/game/test-push', fn($r) => $runInternal($r, 'game:test-push'));
@@ -881,6 +897,32 @@ $router->post('/internal/heatmap/manifest', fn($r) => $runInternal($r, 'heatmap:
 // serverseitig in eine Shadow-Tabelle laden + atomar swappen. Eigener Handler
 // (statt $runInternal), weil der Request-Body verarbeitet wird. Sicher: nur
 // parametrisierte INSERTs, kein beliebiges SQL.
+// Prod-Sync der Gebiets-Eroberung: lokal berechnete game_region-Zeilen chunk-weise
+// nach PROD (verbatim inkl. id/parent_id/path). Token-geschützt, Body-Limit gehoben.
+$router->post('/internal/regions/import', function (Request $r) use ($internalToken, $regionImportSvc): void {
+    if ($internalToken === '') {
+        Response::error('not_found', 'Nicht gefunden.', 404);
+    }
+    $provided = (string)($r->query['token'] ?? $r->header('X-Internal-Token', ''));
+    if ($provided === '' || !hash_equals($internalToken, $provided)) {
+        Response::error('not_found', 'Nicht gefunden.', 404);
+    }
+    if ($r->rawBody === '') {
+        Response::error('bad_request', 'Leerer Body (Body-Limit/post_max_size prüfen).', 400);
+    }
+    try {
+        $res = $regionImportSvc->importRowsJson($r->rawBody);
+    } catch (\Throwable $e) {
+        error_log('internal regions/import fehlgeschlagen: ' . $e->getMessage());
+        Response::json(['ok' => false, 'error' => $e->getMessage()], 500);
+        return;
+    }
+    Response::json(['ok' => true, 'received' => $res['received'], 'imported' => $res['imported'], 'replace' => $res['replace']]);
+});
+// Kante→Gebiet-Backfill auf PROD (nach dem Import). ?all=1 rechnet alle neu.
+$router->get('/internal/regions/backfill',  fn($r) => $runInternal($r, 'regions:backfill'));
+$router->post('/internal/regions/backfill', fn($r) => $runInternal($r, 'regions:backfill'));
+
 $router->post('/internal/heatmap/import', function (Request $r) use ($internalToken, $heatmapLines): void {
     if ($internalToken === '') {
         Response::error('not_found', 'Nicht gefunden.', 404);

@@ -8,6 +8,8 @@
 !/storage/mail/.gitkeep
 /storage/routes/*
 !/storage/routes/.gitkeep
+# OSM-Grenzen-Zwischendateien der Gebiets-Eroberung (mehrere GB — NIE committen)
+/storage/regions/
 .DS_Store
 *.log
 # Build-Artefakte (z. B. scripts/sync_heatmap_edges.sh export -> build/heatmap_edges.sql)

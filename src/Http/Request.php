@@ -113,7 +113,8 @@ final class Request
         // Cutover-Rückweg: der heatmap_edges-Import schiebt die vorberechneten
         // Kanten als JSON-Body (kann mehrere MB groß sein) — gleicher Cap wie
         // Routen-Uploads. Token-geschützt in index.php.
-        $isInternalImport = $method === 'POST' && $path === '/internal/heatmap/import';
+        $isInternalImport = $method === 'POST'
+            && in_array($path, ['/internal/heatmap/import', '/internal/regions/import'], true);
         $isUploadPath = $isApiUpload || $isWebUpload || $isSurfaceCheckUpload || $isInternalImport;
         $maxBytes = $isUploadPath
             ? $cfg->int('REQUEST_MAX_UPLOAD_BYTES', 26_214_400)  // 25 MB

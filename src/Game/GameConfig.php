@@ -133,6 +133,17 @@ final class GameConfig
         // Familien (mit mehr Familien später anheben). gold/onyx = Stufenanzahl
         // über alle Familien; allCoreGold = alle Kern-Familien ≥ Gold.
         'progression_rank_gate'        => '{"6":{"gold":1},"7":{"gold":2},"8":{"gold":3},"9":{"gold":4,"onyx":1},"10":{"onyx":2,"allCoreGold":true}}',
+        // Gebiets-Eroberung (CityConquest_Backend_Spec.md). JSON-Werte (wie
+        // progression_*): der Dienst json_decode't den Rohwert. Ebenen 2/4/6/8 =
+        // Land/Bundesland/Landkreis/Gemeinde. „ownable" = Ebenen, die echten
+        // Besitz erlauben (sonst nur Dominanz-Anzeige über leader_claimant_id).
+        'region_ownable_levels'        => '[6,8]',
+        'region_control_min_fraction'  => '{"8":0.25,"6":0.30,"4":0.35,"2":0.40}',
+        'region_control_min_edges'     => '{"8":3,"6":15,"4":60,"2":250}',
+        // Zoom→Ebene: obere bbox-Spanne (Grad) je Ebene; darüber die nächstgröbere.
+        'region_level_span_breaks'     => '{"2":6.0,"4":1.5,"6":0.4}',
+        'region_list_max'              => '300',
+        'region_refresh_cron_enabled'  => '1',
     ];
 
     public function __construct(private readonly PDO $pdo) {}

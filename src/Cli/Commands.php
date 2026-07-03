@@ -27,6 +27,8 @@ final class Commands
         private readonly ?\App\Game\EdgeRecordBackfillService $edgeBackfill = null,
         private readonly ?\App\Game\GameNotificationDispatcher $gameDispatcher = null,
         private readonly ?\App\Game\GameHistoryService $gameHistory = null,
+        private readonly ?\App\Game\RegionImportService $regionImport = null,
+        private readonly ?\App\Game\RegionOwnershipService $regionOwnership = null,
     ) {}
 
     public function run(array $argv): int
@@ -77,6 +79,19 @@ final class Commands
             case 'cron:game-snapshot':
             case 'game:snapshot-daily':
                 return $this->gameSnapshotDaily();
+
+            case 'regions:import':
+                return $this->regionsImport($argv);
+
+            case 'regions:backfill':
+                return $this->regionsBackfill($argv);
+
+            case 'cron:region-ownership':
+            case 'regions:ownership-refresh':
+                return $this->regionsOwnershipRefresh();
+
+            case 'regions:push':
+                return $this->regionsPush($argv);
 
             case 'game:test-push':
                 return $this->gameTestPush($argv);
@@ -594,6 +609,168 @@ final class Commands
             $res['claimants'], $res['date'], $res['backfilled'],
         );
         return 0;
+    }
+
+    /**
+     * regions:import --file=storage/regions/boundaries.geojsonseq [--levels=2,4,6,8]
+     * Lädt die OSM-Verwaltungsgrenzen in die game_region-Hierarchie (Phase A der
+     * Gebiets-Eroberung, CityConquest_Backend_Spec.md).
+     */
+    private function regionsImport(array $argv): int
+    {
+        if ($this->regionImport === null) {
+            fwrite(STDERR, "regions:import nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        // Einmaliger Ops-Import europaweiter Grenzen: großzügiges Limit (der
+        // Geometrie-Cache der Zwischen-Ebenen wächst über den ganzen Kontinent).
+        ini_set('memory_limit', '3G');
+        $opts = $this->parseOptions($argv);
+        $file = (string)($opts['file'] ?? ($this->basePath . '/storage/regions/boundaries.geojsonseq'));
+        $levels = array_values(array_filter(array_map(
+            static fn($s): int => (int)trim($s),
+            explode(',', (string)($opts['levels'] ?? '2,4,6,8'))
+        ), static fn(int $l): bool => $l > 0));
+        if ($levels === []) {
+            $levels = [2, 4, 6, 8];
+        }
+        $log = static fn(string $m): int => fwrite(STDERR, $m . "\n");
+        try {
+            $res = $this->regionImport->importFromGeojsonSeq($file, $levels, $log);
+        } catch (\Throwable $e) {
+            fwrite(STDERR, "Fehler: {$e->getMessage()}\n");
+            return 1;
+        }
+        $total = array_sum($res['inserted']);
+        echo sprintf("Gebiete importiert: %d (verknüpft: %d)\n", $total, $res['linked']);
+        foreach ($res['inserted'] as $lvl => $cnt) {
+            echo sprintf("  Ebene %d: %d\n", $lvl, $cnt);
+        }
+        return 0;
+    }
+
+    /**
+     * regions:backfill [--all] [--batch=1000]
+     * Ordnet Kanten ihr feinstes Gebiet zu (game_edge.region_id). Standard: nur
+     * bisher nicht zugeordnete Kanten; --all rechnet alle neu.
+     */
+    private function regionsBackfill(array $argv): int
+    {
+        if ($this->regionImport === null) {
+            fwrite(STDERR, "regions:backfill nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        ini_set('memory_limit', '2G');
+        $opts = $this->parseOptions($argv);
+        $onlyUnassigned = !isset($opts['all']);
+        $batch = max(1, (int)($opts['batch'] ?? 1000));
+        $log = static fn(string $m): int => fwrite(STDERR, $m . "\n");
+        try {
+            $res = $this->regionImport->backfillEdges($onlyUnassigned, $batch, $log);
+        } catch (\Throwable $e) {
+            fwrite(STDERR, "Fehler: {$e->getMessage()}\n");
+            return 1;
+        }
+        echo sprintf(
+            "Backfill: %d Kante(n) geprüft, %d einem Gebiet zugeordnet.\n",
+            $res['scanned'], $res['assigned']
+        );
+        return 0;
+    }
+
+    /**
+     * regions:ownership-refresh — rechnet den Gebiets-Besitz (game_region_ownership)
+     * voll neu (Bottom-up-Rollup + Kontrollschwelle). Idempotent; Besitzwechsel
+     * werden gezählt (später für region_taken/region_lost-Events nutzbar).
+     */
+    private function regionsOwnershipRefresh(): int
+    {
+        if ($this->regionOwnership === null) {
+            fwrite(STDERR, "regions:ownership-refresh nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        ini_set('memory_limit', '1G');
+        $res = $this->regionOwnership->recomputeAll();
+        echo sprintf(
+            "Gebiets-Besitz aktualisiert: %d Gebiet(e), %d Besitzwechsel.\n",
+            $res['regions'], count($res['changes'])
+        );
+        return 0;
+    }
+
+    /**
+     * regions:push [--base-url=] [--token=] [--chunk=2000]
+     * Schiebt die lokal berechnete game_region-Hierarchie chunk-weise an
+     * POST {base}/internal/regions/import auf PROD (verbatim inkl. id/parent_id/
+     * path). Kein mysql-Client/osmium auf dem Server nötig — wie der Heatmap-
+     * Cutover. Danach auf PROD /internal/regions/backfill?all=1 und
+     * /internal/cron/region-ownership aufrufen.
+     */
+    private function regionsPush(array $argv): int
+    {
+        if ($this->regionImport === null) {
+            fwrite(STDERR, "regions:push nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        ini_set('memory_limit', '1G');
+        $opts = $this->parseOptions($argv);
+        $base = rtrim((string)($opts['base-url'] ?? $this->config->get('APP_URL', '')), '/');
+        $token = (string)($opts['token'] ?? $this->config->get('INTERNAL_TOKEN', ''));
+        $chunk = max(100, min(5000, (int)($opts['chunk'] ?? 2000)));
+        if ($base === '' || $token === '') {
+            fwrite(STDERR, "base-url und token nötig (--base-url=, --token= oder APP_URL/INTERNAL_TOKEN in .env).\n");
+            return 1;
+        }
+        $total = $this->regionImport->regionCount();
+        if ($total === 0) {
+            fwrite(STDERR, "Keine Gebiete lokal — erst regions:import laufen lassen.\n");
+            return 1;
+        }
+        $url = $base . '/internal/regions/import';
+        echo sprintf("Push %d Gebiete → %s (chunk=%d)\n", $total, $url, $chunk);
+
+        $after = 0;
+        $sent = 0;
+        $first = true;
+        while (true) {
+            $rows = $this->regionImport->exportPage($after, $chunk);
+            if ($rows === []) {
+                break;
+            }
+            $after = (int)$rows[count($rows) - 1]['id'];
+            $payload = json_encode(['replace' => $first, 'rows' => $rows], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $ok = $this->postJson($url, $token, (string)$payload);
+            if (!$ok) {
+                fwrite(STDERR, "Abbruch bei id>{$after} (HTTP-Fehler).\n");
+                return 1;
+            }
+            $sent += count($rows);
+            $first = false;
+            echo sprintf("  … %d/%d gesendet\n", $sent, $total);
+        }
+        echo sprintf("Fertig: %d Gebiete gepusht. Jetzt auf PROD: /internal/regions/backfill?all=1 dann /internal/cron/region-ownership\n", $sent);
+        return 0;
+    }
+
+    private function postJson(string $url, string $token, string $body): bool
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'X-Internal-Token: ' . $token],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 120,
+        ]);
+        $resp = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+        if ($resp === false || $code < 200 || $code >= 300) {
+            fwrite(STDERR, "  HTTP {$code} {$err}: " . substr((string)$resp, 0, 300) . "\n");
+            return false;
+        }
+        return true;
     }
 
     private function backfillSpeed(array $argv): int
