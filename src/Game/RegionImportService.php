@@ -26,6 +26,13 @@ final class RegionImportService
     /** Obergrenze dekodierter Eltern-Geometrien im Cache (Speicherschutz). */
     private const MAX_GEOM_CACHE = 8000;
 
+    /**
+     * Großzügige Obergrenze der Gebiets-Ausdehnung je Ebene (Grad). Begrenzt den
+     * bbox-Kandidaten-Scan (untere min_lat/min_lon-Schranke) — sonst scannt der
+     * Index bei 151k Gemeinden die halbe Tabelle je Punkt.
+     */
+    private const LEVEL_MAX_SPAN = [8 => 0.8, 6 => 2.5, 4 => 9.0, 2 => 30.0];
+
     /** @var array<int,array{geom:array<string,mixed>|null,area:float}> Decode-Cache für Eltern-Geometrien. */
     private array $geomCache = [];
 
@@ -193,7 +200,7 @@ final class RegionImportService
         if (count($this->geomCache) > self::MAX_GEOM_CACHE) {
             $this->geomCache = [];
         }
-        $candidates = $this->repo->bboxCandidates($level, $lat, $lon, $excludeId);
+        $candidates = $this->repo->bboxCandidates($level, $lat, $lon, $excludeId, self::LEVEL_MAX_SPAN[$level] ?? null);
         $bestId = null;
         $bestArea = INF;
         foreach ($candidates as $c) {

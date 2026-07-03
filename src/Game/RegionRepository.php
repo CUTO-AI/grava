@@ -117,14 +117,23 @@ final class RegionRepository
      *
      * @return list<array{id:int,area_km2:?float,boundary_geojson:string}>
      */
-    public function bboxCandidates(int $level, float $lat, float $lon, ?int $excludeId = null): array
+    public function bboxCandidates(int $level, float $lat, float $lon, ?int $excludeId = null, ?float $maxSpan = null): array
     {
+        // Untere Schranke gegen den offenen `min_lat <= lat` / `min_lon <= lon`:
+        // ohne sie scannt der Index (level,min_lat,…) die halbe Tabelle. Da ein
+        // Gebiet der Ebene nie breiter als maxSpan ist, kann sein min_lat/min_lon
+        // nicht weiter als maxSpan unter dem Punkt liegen → schmaler Range-Scan.
         $sql = 'SELECT id, area_km2, boundary_geojson
                   FROM game_region
                  WHERE level = :level
                    AND min_lat <= :lat1 AND max_lat >= :lat2
                    AND min_lon <= :lon1 AND max_lon >= :lon2';
         $params = [':level' => $level, ':lat1' => $lat, ':lat2' => $lat, ':lon1' => $lon, ':lon2' => $lon];
+        if ($maxSpan !== null) {
+            $sql .= ' AND min_lat >= :latlo AND min_lon >= :lonlo';
+            $params[':latlo'] = $lat - $maxSpan;
+            $params[':lonlo'] = $lon - $maxSpan;
+        }
         if ($excludeId !== null) {
             $sql .= ' AND id <> :ex';
             $params[':ex'] = $excludeId;
