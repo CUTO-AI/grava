@@ -663,19 +663,23 @@ final class Commands
         ini_set('memory_limit', '2G');
         $opts = $this->parseOptions($argv);
         $onlyUnassigned = !isset($opts['all']);
-        $batch = max(1, (int)($opts['batch'] ?? 1000));
+        $batch = max(1, (int)($opts['batch'] ?? 500));
+        // --limit begrenzt die je Aufruf verarbeiteten Kanten (fortsetzbar über
+        // --after-id) — nötig auf PROD, wo ein Request Zeit-/Speicherlimits hat.
+        $maxCount = isset($opts['limit']) ? max(1, (int)$opts['limit']) : null;
+        $afterId = max(0, (int)($opts['after-id'] ?? 0));
         // echo (kein STDERR): läuft auch über die Internal-HTTP-Route (Web-SAPI,
         // wo die STDERR-Konstante fehlt); der Runner erfasst die Ausgabe per ob_start.
         $log = static function (string $m): void { echo $m . "\n"; };
         try {
-            $res = $this->regionImport->backfillEdges($onlyUnassigned, $batch, $log);
+            $res = $this->regionImport->backfillEdges($onlyUnassigned, $batch, $log, $maxCount, $afterId);
         } catch (\Throwable $e) {
             echo "Fehler: {$e->getMessage()}\n";
             return 1;
         }
         echo sprintf(
-            "Backfill: %d Kante(n) geprüft, %d einem Gebiet zugeordnet.\n",
-            $res['scanned'], $res['assigned']
+            "Backfill: %d geprüft, %d zugeordnet, last_id=%d, done=%s\n",
+            $res['scanned'], $res['assigned'], $res['last_id'], $res['done'] ? '1' : '0'
         );
         return 0;
     }
@@ -784,6 +788,21 @@ final class Commands
     }
 
     private function postJson(string $url, string $token, string $body): bool
+    {
+        // Bis zu 3 Versuche gegen transiente 5xx/Netzfehler (Prod ist Shared-Hosting).
+        for ($attempt = 1; $attempt <= 3; $attempt++) {
+            if ($this->postJsonOnce($url, $token, $body)) {
+                return true;
+            }
+            if ($attempt < 3) {
+                echo "  … Retry {$attempt}\n";
+                sleep($attempt);
+            }
+        }
+        return false;
+    }
+
+    private function postJsonOnce(string $url, string $token, string $body): bool
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [

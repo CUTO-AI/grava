@@ -218,24 +218,41 @@ final class RegionImportService
     }
 
     /**
-     * Backfill: ordnet Kanten ihr feinstes Gebiet zu.
+     * Backfill: ordnet Kanten ihr feinstes Gebiet zu. Beschränkbar (maxCount) und
+     * fortsetzbar (startAfter → last_id) — für den PROD-Lauf über die
+     * Internal-HTTP-Route (Zeit-/Speicherlimit je Request), von außen geschleift.
      *
      * @param callable(string):void|null $log
-     * @return array{scanned:int,assigned:int}
+     * @return array{scanned:int,assigned:int,last_id:int,done:bool}
      */
-    public function backfillEdges(bool $onlyUnassigned = true, int $batch = 1000, ?callable $log = null): array
-    {
+    public function backfillEdges(
+        bool $onlyUnassigned = true,
+        int $batch = 1000,
+        ?callable $log = null,
+        ?int $maxCount = null,
+        int $startAfter = 0
+    ): array {
         $log ??= static function (string $_): void {};
         $levelsDesc = array_reverse($this->repo->levelsPresent());   // fein → grob
         if ($levelsDesc === []) {
             throw new \RuntimeException('Keine Gebiete geladen — erst importieren.');
         }
-        $after = 0;
+        // Bei maxCount (fortsetzbarer Lauf) über den globalen id-Cursor gehen
+        // (nicht onlyUnassigned), damit der last_id-Cursor deterministisch
+        // vorrückt und der Aufrufer sauber weiterblättern kann.
+        $cursorMode = $maxCount !== null;
+        $after = $startAfter;
         $scanned = 0;
         $assigned = 0;
+        $done = false;
         while (true) {
-            $rows = $this->repo->edgeMidpointsAfter($after, $batch, $onlyUnassigned);
+            $take = $cursorMode ? min($batch, $maxCount - $scanned) : $batch;
+            if ($take <= 0) {
+                break;
+            }
+            $rows = $this->repo->edgeMidpointsAfter($after, $take, $cursorMode ? false : $onlyUnassigned);
             if ($rows === []) {
+                $done = true;
                 break;
             }
             foreach ($rows as $e) {
@@ -248,10 +265,11 @@ final class RegionImportService
                 $after = $e['id'];
             }
             $log("… {$scanned} Kanten geprüft, {$assigned} zugeordnet");
-            // Immer per id-Cursor vorwärts: Kanten ohne Gebiet behalten region_id
-            // NULL, würden bei Cursor-Reset aber endlos erneut geliefert.
+            if ($cursorMode && $scanned >= $maxCount) {
+                break;
+            }
         }
-        return ['scanned' => $scanned, 'assigned' => $assigned];
+        return ['scanned' => $scanned, 'assigned' => $assigned, 'last_id' => $after, 'done' => $done];
     }
 
     /**
