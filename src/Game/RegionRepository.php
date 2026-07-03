@@ -15,6 +15,15 @@ final class RegionRepository
 {
     public function __construct(private readonly PDO $pdo) {}
 
+    /** WKT-Polygon der bbox (für die SRID-0-Spatial-Spalte bbox_geom). */
+    private static function bboxWkt(float $minLon, float $minLat, float $maxLon, float $maxLat): string
+    {
+        return sprintf(
+            'POLYGON((%1$.8f %2$.8f,%3$.8f %2$.8f,%3$.8f %4$.8f,%1$.8f %4$.8f,%1$.8f %2$.8f))',
+            $minLon, $minLat, $maxLon, $maxLat
+        );
+    }
+
     // ---- Import / Hierarchie -------------------------------------------------
 
     /**
@@ -39,10 +48,11 @@ final class RegionRepository
         $stmt = $this->pdo->prepare(
             'INSERT INTO game_region
                (osm_relation_id, level, kind, name, country_code, parent_id, path,
-                center_lat, center_lon, min_lat, min_lon, max_lat, max_lon, area_km2, boundary_geojson)
+                center_lat, center_lon, min_lat, min_lon, max_lat, max_lon, area_km2, boundary_geojson, bbox_geom)
              VALUES
                (:osm, :level, :kind, :name, :cc, NULL, :path,
-                :clat, :clon, :minlat, :minlon, :maxlat, :maxlon, :area, :geo)'
+                :clat, :clon, :minlat, :minlon, :maxlat, :maxlon, :area, :geo,
+                ST_SRID(ST_GeomFromText(:wkt), 0))'
         );
         // Vorläufiger Self-Path; wird im Link-Pass überschrieben, sobald die id feststeht.
         $stmt->execute([
@@ -60,6 +70,7 @@ final class RegionRepository
             ':maxlon' => $r['max_lon'],
             ':area'   => $r['area_km2'],
             ':geo'    => $r['boundary_geojson'],
+            ':wkt'    => self::bboxWkt((float)$r['min_lon'], (float)$r['min_lat'], (float)$r['max_lon'], (float)$r['max_lat']),
         ]);
         return (int)$this->pdo->lastInsertId();
     }
@@ -119,21 +130,14 @@ final class RegionRepository
      */
     public function bboxCandidates(int $level, float $lat, float $lon, ?int $excludeId = null, ?float $maxSpan = null): array
     {
-        // Untere Schranke gegen den offenen `min_lat <= lat` / `min_lon <= lon`:
-        // ohne sie scannt der Index (level,min_lat,…) die halbe Tabelle. Da ein
-        // Gebiet der Ebene nie breiter als maxSpan ist, kann sein min_lat/min_lon
-        // nicht weiter als maxSpan unter dem Punkt liegen → schmaler Range-Scan.
+        // Spatial-Index (R-Tree) über bbox_geom (SRID 0): MBRContains findet die
+        // Gebiete, deren bbox den Punkt enthält, größenunabhängig schnell (~0,1 ms
+        // statt Halbtabellen-Scan über min_lat<=P). POINT(lon lat), SRID 0.
         $sql = 'SELECT id, area_km2, boundary_geojson
                   FROM game_region
                  WHERE level = :level
-                   AND min_lat <= :lat1 AND max_lat >= :lat2
-                   AND min_lon <= :lon1 AND max_lon >= :lon2';
-        $params = [':level' => $level, ':lat1' => $lat, ':lat2' => $lat, ':lon1' => $lon, ':lon2' => $lon];
-        if ($maxSpan !== null) {
-            $sql .= ' AND min_lat >= :latlo AND min_lon >= :lonlo';
-            $params[':latlo'] = $lat - $maxSpan;
-            $params[':lonlo'] = $lon - $maxSpan;
-        }
+                   AND MBRContains(bbox_geom, ST_SRID(ST_GeomFromText(:pt), 0))';
+        $params = [':level' => $level, ':pt' => sprintf('POINT(%.8f %.8f)', $lon, $lat)];
         if ($excludeId !== null) {
             $sql .= ' AND id <> :ex';
             $params[':ex'] = $excludeId;
@@ -394,16 +398,18 @@ final class RegionRepository
         }
         $sql = 'INSERT INTO game_region
                   (id, osm_relation_id, level, kind, name, country_code, parent_id, path,
-                   center_lat, center_lon, min_lat, min_lon, max_lat, max_lon, area_km2, boundary_geojson)
+                   center_lat, center_lon, min_lat, min_lon, max_lat, max_lon, area_km2, boundary_geojson, bbox_geom)
                 VALUES
                   (:id, :osm, :level, :kind, :name, :cc, :pid, :path,
-                   :clat, :clon, :minlat, :minlon, :maxlat, :maxlon, :area, :geo)
+                   :clat, :clon, :minlat, :minlon, :maxlat, :maxlon, :area, :geo,
+                   ST_SRID(ST_GeomFromText(:wkt), 0))
                 ON DUPLICATE KEY UPDATE
                    osm_relation_id = VALUES(osm_relation_id), level = VALUES(level), kind = VALUES(kind),
                    name = VALUES(name), country_code = VALUES(country_code), parent_id = VALUES(parent_id),
                    path = VALUES(path), center_lat = VALUES(center_lat), center_lon = VALUES(center_lon),
                    min_lat = VALUES(min_lat), min_lon = VALUES(min_lon), max_lat = VALUES(max_lat),
-                   max_lon = VALUES(max_lon), area_km2 = VALUES(area_km2), boundary_geojson = VALUES(boundary_geojson)';
+                   max_lon = VALUES(max_lon), area_km2 = VALUES(area_km2), boundary_geojson = VALUES(boundary_geojson),
+                   bbox_geom = VALUES(bbox_geom)';
         $stmt = $this->pdo->prepare($sql);
         $n = 0;
         foreach ($rows as $r) {
@@ -424,6 +430,7 @@ final class RegionRepository
                 ':maxlon' => (float)$r['max_lon'],
                 ':area'   => $r['area_km2'] !== null ? (float)$r['area_km2'] : null,
                 ':geo'    => is_string($r['boundary_geojson']) ? $r['boundary_geojson'] : json_encode($r['boundary_geojson']),
+                ':wkt'    => self::bboxWkt((float)$r['min_lon'], (float)$r['min_lat'], (float)$r['max_lon'], (float)$r['max_lat']),
             ]);
             $n++;
         }
