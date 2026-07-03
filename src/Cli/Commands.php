@@ -657,18 +657,20 @@ final class Commands
     private function regionsBackfill(array $argv): int
     {
         if ($this->regionImport === null) {
-            fwrite(STDERR, "regions:backfill nicht verfügbar (Service nicht verdrahtet).\n");
+            echo "regions:backfill nicht verfügbar (Service nicht verdrahtet).\n";
             return 1;
         }
         ini_set('memory_limit', '2G');
         $opts = $this->parseOptions($argv);
         $onlyUnassigned = !isset($opts['all']);
         $batch = max(1, (int)($opts['batch'] ?? 1000));
-        $log = static fn(string $m): int => fwrite(STDERR, $m . "\n");
+        // echo (kein STDERR): läuft auch über die Internal-HTTP-Route (Web-SAPI,
+        // wo die STDERR-Konstante fehlt); der Runner erfasst die Ausgabe per ob_start.
+        $log = static function (string $m): void { echo $m . "\n"; };
         try {
             $res = $this->regionImport->backfillEdges($onlyUnassigned, $batch, $log);
         } catch (\Throwable $e) {
-            fwrite(STDERR, "Fehler: {$e->getMessage()}\n");
+            echo "Fehler: {$e->getMessage()}\n";
             return 1;
         }
         echo sprintf(
@@ -686,7 +688,7 @@ final class Commands
     private function regionsOwnershipRefresh(): int
     {
         if ($this->regionOwnership === null) {
-            fwrite(STDERR, "regions:ownership-refresh nicht verfügbar (Service nicht verdrahtet).\n");
+            echo "regions:ownership-refresh nicht verfügbar (Service nicht verdrahtet).\n";
             return 1;
         }
         ini_set('memory_limit', '1G');
@@ -716,7 +718,11 @@ final class Commands
         $opts = $this->parseOptions($argv);
         $base = rtrim((string)($opts['base-url'] ?? $this->config->get('APP_URL', '')), '/');
         $token = (string)($opts['token'] ?? $this->config->get('INTERNAL_TOKEN', ''));
-        $chunk = max(100, min(5000, (int)($opts['chunk'] ?? 2000)));
+        // Chunking nach BYTES (nicht Zeilen): Einzelgeometrien reichen von 1 KB
+        // (Gemeinde) bis >1 MB (Bundesland mit vielen Inseln) — eine feste Zeilenzahl
+        // sprengt sonst das Prod-Body-Limit (post_max_size). Default konservativ.
+        $maxBytes = max(200_000, (int)($opts['max-bytes'] ?? 2_000_000));
+        $maxRows = max(1, (int)($opts['chunk'] ?? 1000));
         if ($base === '' || $token === '') {
             fwrite(STDERR, "base-url und token nötig (--base-url=, --token= oder APP_URL/INTERNAL_TOKEN in .env).\n");
             return 1;
@@ -727,26 +733,51 @@ final class Commands
             return 1;
         }
         $url = $base . '/internal/regions/import';
-        echo sprintf("Push %d Gebiete → %s (chunk=%d)\n", $total, $url, $chunk);
+        echo sprintf("Push %d Gebiete → %s (max %.1f MB/Chunk)\n", $total, $url, $maxBytes / 1e6);
 
         $after = 0;
         $sent = 0;
         $first = true;
+        $buffer = [];
+        $bufBytes = 0;
+
+        $flush = function () use (&$buffer, &$bufBytes, &$first, &$sent, $url, $token, $total): bool {
+            if ($buffer === []) {
+                return true;
+            }
+            $payload = json_encode(['replace' => $first, 'rows' => $buffer], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if (!$this->postJson($url, $token, (string)$payload)) {
+                return false;
+            }
+            $sent += count($buffer);
+            $first = false;
+            echo sprintf("  … %d/%d gesendet\n", $sent, $total);
+            $buffer = [];
+            $bufBytes = 0;
+            return true;
+        };
+
         while (true) {
-            $rows = $this->regionImport->exportPage($after, $chunk);
+            $rows = $this->regionImport->exportPage($after, 500);
             if ($rows === []) {
                 break;
             }
-            $after = (int)$rows[count($rows) - 1]['id'];
-            $payload = json_encode(['replace' => $first, 'rows' => $rows], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-            $ok = $this->postJson($url, $token, (string)$payload);
-            if (!$ok) {
-                fwrite(STDERR, "Abbruch bei id>{$after} (HTTP-Fehler).\n");
-                return 1;
+            foreach ($rows as $r) {
+                $after = (int)$r['id'];
+                $rowBytes = strlen((string)json_encode($r, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+                if ($buffer !== [] && ($bufBytes + $rowBytes > $maxBytes || count($buffer) >= $maxRows)) {
+                    if (!$flush()) {
+                        fwrite(STDERR, "Abbruch bei id>{$after} (HTTP-Fehler).\n");
+                        return 1;
+                    }
+                }
+                $buffer[] = $r;
+                $bufBytes += $rowBytes;
             }
-            $sent += count($rows);
-            $first = false;
-            echo sprintf("  … %d/%d gesendet\n", $sent, $total);
+        }
+        if (!$flush()) {
+            fwrite(STDERR, "Abbruch beim letzten Chunk (HTTP-Fehler).\n");
+            return 1;
         }
         echo sprintf("Fertig: %d Gebiete gepusht. Jetzt auf PROD: /internal/regions/backfill?all=1 dann /internal/cron/region-ownership\n", $sent);
         return 0;
