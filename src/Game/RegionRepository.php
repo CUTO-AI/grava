@@ -121,19 +121,22 @@ final class RegionRepository
         ];
     }
 
+    /** Obergrenze der bbox-Kandidaten je Punkt (real ≤ wenige je Ebene). */
+    private const CANDIDATE_LIMIT = 200;
+
     /**
-     * Kandidaten-Gebiete einer Ebene, deren bbox den Punkt enthält (indexiert
-     * über idx_region_level_bbox). Für den PiP-Feinschliff werden id, Fläche und
-     * Geometrie geliefert.
+     * Kandidaten-Gebiete einer Ebene, deren bbox den Punkt enthält (Spatial-Index
+     * über bbox_geom). Liefert NUR id + Fläche (klein), kleinste Fläche zuerst —
+     * die große boundary_geojson wird erst beim PiP über {@see boundaryGeojson()}
+     * lazy geladen. So kann selbst ein pathologischer Massen-Match keinen Speicher
+     * sprengen, und der wahrscheinlichste (kleinste) Treffer kommt zuerst.
      *
-     * @return list<array{id:int,area_km2:?float,boundary_geojson:string}>
+     * @return list<array{id:int,area_km2:?float}>
      */
     public function bboxCandidates(int $level, float $lat, float $lon, ?int $excludeId = null, ?float $maxSpan = null): array
     {
-        // Spatial-Index (R-Tree) über bbox_geom (SRID 0): MBRContains findet die
-        // Gebiete, deren bbox den Punkt enthält, größenunabhängig schnell (~0,1 ms
-        // statt Halbtabellen-Scan über min_lat<=P). POINT(lon lat), SRID 0.
-        $sql = 'SELECT id, area_km2, boundary_geojson
+        // Spatial-Index (R-Tree) über bbox_geom (SRID 0): MBRContains, POINT(lon lat).
+        $sql = 'SELECT id, area_km2
                   FROM game_region
                  WHERE level = :level
                    AND MBRContains(bbox_geom, ST_SRID(ST_GeomFromText(:pt), 0))';
@@ -142,6 +145,7 @@ final class RegionRepository
             $sql .= ' AND id <> :ex';
             $params[':ex'] = $excludeId;
         }
+        $sql .= ' ORDER BY area_km2 ASC LIMIT ' . self::CANDIDATE_LIMIT;
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $out = [];
@@ -149,10 +153,18 @@ final class RegionRepository
             $out[] = [
                 'id' => (int)$row['id'],
                 'area_km2' => $row['area_km2'] !== null ? (float)$row['area_km2'] : null,
-                'boundary_geojson' => (string)$row['boundary_geojson'],
             ];
         }
         return $out;
+    }
+
+    /** Lädt die (potenziell große) Grenzgeometrie eines Gebiets lazy (für PiP). */
+    public function boundaryGeojson(int $id): ?string
+    {
+        $stmt = $this->pdo->prepare('SELECT boundary_geojson FROM game_region WHERE id = ?');
+        $stmt->execute([$id]);
+        $v = $stmt->fetchColumn();
+        return $v === false ? null : (string)$v;
     }
 
     // ---- Backfill Kante → Gebiet --------------------------------------------

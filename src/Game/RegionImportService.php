@@ -26,7 +26,7 @@ final class RegionImportService
     /** Obergrenze dekodierter Eltern-Geometrien im Cache (Speicherschutz). */
     private const MAX_GEOM_CACHE = 8000;
 
-    /** @var array<int,array{geom:array<string,mixed>|null,area:float}> Decode-Cache für Eltern-Geometrien. */
+    /** @var array<int,array<string,mixed>|null> Decode-Cache für Grenz-Geometrien (id → decoded|null). */
     private array $geomCache = [];
 
     public function __construct(private readonly RegionRepository $repo) {}
@@ -193,28 +193,23 @@ final class RegionImportService
         if (count($this->geomCache) > self::MAX_GEOM_CACHE) {
             $this->geomCache = [];
         }
+        // Kandidaten kommen kleinste-Fläche-zuerst (Repo ORDER BY area ASC) und
+        // OHNE Geometrie — die wird hier lazy je Kandidat geladen. Der erste
+        // PiP-Treffer ist damit automatisch das feinste enthaltende Gebiet.
         $candidates = $this->repo->bboxCandidates($level, $lat, $lon, $excludeId);
-        $bestId = null;
-        $bestArea = INF;
         foreach ($candidates as $c) {
             $id = $c['id'];
-            if (!isset($this->geomCache[$id])) {
-                $decoded = json_decode($c['boundary_geojson'], true);
-                $this->geomCache[$id] = [
-                    'geom' => is_array($decoded) ? $decoded : null,
-                    'area' => $c['area_km2'] ?? INF,
-                ];
+            if (!array_key_exists($id, $this->geomCache)) {
+                $raw = $this->repo->boundaryGeojson($id);
+                $decoded = $raw !== null ? json_decode($raw, true) : null;
+                $this->geomCache[$id] = is_array($decoded) ? $decoded : null;
             }
-            $entry = $this->geomCache[$id];
-            if ($entry['geom'] === null || !GeoPolygon::contains($lat, $lon, $entry['geom'])) {
-                continue;
-            }
-            if ($entry['area'] < $bestArea) {
-                $bestArea = $entry['area'];
-                $bestId = $id;
+            $geom = $this->geomCache[$id];
+            if ($geom !== null && GeoPolygon::contains($lat, $lon, $geom)) {
+                return $id;
             }
         }
-        return $bestId;
+        return null;
     }
 
     /**
