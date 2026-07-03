@@ -5,6 +5,14 @@
  * Generiert (App-Schale + View-Bodies). 571 Einträge.
  */
 return [
+    'Reviere-Karte' => 'Territory Map',
+    'Wer hält welches Gebiet? Zoom rein — die Karte zeigt je nach Nähe grobe Regionen, dann Landkreise und Gemeinden, ganz nah einzelne Wege nach Besitz.' => 'Who holds which territory? Zoom in — the map shows coarse regions, then counties and municipalities, and finally individual roads by ownership.',
+    'Karte wird geladen …' => 'Loading map …',
+    'Fraktion Blau' => 'Blue Faction',
+    'Fraktion Grün' => 'Green Faction',
+    'Anderer Besitzer' => 'Other owner',
+    'frei / kein Besitzer' => 'free / no owner',
+    'Deckung eines Gebiets = wie viel davon gehalten wird. Freie Gebiete erscheinen nur als feiner Umriss und färben sich, sobald sie erobert werden.' => 'A territory\'s fill shows how much of it is held. Free territories appear as a faint outline and fill in once they are captured.',
     ' folgt dir jetzt.' => ' now follows you.',
     ' hat deine Route geliked.' => ' liked your route.',
     ' hat deine Route kommentiert.' => ' commented on your route.',
