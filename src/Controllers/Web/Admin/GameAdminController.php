@@ -44,6 +44,7 @@ final class GameAdminController
         private readonly RouteService $routes,
         private readonly GeometryParser $parser,
         private readonly ValhallaClient $valhalla,
+        private readonly \App\Game\RegionRepository $regions,
         string $viewsPath,
     ) {
         $this->view = new WebView($viewsPath);
@@ -61,6 +62,20 @@ final class GameAdminController
             // Game-Ingestion fehl (routing_unavailable). Ping mit kurzem Timeout.
             'valhalla' => $this->valhalla->status(),
             'audits' => $this->audit->recent(15),
+        ]);
+    }
+
+    /** Gebiets-/Städte-Übersicht (CityConquest): wer hält welche Gebiete. */
+    public function regions(Request $req): void
+    {
+        [$user] = $this->requireAdmin();
+        $overview = $this->regions->adminRegionOverview();
+        $this->view->render('admin/game/regions', [
+            '_title' => 'Game · Gebiete', '_authedUser' => $user, '_layoutWide' => true,
+            'flash' => $this->takeFlash(),
+            'summary' => $overview['summary'],
+            'owned' => $overview['owned'],
+            'topOwners' => $overview['topOwners'],
         ]);
     }
 

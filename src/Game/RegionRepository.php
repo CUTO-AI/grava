@@ -606,6 +606,97 @@ final class RegionRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    // ---- Web-Admin-Übersicht ------------------------------------------------
+
+    /**
+     * Kennzahlen für die Admin-Gebietsübersicht: Zusammenfassung je Ebene,
+     * eroberte Gebiete (mit Besitzername) und Top-Besitzer.
+     *
+     * @return array{summary:list<array<string,mixed>>,owned:list<array<string,mixed>>,topOwners:list<array<string,mixed>>}
+     */
+    public function adminRegionOverview(int $ownedLimit = 200, int $ownerLimit = 25): array
+    {
+        // Besitzername-Join (Crew-Name bzw. Rider-Handle/Name).
+        $ownerName = "COALESCE(cr.name, u.display_name, u.public_handle, CONCAT('#', c.id))";
+        $joins = 'JOIN game_claimant c ON c.id = o.owner_claimant_id
+                  LEFT JOIN game_crew cr ON cr.claimant_id = c.id
+                  LEFT JOIN users u ON u.id = c.user_id';
+
+        $summary = [];
+        $sql = 'SELECT r.level,
+                       COUNT(*) AS with_edges,
+                       SUM(o.owner_claimant_id IS NOT NULL AND o.contested = 0) AS owned,
+                       SUM(o.owner_claimant_id IS NULL OR o.contested = 1) AS contested
+                  FROM game_region_ownership o
+                  JOIN game_region r ON r.id = o.region_id
+              GROUP BY r.level
+              ORDER BY r.level ASC';
+        foreach ($this->pdo->query($sql) as $r) {
+            $summary[] = [
+                'level' => (int)$r['level'],
+                'with_edges' => (int)$r['with_edges'],
+                'owned' => (int)$r['owned'],
+                'contested' => (int)$r['contested'],
+            ];
+        }
+
+        $owned = [];
+        $stmt = $this->pdo->prepare(
+            "SELECT r.level, r.name, r.kind, r.country_code, o.held_fraction, o.total_edges,
+                    c.type AS owner_type, $ownerName AS owner_name
+               FROM game_region_ownership o
+               JOIN game_region r ON r.id = o.region_id
+               $joins
+              WHERE o.owner_claimant_id IS NOT NULL AND o.contested = 0
+           ORDER BY r.level ASC, o.total_edges DESC
+              LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $ownedLimit, PDO::PARAM_INT);
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $owned[] = [
+                'level' => (int)$r['level'],
+                'name' => (string)$r['name'],
+                'kind' => (string)$r['kind'],
+                'country_code' => $r['country_code'] !== null ? (string)$r['country_code'] : null,
+                'held_fraction' => (float)$r['held_fraction'],
+                'total_edges' => (int)$r['total_edges'],
+                'owner_type' => (string)$r['owner_type'],
+                'owner_name' => (string)$r['owner_name'],
+            ];
+        }
+
+        $topOwners = [];
+        // ANY_VALUE: c.type / owner_name sind je owner_claimant_id konstant, aber
+        // only_full_group_by weiß das nicht → explizit umschließen.
+        $stmt = $this->pdo->prepare(
+            "SELECT o.owner_claimant_id, ANY_VALUE(c.type) AS owner_type, ANY_VALUE($ownerName) AS owner_name,
+                    COUNT(*) AS regions,
+                    SUM(r.level = 8) AS municipalities,
+                    SUM(r.level = 6) AS districts
+               FROM game_region_ownership o
+               JOIN game_region r ON r.id = o.region_id
+               $joins
+              WHERE o.owner_claimant_id IS NOT NULL AND o.contested = 0
+           GROUP BY o.owner_claimant_id
+           ORDER BY regions DESC
+              LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $ownerLimit, PDO::PARAM_INT);
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $topOwners[] = [
+                'owner_type' => (string)$r['owner_type'],
+                'owner_name' => (string)$r['owner_name'],
+                'regions' => (int)$r['regions'],
+                'municipalities' => (int)$r['municipalities'],
+                'districts' => (int)$r['districts'],
+            ];
+        }
+
+        return ['summary' => $summary, 'owned' => $owned, 'topOwners' => $topOwners];
+    }
+
     /** path eines Gebiets (für Präfix-Abfragen). */
     public function pathOf(int $id): ?string
     {

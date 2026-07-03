@@ -487,7 +487,7 @@ $gameUserFlag    = new \App\Game\Admin\GameUserFlagService(Db::pdo(), $gameAudit
 $webGameAdmin    = new \App\Controllers\Web\Admin\GameAdminController(
     $webSession, $auth, $adminGuard, $gameAdminSvc, $gameCfgAdmin, $gameConfig,
     $gameModeration, $gameRecompute, $gameAudit, $gameRepo, $gameIngest, $routeService,
-    new GeometryParser(), $gameValhalla, $basePath . '/views',
+    new GeometryParser(), $gameValhalla, $regionRepo, $basePath . '/views',
 );
 $webGameEdge     = new \App\Controllers\Web\Admin\GameEdgeInspectorController(
     $webSession, $auth, $adminGuard, $gameAdminSvc, $gamePassAdmin, $gameUserFlag,
@@ -758,6 +758,7 @@ $router->get ('/admin/game/moderation',                fn($r) => $webGameAdmin->
 $router->get ('/admin/game/players',                   fn($r) => $webGameAdmin->players($r));
 $router->get ('/admin/game/player',                    fn($r) => $webGameAdmin->player($r));
 $router->get ('/admin/game/crews',                     fn($r) => $webGameAdmin->crews($r));
+$router->get ('/admin/game/regions',                   fn($r) => $webGameAdmin->regions($r));
 $router->get ('/admin/game/map',                       fn($r) => $webGameAdmin->map($r));
 $router->get ('/admin/game/edges.geojson',             fn($r) => $webGameAdmin->edgesGeoJson($r));
 $router->get ('/admin/game/edge',                      fn($r) => $webGameEdge->show($r));

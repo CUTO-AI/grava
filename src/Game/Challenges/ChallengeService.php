@@ -39,6 +39,11 @@ final class ChallengeService
 
         $newEdges = $this->countEvents('edge_new', 'user_id', $userId, $mondayDate);
         $captures = $this->countEvents('edge_taken', 'actor_user_id', $userId, $mondayDate);
+        // Gebiets-Eroberung: aktueller Besitz (Snapshot) des effektiven Claimants
+        // (Crew, wenn Mitglied — sonst Solo). Robust für Solo UND Crew, da nicht
+        // vom (crew-only) region_taken-Ereignis abhängig.
+        $muniHeld     = $this->countOwnedRegions($userId, 8);
+        $districtHeld = $this->countOwnedRegions($userId, 6);
 
         $challenges = [
             $this->buildChallenge(
@@ -61,6 +66,28 @@ final class ChallengeService
                 rewardPoints: 30,
                 badge: $de ? 'Eroberer' : 'Conqueror',
                 icon: 'flag',
+                expiresAt: $expiresAt,
+            ),
+            $this->buildChallenge(
+                id: 'weekly_hold_municipality',
+                title: $de ? 'Halte eine Gemeinde' : 'Hold a municipality',
+                detail: $de ? 'Aktueller Besitz' : 'Current holdings',
+                progress: $muniHeld,
+                target: 1,
+                rewardPoints: 40,
+                badge: $de ? 'Stadtherr' : 'City Holder',
+                icon: 'building.2',
+                expiresAt: $expiresAt,
+            ),
+            $this->buildChallenge(
+                id: 'weekly_hold_district',
+                title: $de ? 'Halte einen Landkreis' : 'Hold a district',
+                detail: $de ? 'Aktueller Besitz' : 'Current holdings',
+                progress: $districtHeld,
+                target: 1,
+                rewardPoints: 80,
+                badge: $de ? 'Landvogt' : 'District Lord',
+                icon: 'mappin.and.ellipse',
                 expiresAt: $expiresAt,
             ),
         ];
@@ -122,6 +149,50 @@ final class ChallengeService
         );
         $stmt->execute([$type, $userId, $sinceDate]);
         return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Aktuell gehaltene (nicht umkämpfte) Gebiete einer Ebene für den effektiven
+     * Claimant des Nutzers. Graceful: fehlen die Gebiets-Tabellen, → 0.
+     */
+    private function countOwnedRegions(int $userId, int $level): int
+    {
+        $claimantId = $this->effectiveClaimantId($userId);
+        if ($claimantId === null) {
+            return 0;
+        }
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT COUNT(*)
+                   FROM game_region_ownership o
+                   JOIN game_region r ON r.id = o.region_id
+                  WHERE o.owner_claimant_id = ? AND o.contested = 0 AND r.level = ?'
+            );
+            $stmt->execute([$claimantId, $level]);
+            return (int)$stmt->fetchColumn();
+        } catch (\PDOException) {
+            return 0;
+        }
+    }
+
+    /** Effektiver Claimant: Crew-Claimant (wenn Mitglied), sonst Rider-Claimant. */
+    private function effectiveClaimantId(int $userId): ?int
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT cr.claimant_id
+               FROM game_crew_member m
+               JOIN game_crew cr ON cr.id = m.crew_id
+              WHERE m.user_id = ? LIMIT 1'
+        );
+        $stmt->execute([$userId]);
+        $crew = $stmt->fetchColumn();
+        if ($crew !== false && $crew !== null) {
+            return (int)$crew;
+        }
+        $stmt = $this->pdo->prepare("SELECT id FROM game_claimant WHERE type = 'rider' AND user_id = ?");
+        $stmt->execute([$userId]);
+        $rider = $stmt->fetchColumn();
+        return $rider === false || $rider === null ? null : (int)$rider;
     }
 
     /**
