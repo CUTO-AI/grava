@@ -429,16 +429,17 @@ $apiHeatmapLines = new HeatmapLinesController($heatmapLines);
 $apiReferral = new ReferralController($referrals);
 $gameChallenges = new \App\Game\Challenges\ChallengeService(Db::pdo());
 $gameHistory = new \App\Game\GameHistoryService($gameRepo);
-$apiGame = new GameController($gameRead, $gameRepo, $gameIngest, $gameConfig, $routeService, new GeometryParser(), $gameRideSummary, $gameAtRisk, $gameChallenges, $gameHistory);
-$apiEdgeRecords = new EdgeRecordController($edgeRecords);
-$apiPlayerBoard = new PlayerLeaderboardController(new PlayerLeaderboardService($gameRepo, $gameConfig));
-$apiSegment = new SegmentSpeedController(new SegmentSpeedService($gameRepo, $gameConfig));
-// Gebiets-Eroberung (CityConquest_Backend_Spec.md): eigener Repo + Read-Service.
+// Gebiets-Eroberung (CityConquest_Backend_Spec.md): eigener Repo + Services.
+// Vor dem GameController erzeugt, damit der Ingest-Hook sie mitbekommt.
 $regionRepo = new \App\Game\RegionRepository(Db::pdo());
 $regionImportSvc = new \App\Game\RegionImportService($regionRepo);
 $regionOwnershipSvc = new \App\Game\RegionOwnershipService($regionRepo, $gameConfig);
+$apiGame = new GameController($gameRead, $gameRepo, $gameIngest, $gameConfig, $routeService, new GeometryParser(), $gameRideSummary, $gameAtRisk, $gameChallenges, $gameHistory, $regionImportSvc, $regionOwnershipSvc);
+$apiEdgeRecords = new EdgeRecordController($edgeRecords);
+$apiPlayerBoard = new PlayerLeaderboardController(new PlayerLeaderboardService($gameRepo, $gameConfig));
+$apiSegment = new SegmentSpeedController(new SegmentSpeedService($gameRepo, $gameConfig));
 $apiRegion = new \App\Controllers\Api\RegionController(
-    new \App\Game\RegionService($regionRepo, $gameRepo, $gameConfig), $gameRepo,
+    new \App\Game\RegionService($regionRepo, $gameRepo, $gameConfig, $regionOwnershipSvc), $gameRepo,
 );
 $apiPrivacyZone = new \App\Controllers\Api\PrivacyZoneController($privacyZoneSvc);
 // $gameCrewRepo, $gameFactionRepo, $gameCrewSvc wurden bereits oben (vor dem

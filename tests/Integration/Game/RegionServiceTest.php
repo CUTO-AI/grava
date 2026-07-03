@@ -140,6 +140,28 @@ final class RegionServiceTest extends IntegrationTestCase
         $this->assertSame(1, $detail['me']['rank']);
     }
 
+    public function testSelfHealComputesOwnershipOnRead(): void
+    {
+        $muni = $this->regionId(8);
+        $a = $this->claimant('erin');
+        for ($i = 0; $i < 4; $i++) {
+            $this->ownedEdge($muni, $a, 100.0);
+        }
+        // Besitz-Cache bewusst NICHT rechnen — leer.
+        $this->assertSame(0, $this->repo->ownershipRowCount());
+
+        // RegionService MIT Ownership-Service → Self-Heal beim Lesen.
+        $svc = new RegionService($this->repo, new GameRepository($this->pdo), new GameConfig($this->pdo), $this->own);
+        $res = $svc->regionsInBbox(11.3, 47.75, 11.8, 48.05, 8, false, $a);
+
+        $this->assertGreaterThan(0, $this->repo->ownershipRowCount(), 'Self-Heal hat den Besitz gerechnet');
+        $found = null;
+        foreach ($res['regions'] as $r) { if ($r['id'] === $muni) { $found = $r; } }
+        $this->assertNotNull($found);
+        $this->assertFalse($found['contested']);
+        $this->assertSame($a, $found['owner']['claimant_id']);
+    }
+
     public function testMyRegionsListsOwnedAndContesting(): void
     {
         $muni = $this->regionId(8);

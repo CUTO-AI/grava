@@ -39,6 +39,10 @@ final class GameController
         private readonly GameEdgesAtRiskService $atRisk,
         private readonly ?ChallengeService $challenges = null,
         private readonly ?GameHistoryService $history = null,
+        // Gebiets-Eroberung: nach dem Ingest neue Kanten zuordnen + Besitz neu
+        // rechnen (hält Städte-/Gebiets-Besitz live, ohne Cron-Abhängigkeit).
+        private readonly ?\App\Game\RegionImportService $regionImport = null,
+        private readonly ?\App\Game\RegionOwnershipService $regionOwnership = null,
     ) {}
 
     /**
@@ -269,6 +273,18 @@ final class GameController
             // Routing-Engine (Valhalla) nicht erreichbar/kein Match → kein 500,
             // sondern ein ehrliches 503: der Client darf später erneut.
             Response::error('routing_unavailable', 'Map-Matching derzeit nicht möglich (Routing-Engine nicht erreichbar). Bitte später erneut versuchen.', 503);
+        }
+        // Gebiets-Eroberung live halten: neu erschlossene Kanten ihrem Gebiet
+        // zuordnen und den Besitz-Cache neu rechnen. Bewusst NACH dem Ingest und
+        // best-effort (Fehler dürfen die Ingest-Antwort nie kippen). Beides ist
+        // dank Spatial-Index + kleinem Aktiv-Datensatz günstig.
+        if (($summary['matched'] ?? 0) > 0) {
+            try {
+                $this->regionImport?->backfillEdges(true, 500);
+                $this->regionOwnership?->recomputeAll();
+            } catch (\Throwable $e) {
+                error_log('region refresh nach ingest fehlgeschlagen: ' . $e->getMessage());
+            }
         }
         Response::json($summary);
     }

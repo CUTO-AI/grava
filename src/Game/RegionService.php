@@ -20,7 +20,19 @@ final class RegionService
         private readonly RegionRepository $repo,
         private readonly GameRepository $game,
         private readonly GameConfig $config,
+        private readonly ?RegionOwnershipService $ownership = null,
     ) {}
+
+    /**
+     * Self-Heal: ist der Besitz-Cache leer (Cron nie gelaufen, noch kein Ingest),
+     * einmal rechnen. Bei 0 Spielkanten ist recomputeAll ein No-Op → billig.
+     */
+    private function ensureOwnership(): void
+    {
+        if ($this->ownership !== null && $this->repo->ownershipRowCount() === 0) {
+            $this->ownership->recomputeAll();
+        }
+    }
 
     /**
      * GET /game/regions — Gebiete im Ausschnitt (zoom-adaptiv).
@@ -36,6 +48,7 @@ final class RegionService
         bool $withGeometry,
         ?int $viewerClaimant
     ): array {
+        $this->ensureOwnership();
         if ($level === null) {
             $span = max($maxLat - $minLat, $maxLon - $minLon);
             $level = $this->levelForSpan($span);
@@ -58,6 +71,7 @@ final class RegionService
      */
     public function regionDetail(int $id, ?int $viewerClaimant): ?array
     {
+        $this->ensureOwnership();
         $r = $this->repo->regionFull($id);
         if ($r === null) {
             return null;
@@ -117,6 +131,7 @@ final class RegionService
      */
     public function myRegions(int $claimantId, ?int $level): array
     {
+        $this->ensureOwnership();
         $rows = $this->repo->regionsForClaimant($claimantId, $level);
         $out = [];
         foreach ($rows as $r) {
