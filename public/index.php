@@ -924,6 +924,9 @@ $router->post('/internal/regions/import', function (Request $r) use ($internalTo
 // Kante→Gebiet-Backfill auf PROD (nach dem Import). ?all=1 rechnet alle neu.
 $router->get('/internal/regions/backfill',  fn($r) => $runInternal($r, 'regions:backfill'));
 $router->post('/internal/regions/backfill', fn($r) => $runInternal($r, 'regions:backfill'));
+// Hierarchie zu hoch verketteter Gebiete (Inseln) neu verknüpfen.
+$router->get('/internal/regions/relink',  fn($r) => $runInternal($r, 'regions:relink'));
+$router->post('/internal/regions/relink', fn($r) => $runInternal($r, 'regions:relink'));
 
 $router->post('/internal/heatmap/import', function (Request $r) use ($internalToken, $heatmapLines): void {
     if ($internalToken === '') {

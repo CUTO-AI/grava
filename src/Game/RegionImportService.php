@@ -146,9 +146,9 @@ final class RegionImportService
                 }
                 $parentId = null;
                 $parentCore = null;
-                // Nächsthöhere Ebene zuerst (6 vor 4 vor 2).
+                // Nächsthöhere Ebene zuerst (6 vor 4 vor 2), mit Insel-bbox-Fallback.
                 foreach (array_reverse($higher) as $plevel) {
-                    $parentId = $this->resolveContaining($plevel, $self['center_lat'], $self['center_lon'], $id);
+                    $parentId = $this->resolveContaining($plevel, $self['center_lat'], $self['center_lon'], $id, true);
                     if ($parentId !== null) {
                         $parentCore = $this->repo->coreById($parentId);
                         break;
@@ -170,6 +170,58 @@ final class RegionImportService
     }
 
     /**
+     * Gezielte Neu-Verknüpfung fehl-/zu-hoch verketteter Gebiete (v. a. Inseln),
+     * OHNE Neu-Import der Geometrie. Nutzt den Insel-bbox-Fallback. Ebene
+     * aufsteigend (erst Provinzen, dann Gemeinden → nutzen ggf. den frisch
+     * korrigierten Provinz-Pfad).
+     *
+     * @param callable(string):void|null $log
+     * @return array{checked:int,relinked:int}
+     */
+    public function relinkOrphans(?callable $log = null): array
+    {
+        $log ??= static function (string $_): void {};
+        $levels = $this->repo->levelsPresent();
+        $orphans = $this->repo->regionsWithSkippedParent();
+        $checked = 0;
+        $relinked = 0;
+        foreach ($orphans as $o) {
+            $checked++;
+            $higher = array_values(array_filter($levels, static fn(int $l): bool => $l < $o['level']));
+            $parentId = null;
+            $parentCore = null;
+            foreach (array_reverse($higher) as $plevel) {
+                $cand = $this->resolveContaining($plevel, $o['center_lat'], $o['center_lon'], $o['id'], true);
+                if ($cand === null) {
+                    continue;
+                }
+                $core = $this->repo->coreById($cand);
+                // Ländercode-Sicherung: der bbox-Fallback könnte bei Küsten-Boxen
+                // eine ausländische Provinz treffen — nur akzeptieren, wenn das Land
+                // passt (oder eines von beiden unbekannt ist).
+                if ($core !== null
+                    && !empty($o['country_code']) && !empty($core['country_code'])
+                    && $o['country_code'] !== $core['country_code']) {
+                    continue;
+                }
+                $parentId = $cand;
+                $parentCore = $core;
+                break;
+            }
+            if ($parentId !== null && $parentCore !== null) {
+                $path = rtrim($parentCore['path'], '/') . '/' . $o['id'] . '/';
+                $cc = $o['country_code'] ?? $parentCore['country_code'];
+                $this->repo->setParent($o['id'], $parentId, $path, $cc);
+                $relinked++;
+            }
+            if ($checked % 200 === 0) {
+                $log("… {$checked} geprüft, {$relinked} neu verknüpft");
+            }
+        }
+        return ['checked' => $checked, 'relinked' => $relinked];
+    }
+
+    /**
      * feinstes Gebiet, das den Punkt enthält — Ebenen von fein nach grob
      * (8→6→4→2). Kleinste Fläche gewinnt bei Overlaps. Für Ingest & Backfill.
      */
@@ -184,12 +236,18 @@ final class RegionImportService
         return null;
     }
 
-    /** Enthaltendes Gebiet einer bestimmten Ebene (kleinste Fläche gewinnt). */
-    private function resolveContaining(int $level, float $lat, float $lon, ?int $excludeId): ?int
+    /**
+     * Enthaltendes Gebiet einer bestimmten Ebene (kleinste Fläche gewinnt).
+     *
+     * `$bboxFallback`: findet KEIN Polygon (PiP) den Punkt, aber es gibt bbox-
+     * Kandidaten, wird der flächenkleinste bbox-Kandidat zurückgegeben. Nötig für
+     * die Eltern-Verknüpfung von INSELN: die vereinfachten Provinz-/Regions-
+     * Polygone verlieren mitunter den Insel-Teil, sodass ein exakter PiP scheitert
+     * und die Zuordnung sonst eine Ebene zu hoch springt (Comune → direkt Land).
+     * Für die Kanten-Zuordnung bleibt der Fallback AUS (strikter PiP).
+     */
+    private function resolveContaining(int $level, float $lat, float $lon, ?int $excludeId, bool $bboxFallback = false): ?int
     {
-        // Speicher deckeln: europaweit sind die Zwischen-Ebenen (Landkreise) sonst
-        // in Summe sehr groß. Bei Überschreitung Cache leeren (kostet nur erneutes
-        // Decodieren, kein Korrektheitsproblem).
         if (count($this->geomCache) > self::MAX_GEOM_CACHE) {
             $this->geomCache = [];
         }
@@ -209,7 +267,8 @@ final class RegionImportService
                 return $id;
             }
         }
-        return null;
+        // Insel-Fallback: kein exakter Treffer → flächenkleinster bbox-Kandidat.
+        return $bboxFallback ? ($candidates[0]['id'] ?? null) : null;
     }
 
     /**

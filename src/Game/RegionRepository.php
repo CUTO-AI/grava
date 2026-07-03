@@ -697,6 +697,36 @@ final class RegionRepository
         return ['summary' => $summary, 'owned' => $owned, 'topOwners' => $topOwners];
     }
 
+    /**
+     * Gebiete (Ebene 6/8), die direkt am LAND (L2) hängen oder gar keinen Elter
+     * haben — der klar fehlerhafte Insel-Fall (ein Comune sollte nie direkt unter
+     * dem Land liegen). L8→L4 (nur Provinz übersprungen) wird bewusst NICHT
+     * gelistet: in vielen Ländern gibt es legitim keine Provinz-Ebene. Für die
+     * gezielte Neu-Verknüpfung (regions:relink), Ebene aufsteigend.
+     *
+     * @return list<array{id:int,level:int,center_lat:float,center_lon:float,country_code:?string}>
+     */
+    public function regionsWithSkippedParent(): array
+    {
+        $sql = 'SELECT r.id, r.level, r.center_lat, r.center_lon, r.country_code
+                  FROM game_region r
+             LEFT JOIN game_region p ON p.id = r.parent_id
+                 WHERE r.level IN (6, 8)
+                   AND (r.parent_id IS NULL OR p.level = 2)
+              ORDER BY r.level ASC, r.id ASC';
+        $out = [];
+        foreach ($this->pdo->query($sql) as $r) {
+            $out[] = [
+                'id' => (int)$r['id'],
+                'level' => (int)$r['level'],
+                'center_lat' => (float)$r['center_lat'],
+                'center_lon' => (float)$r['center_lon'],
+                'country_code' => $r['country_code'] !== null ? (string)$r['country_code'] : null,
+            ];
+        }
+        return $out;
+    }
+
     /** path eines Gebiets (für Präfix-Abfragen). */
     public function pathOf(int $id): ?string
     {

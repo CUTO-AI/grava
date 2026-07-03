@@ -86,6 +86,9 @@ final class Commands
             case 'regions:backfill':
                 return $this->regionsBackfill($argv);
 
+            case 'regions:relink':
+                return $this->regionsRelink();
+
             case 'cron:region-ownership':
             case 'regions:ownership-refresh':
                 return $this->regionsOwnershipRefresh();
@@ -681,6 +684,24 @@ final class Commands
             "Backfill: %d geprüft, %d zugeordnet, last_id=%d, done=%s\n",
             $res['scanned'], $res['assigned'], $res['last_id'], $res['done'] ? '1' : '0'
         );
+        return 0;
+    }
+
+    /**
+     * regions:relink — verknüpft zu hoch/fehlerhaft verkettete Gebiete (v. a.
+     * Inseln, deren Comune direkt am Land statt an der Provinz hing) neu, ohne
+     * Neu-Import der Geometrie. Danach regions:ownership-refresh aufrufen.
+     */
+    private function regionsRelink(): int
+    {
+        if ($this->regionImport === null) {
+            echo "regions:relink nicht verfügbar (Service nicht verdrahtet).\n";
+            return 1;
+        }
+        ini_set('memory_limit', '2G');
+        $log = static function (string $m): void { echo $m . "\n"; };
+        $res = $this->regionImport->relinkOrphans($log);
+        echo sprintf("Relink: %d geprüft, %d neu verknüpft.\n", $res['checked'], $res['relinked']);
         return 0;
     }
 
