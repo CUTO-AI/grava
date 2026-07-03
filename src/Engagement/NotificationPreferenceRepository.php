@@ -116,7 +116,8 @@ final class NotificationPreferenceRepository
             return 'rush';
         }
         return match ($type) {
-            'edge_taken', 'edge_lost', 'edge_reclaimed', 'territory_taken' => 'game_takeover',
+            'edge_taken', 'edge_lost', 'edge_reclaimed', 'territory_taken',
+            'region_taken', 'region_lost' => 'game_takeover',
             'record_beaten' => 'game_record',
             'pioneer_joined' => 'game_pioneer',
             default => $type,

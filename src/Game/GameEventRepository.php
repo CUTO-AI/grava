@@ -32,17 +32,19 @@ final class GameEventRepository
         ?int $crewId,
         ?string $riddenOn,
         ?array $payload = null,
+        ?int $regionId = null,
     ): bool {
         $stmt = $this->pdo->prepare(
             'INSERT IGNORE INTO game_event
-                (type, user_id, actor_user_id, edge_id, ride_id, crew_id, ridden_on, payload)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+                (type, user_id, actor_user_id, edge_id, region_id, ride_id, crew_id, ridden_on, payload)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
         $stmt->execute([
             $type,
             $userId,
             $actorUserId,
             $edgeId,
+            $regionId,
             $rideId,
             $crewId,
             $riddenOn,
@@ -56,7 +58,7 @@ final class GameEventRepository
      * Gruppierung im Dispatcher (Empfänger → Typ → Alter).
      *
      * @param list<string> $types
-     * @return list<array{id:int,type:string,user_id:int,actor_user_id:?int,edge_id:?int,created_at:string}>
+     * @return list<array{id:int,type:string,user_id:int,actor_user_id:?int,edge_id:?int,region_id:?int,created_at:string}>
      */
     public function pendingForDispatch(array $types): array
     {
@@ -65,7 +67,7 @@ final class GameEventRepository
         }
         $ph = implode(',', array_fill(0, count($types), '?'));
         $stmt = $this->pdo->prepare(
-            "SELECT id, type, user_id, actor_user_id, edge_id, created_at
+            "SELECT id, type, user_id, actor_user_id, edge_id, region_id, created_at
                FROM game_event
               WHERE notified_at IS NULL AND type IN ($ph)
               ORDER BY user_id ASC, type ASC, created_at ASC, id ASC"
@@ -77,6 +79,7 @@ final class GameEventRepository
                 'id'            => (int)$r['id'],
                 'type'          => (string)$r['type'],
                 'user_id'       => (int)$r['user_id'],
+                'region_id'     => $r['region_id'] !== null ? (int)$r['region_id'] : null,
                 'actor_user_id' => $r['actor_user_id'] !== null ? (int)$r['actor_user_id'] : null,
                 'edge_id'       => $r['edge_id'] !== null ? (int)$r['edge_id'] : null,
                 'created_at'    => (string)$r['created_at'],

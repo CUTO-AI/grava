@@ -31,6 +31,7 @@ final class PushService
         ?int $subjectId = null,
         ?int $edgeId = null,
         ?int $count = null,
+        ?int $regionId = null,
     ): void {
         try {
             $devices = $this->devices->forUser($recipientId);
@@ -43,8 +44,10 @@ final class PushService
                 ? $this->routePublicId($subjectId)
                 : null;
             $badge = $this->unreadCount($recipientId);
+            // Gebietsname für den Push-Text (nur Einzel-Push, kein Digest).
+            $regionName = ($regionId !== null && ($count === null || $count <= 1)) ? $this->regionName($regionId) : null;
 
-            $payload = $this->buildPayload($notificationId, $type, $actor, $routePublicId, $badge, $count);
+            $payload = $this->buildPayload($notificationId, $type, $actor, $routePublicId, $badge, $count, $regionName);
             // Rush-Deep-Link (rush/{id}): subject_type='rush' trägt die Rush-ID
             // ins Payload, damit iOS direkt auf RushView springen kann.
             if ($subjectType === 'rush' && $subjectId !== null) {
@@ -53,6 +56,10 @@ final class PushService
             // Spiel-Deep-Link: edge_id ins Custom-Payload (Tap-Routing zur Kante).
             if ($edgeId !== null) {
                 $payload['edge_id'] = (string)$edgeId;
+            }
+            // Gebiets-Deep-Link: region_id ins Custom-Payload (Tap → Gebiet).
+            if ($regionId !== null) {
+                $payload['region_id'] = (string)$regionId;
             }
             if ($count !== null) {
                 $payload['count'] = (string)$count;
@@ -83,11 +90,13 @@ final class PushService
         ?string $routePublicId,
         int $badge,
         ?int $count = null,
+        ?string $regionName = null,
     ): array {
         $actorLabel = $actor['name'] ?? ($actor['handle'] !== null ? '@' . $actor['handle'] : 'Jemand');
         // Digest: count > 1 ⇒ gebündelter Text ohne einzelnen Auslöser.
         $isDigest = $count !== null && $count > 1;
         $n = (int)$count;
+        $gebiet = $regionName ?? 'ein Gebiet';
 
         [$title, $body] = match ($type) {
             'follow'          => ['Neuer Follower', $actorLabel . ' folgt dir jetzt.'],
@@ -110,6 +119,12 @@ final class PushService
             'pioneer_joined'  => $isDigest
                 ? ['Pionier-Kanten befahren', $n . ' deiner Pionier-Kanten wurden zum ersten Mal von anderen befahren.']
                 : ['Pionier-Kante befahren', $actorLabel . ' ist zum ersten Mal eine deiner Pionier-Kanten gefahren.'],
+            'region_taken'    => $isDigest
+                ? ['Gebiete erobert', $n . ' Gebiete gingen an deine Crew.']
+                : ['Gebiet erobert', $actorLabel . ' hat ' . $gebiet . ' erobert.'],
+            'region_lost'     => $isDigest
+                ? ['Gebiete verloren', $n . ' deiner Gebiete wurden übernommen.']
+                : ['Gebiet verloren', $actorLabel . ' hat ' . $gebiet . ' übernommen.'],
             default           => ['GRAVA', $actorLabel . ' hat eine Aktion ausgeführt.'],
         };
 
@@ -153,6 +168,19 @@ final class PushService
         $stmt->execute([$routeId]);
         $v = $stmt->fetchColumn();
         return $v === false || $v === null ? null : (string)$v;
+    }
+
+    /** Name eines Verwaltungsgebiets für den Push-Text (Gebiets-Eroberung). */
+    private function regionName(int $regionId): ?string
+    {
+        try {
+            $stmt = Db::pdo()->prepare('SELECT name FROM game_region WHERE id = ?');
+            $stmt->execute([$regionId]);
+            $v = $stmt->fetchColumn();
+            return $v === false || $v === null ? null : (string)$v;
+        } catch (\PDOException) {
+            return null; // Tabelle (noch) nicht vorhanden → generischer Text
+        }
     }
 
     private function unreadCount(int $userId): int

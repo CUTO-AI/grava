@@ -99,6 +99,45 @@ final class GameEventRecorder
     }
 
     /**
+     * Gebiets-Besitzwechsel (region_taken / region_lost) aus dem Rollup-Ergebnis
+     * von {@see RegionOwnershipService::recomputeAll()} in den Ereignis-Strom.
+     * Wird aus dem Ingest-Pfad aufgerufen (dort ist der Auslöser bekannt).
+     *
+     * @param list<array{region_id:int,level:int,old_owner:?int,new_owner:?int}> $changes
+     * @return int Anzahl geschriebener Ereignisse
+     */
+    public function recordRegionChanges(array $changes, int $actorUserId, string $riddenOn): int
+    {
+        $written = 0;
+        foreach ($changes as $c) {
+            $regionId = (int)$c['region_id'];
+            $old = $c['old_owner'] ?? null;
+            $new = $c['new_owner'] ?? null;
+            if ($old === $new) {
+                continue;
+            }
+            // Verlust: der bisherige Eigentümer (Crew/Solo) verliert das Gebiet.
+            if ($old !== null) {
+                foreach ($this->recipientsExceptActor((int)$old, $actorUserId) as $uid) {
+                    if ($this->events->insertIgnore('region_lost', $uid, $actorUserId, null, null, null, $riddenOn, null, $regionId)) {
+                        $written++;
+                    }
+                }
+            }
+            // Eroberung: der neue Eigentümer bekommt das Gebiet. Auslöser (der es
+            // selbst erfuhr) ausgeschlossen → Crew-Kolleg:innen werden benachrichtigt.
+            if ($new !== null) {
+                foreach ($this->recipientsExceptActor((int)$new, $actorUserId) as $uid) {
+                    if ($this->events->insertIgnore('region_taken', $uid, $actorUserId, null, null, null, $riddenOn, null, $regionId)) {
+                        $written++;
+                    }
+                }
+            }
+        }
+        return $written;
+    }
+
+    /**
      * Reale Empfänger hinter einem Claimant (Rider = 1 User, Crew = alle
      * Mitglieder), die auslösende Person ausgeschlossen.
      *

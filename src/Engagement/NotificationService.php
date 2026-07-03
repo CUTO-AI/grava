@@ -79,6 +79,7 @@ final class NotificationService
         string $type,
         ?int $edgeId = null,
         ?int $count = null,
+        ?int $regionId = null,
     ): void {
         if ($actorId !== null) {
             if ($recipientId === $actorId) {
@@ -93,9 +94,9 @@ final class NotificationService
         try {
             $pdo = Db::pdo();
             $pdo->prepare(
-                'INSERT INTO notifications (user_id, actor_id, type, edge_id, `count`)
-                 VALUES (?, ?, ?, ?, ?)'
-            )->execute([$recipientId, $actorId, $type, $edgeId, $count]);
+                'INSERT INTO notifications (user_id, actor_id, type, edge_id, region_id, `count`)
+                 VALUES (?, ?, ?, ?, ?, ?)'
+            )->execute([$recipientId, $actorId, $type, $edgeId, $regionId, $count]);
             $notificationId = (int)$pdo->lastInsertId();
         } catch (\PDOException $e) {
             if (!str_contains($e->getMessage(), '1146')) {
@@ -106,7 +107,7 @@ final class NotificationService
 
         if ($this->push !== null && $notificationId > 0
             && ($this->prefs === null || $this->prefs->isPushEnabled($recipientId, $type))) {
-            $this->push->dispatch($notificationId, $recipientId, $actorId, $type, null, null, $edgeId, $count);
+            $this->push->dispatch($notificationId, $recipientId, $actorId, $type, null, null, $edgeId, $count, $regionId);
         }
     }
 

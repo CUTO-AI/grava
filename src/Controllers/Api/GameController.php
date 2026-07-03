@@ -43,6 +43,7 @@ final class GameController
         // rechnen (hält Städte-/Gebiets-Besitz live, ohne Cron-Abhängigkeit).
         private readonly ?\App\Game\RegionImportService $regionImport = null,
         private readonly ?\App\Game\RegionOwnershipService $regionOwnership = null,
+        private readonly ?\App\Game\GameEventRecorder $regionEvents = null,
     ) {}
 
     /**
@@ -281,7 +282,14 @@ final class GameController
         if (($summary['matched'] ?? 0) > 0) {
             try {
                 $this->regionImport?->backfillEdges(true, 500);
-                $this->regionOwnership?->recomputeAll();
+                $res = $this->regionOwnership?->recomputeAll();
+                // Besitzwechsel → region_taken/region_lost-Ereignisse (Push via
+                // Dispatcher). Auslöser = der Fahrer dieses Ingests.
+                if ($res !== null && $this->regionEvents !== null && ($res['changes'] ?? []) !== []) {
+                    $this->regionEvents->recordRegionChanges(
+                        $res['changes'], $uid, \App\Support\Clock::nowUtc()->format('Y-m-d'),
+                    );
+                }
             } catch (\Throwable $e) {
                 error_log('region refresh nach ingest fehlgeschlagen: ' . $e->getMessage());
             }

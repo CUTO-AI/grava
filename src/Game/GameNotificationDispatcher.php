@@ -22,7 +22,7 @@ use DateTimeZone;
 final class GameNotificationDispatcher
 {
     /** Push-relevante Ereignistypen. edge_new wird bewusst NICHT zugestellt. */
-    private const PUSH_EVENT_TYPES = ['edge_taken', 'edge_reclaimed', 'record_beaten', 'pioneer_joined'];
+    private const PUSH_EVENT_TYPES = ['edge_taken', 'edge_reclaimed', 'record_beaten', 'pioneer_joined', 'region_taken', 'region_lost'];
 
     public function __construct(
         private readonly GameEventRepository $events,
@@ -74,13 +74,14 @@ final class GameNotificationDispatcher
                 $this->notifications->notifyGame($userId, null, $type, null, $count);
                 $sent++;
             } else {
-                // Einzel-Mitteilungen mit Kanten-Deep-Link (Heimatzone-maskiert).
+                // Einzel-Mitteilungen mit Deep-Link: Kante (Heimatzone-maskiert)
+                // oder — bei Gebiets-Ereignissen — das Gebiet.
                 foreach ($rows as $row) {
                     $edgeId = $row['edge_id'];
                     if ($edgeId !== null && $this->isMasked($userId, $edgeId)) {
                         $edgeId = null;
                     }
-                    $this->notifications->notifyGame($userId, $row['actor_user_id'], $type, $edgeId, 1);
+                    $this->notifications->notifyGame($userId, $row['actor_user_id'], $type, $edgeId, 1, $row['region_id']);
                     $sent++;
                 }
             }
