@@ -1705,6 +1705,25 @@ final class GameRepository
         return $out;
     }
 
+    /**
+     * Distinkte Blatt-Gebiete (game_edge.region_id) der Kanten dieser Fahrt — Basis
+     * für die Gebiets-Eroberungs-Karte (Share). Ahnenkette + Besitz zieht der Service.
+     *
+     * @return list<int>
+     */
+    public function rideTouchedRegionIds(int $routeId, int $userId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT DISTINCT e.region_id
+               FROM game_edge_pass p
+               JOIN game_edge e ON e.id = p.edge_id
+              WHERE p.route_id = ? AND p.user_id = ? AND p.invalidated_at IS NULL
+                AND e.region_id IS NOT NULL'
+        );
+        $stmt->execute([$routeId, $userId]);
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
     /** @return array{rush_id:int,edges_rushed:int}|null */
     public function rideRushAggregate(int $routeId, int $userId): ?array
     {

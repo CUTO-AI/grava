@@ -280,6 +280,36 @@ final class RegionRepository
     }
 
     /**
+     * Meta für die Share-Gebiets-Karte: id → name/level/kind/area_km2/path.
+     * (metaForRegions liefert nur path+level; hier zusätzlich Name/Kind/Fläche.)
+     *
+     * @param list<int> $ids
+     * @return array<int,array{name:string,level:int,kind:string,area_km2:?float,path:string}>
+     */
+    public function shareMetaForRegions(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $this->pdo->prepare(
+            "SELECT id, name, level, kind, area_km2, path FROM game_region WHERE id IN ($in)"
+        );
+        $stmt->execute(array_values($ids));
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[(int)$r['id']] = [
+                'name'     => (string)$r['name'],
+                'level'    => (int)$r['level'],
+                'kind'     => (string)$r['kind'],
+                'area_km2' => $r['area_km2'] !== null ? (float)$r['area_km2'] : null,
+                'path'     => (string)$r['path'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * Aktueller Besitzer je Gebiet aus dem Cache (für Event-Diff und owner_since).
      *
      * @param list<int> $ids

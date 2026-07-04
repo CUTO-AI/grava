@@ -400,7 +400,7 @@ $stravaServ    = new StravaService(
     $routeRepo,
     $gameRepo,
 );
-$gameRideSummary = new \App\Game\GameRideSummaryService($gameRepo, $gameRushRepo, $privacyZoneRepo, $privacyTrimmer);
+$gameRideSummary = new \App\Game\GameRideSummaryService($gameRepo, $gameRushRepo, $privacyZoneRepo, $privacyTrimmer, new \App\Game\RegionRepository(Db::pdo()));
 $gameAtRisk      = new \App\Game\GameEdgesAtRiskService($gameRepo, $gameConfig, $gameRecalc, $privacyZoneRepo);
 
 // Admin-Gate (E-Mail in ADMIN_EMAILS) — wird sowohl von API- als auch

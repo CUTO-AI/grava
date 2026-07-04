@@ -14,11 +14,15 @@ use App\Privacy\RoutePrivacyTrimmer;
  */
 final class GameRideSummaryService
 {
+    /** Deckel gegen zu große Payload (viele berührte Gemeinden/Landkreise). */
+    private const SHARE_REGION_LIMIT = 60;
+
     public function __construct(
         private readonly GameRepository $repo,
         private readonly RushRepository $rushes,
         private readonly PrivacyZoneRepository $privacyZones,
         private readonly RoutePrivacyTrimmer $trimmer,
+        private readonly RegionRepository $regions,
     ) {}
 
     /**
@@ -42,18 +46,125 @@ final class GameRideSummaryService
 
         $zone = $this->privacyZone($userId);
 
+        $regions = $this->regionBlocks($routeId, $userId, $claimantId);
+        // „Neue Reviere" = in dieser Fahrt neu gewonnene Gemeinden (Ebene 8), damit
+        // sich L6/L8 nicht doppeln. Fläche als Summe ihrer km² → m².
+        $gainedMunis = array_filter(
+            $regions,
+            static fn(array $r): bool => $r['status'] === 'gained' && $r['level'] === 8
+        );
+        $areaSqm = 0.0;
+        foreach ($gainedMunis as $r) {
+            $areaSqm += ($r['area_km2'] ?? 0) * 1_000_000;
+        }
+
         return [
             'edges_total'        => $stats['edges_total'],
             'edges_new'          => $stats['edges_new'],
             'edges_taken_over'   => $stats['edges_taken_over'],
             'pioneer_names'      => $stats['pioneer_names'],
-            'territories_new'    => 0,
-            'territory_area_sqm' => 0,
+            'territories_new'    => count($gainedMunis),
+            'territory_area_sqm' => $areaSqm,
             'points_awarded'     => null,
             'rank_after'         => null,
             'rush'               => $this->rushBlock($routeId, $userId),
             'edges'              => $this->edgeBlocks($routeId, $userId, $claimantId, $zone),
+            'regions'            => array_map(
+                static fn(array $r): array => [
+                    'name'   => $r['name'],
+                    'level'  => $r['level'],
+                    'kind'   => $r['kind'],
+                    'status' => $r['status'],
+                    'geom'   => $r['geom'],
+                ],
+                $regions
+            ),
         ];
+    }
+
+    /**
+     * Vom Ride berührte Verwaltungsgebiete (Landkreis L6 + Gemeinde/Stadt L8) mit
+     * Besitzstatus und Grenzpolygon für die Share-Gebiets-Karte. Öffentliche
+     * Verwaltungsgrenzen → keine Heimatzonen-Maskierung nötig. `status`:
+     * `gained` (heute erobert) · `held` (eigenes) · `enemy` (fremd) · `neutral` (umkämpft).
+     *
+     * @return list<array{name:string,level:int,kind:string,status:string,area_km2:?float,geom:array<string,mixed>}>
+     */
+    private function regionBlocks(int $routeId, int $userId, int $claimantId): array
+    {
+        $leafIds = $this->repo->rideTouchedRegionIds($routeId, $userId);
+        if ($leafIds === []) {
+            return [];
+        }
+
+        // Blatt-Meta → Ahnenkette (aus dem materialisierten path) einsammeln.
+        $candidate = [];
+        foreach ($leafIds as $id) {
+            $candidate[$id] = true;
+        }
+        foreach ($this->regions->shareMetaForRegions($leafIds) as $m) {
+            foreach (explode('/', trim($m['path'], '/')) as $anc) {
+                if ($anc !== '') {
+                    $candidate[(int)$anc] = true;
+                }
+            }
+        }
+
+        // Nur Landkreis (6) + Gemeinde/Stadt (8); L8 zuerst (Karten-Füllung),
+        // dann L6 (Umriss). Deckel gegen zu große Payload.
+        $meta = $this->regions->shareMetaForRegions(array_keys($candidate));
+        $keep = array_filter($meta, static fn(array $m): bool => in_array($m['level'], [6, 8], true));
+        if ($keep === []) {
+            return [];
+        }
+        uasort($keep, static fn(array $a, array $b): int => $b['level'] <=> $a['level']);
+
+        $owners = $this->regions->currentOwnersFor(array_keys($keep));
+        $today = \App\Support\Clock::nowUtc()->format('Y-m-d');
+
+        $out = [];
+        foreach ($keep as $id => $m) {
+            if (count($out) >= self::SHARE_REGION_LIMIT) {
+                break;
+            }
+            $raw = $this->regions->boundaryGeojson($id);
+            if ($raw === null) {
+                continue;
+            }
+            $geom = json_decode($raw, true);
+            if (!is_array($geom)) {
+                continue;
+            }
+            $out[] = [
+                'name'     => $m['name'],
+                'level'    => $m['level'],
+                'kind'     => $m['kind'],
+                'status'   => $this->regionStatus($owners[$id] ?? null, $claimantId, $today),
+                'area_km2' => $m['area_km2'],
+                'geom'     => $geom,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Besitzstatus eines Gebiets aus Sicht des Fahrers.
+     *
+     * @param array{owner:?int,since:?string}|null $owner
+     */
+    private function regionStatus(?array $owner, int $claimantId, string $today): string
+    {
+        if ($owner === null || $owner['owner'] === null) {
+            return 'neutral';
+        }
+        if ($owner['owner'] !== $claimantId) {
+            return 'enemy';
+        }
+        // Eigenes Gebiet: „gained", wenn der Besitz heute übergegangen ist.
+        if ($owner['since'] !== null && substr($owner['since'], 0, 10) === $today) {
+            return 'gained';
+        }
+        return 'held';
     }
 
     /** @return list<array{category:string,geom:array<string,mixed>}> */
