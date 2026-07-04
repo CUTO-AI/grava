@@ -9,6 +9,7 @@ require __DIR__ . '/inc/lang.php';             // exponiert $CR_LANG + $T
 $SEC = __DIR__ . '/sections/';
 require __DIR__ . '/inc/header.php';
 require $SEC . 'hero.php';
+require $SEC . 'pulse-teaser.php';
 require $SEC . 'features.php';
 require $SEC . 'news.php';
 require $SEC . 'updates.php';

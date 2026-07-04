@@ -52,5 +52,6 @@
 
 <script src="<?= $e($CR_ASSETS) ?>/lucide.min.js"></script>
 <script src="<?= $e($CR_ASSETS) ?>/site.js"></script>
+<script src="<?= $e($CR_ASSETS) ?>/pulse-teaser.js"></script>
 </body>
 </html>

@@ -29,6 +29,7 @@ $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
       <a href="#news"><?= $e($T['nav']['news']) ?></a>
       <a href="#updates"><?= $e($T['nav']['updates']) ?></a>
       <a href="/heatmap"><?= $e($T['nav']['heatmap']) ?></a>
+      <a href="/pulse"><?= $e($T['nav']['live']) ?></a>
     </div>
     <span class="lang-switch">
       <a href="?lang=en" class="<?= $CR_LANG === 'en' ? 'is-active' : '' ?>"><?= $e($T['lang']['en']) ?></a>
