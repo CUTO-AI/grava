@@ -839,7 +839,7 @@ $runInternal = function (Request $r, string $command)
     }
     $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc);
     $argv = ['internal', $command];
-    foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch'] as $opt) {
+    foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {
             $argv[] = '--' . $opt . '=' . (string)$r->query[$opt];
         }

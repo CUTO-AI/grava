@@ -107,6 +107,9 @@ final class Commands
             case 'apns-check':
                 return $this->apnsCheck();
 
+            case 'user:verify':
+                return $this->verifyUser($argv);
+
             case 'help':
             default:
                 $this->help();
@@ -579,6 +582,43 @@ final class Commands
     }
 
     /** Löst eine User-ID aus expliziter ID oder public_handle (mit/ohne @) auf; 0 = nicht gefunden. */
+    /**
+     * user:verify --email=<email>
+     *
+     * Markiert ein Konto als E-Mail-verifiziert (und aktiv) — für Betriebs-/
+     * Test-Konten (z. B. Apple-Review-Demo), die keinen Zugriff auf das Postfach
+     * haben. Nur über den token-geschützten /internal-Endpoint erreichbar.
+     */
+    private function verifyUser(array $argv): int
+    {
+        $opts  = $this->parseOptions($argv);
+        $email = trim((string)($opts['email'] ?? ''));
+        if ($email === '') {
+            echo "Nutzung: user:verify --email=<email>\n";
+            return 1;
+        }
+        $pdo = \App\Database\Db::pdo();
+        $upd = $pdo->prepare(
+            "UPDATE users
+                SET email_verified_at = COALESCE(email_verified_at, UTC_TIMESTAMP()),
+                    status = 'active',
+                    updated_at = UTC_TIMESTAMP()
+              WHERE email = ?"
+        );
+        $upd->execute([$email]);
+
+        $sel = $pdo->prepare('SELECT id, email, email_verified_at, status FROM users WHERE email = ? LIMIT 1');
+        $sel->execute([$email]);
+        $user = $sel->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+        echo json_encode([
+            'ok'    => $user !== null,
+            'email' => $email,
+            'user'  => $user,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        return $user !== null ? 0 : 1;
+    }
+
     private function resolveUserId(\PDO $pdo, string $handle, int $id): int
     {
         if ($id > 0) {
