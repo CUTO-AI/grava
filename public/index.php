@@ -415,6 +415,7 @@ $apiShared  = new SharedRouteController($shareTokens);
 $apiDiscover = new DiscoverController($discovery);
 $apiProfile  = new ProfileController($profileServ, $adminGuard);
 $apiSocial   = new SocialController($followServ, $blockServ);
+$apiReport   = new \App\Controllers\Api\ReportController(new \App\Engagement\ReportService(), $rate);
 $apiFeed     = new FeedController($feedServ);
 $apiLike     = new LikeController($likeServ);
 $apiComment  = new CommentController($commentServ, $rate);
@@ -576,6 +577,8 @@ $router->post("{$apiBase}/users/by-handle/{handle}/follow",       fn($r) => $api
 $router->delete("{$apiBase}/users/by-handle/{handle}/follow",     fn($r) => $apiSocial->unfollow($r), [$requireBearer]);
 $router->post("{$apiBase}/users/by-handle/{handle}/block",        fn($r) => $apiSocial->block($r),    [$requireBearer]);
 $router->delete("{$apiBase}/users/by-handle/{handle}/block",      fn($r) => $apiSocial->unblock($r),  [$requireBearer]);
+// Meldungen (UGC-Schutz, App-Store-Richtlinie 1.2): Nutzer / Route / Kommentar.
+$router->post("{$apiBase}/users/by-handle/{handle}/report",       fn($r) => $apiReport->reportUser($r), [$requireBearer]);
 $router->get("{$apiBase}/users/me/follows",                       fn($r) => $apiSocial->meFollows($r),   [$requireBearer]);
 $router->get("{$apiBase}/users/me/followers",                     fn($r) => $apiSocial->meFollowers($r), [$requireBearer]);
 $router->get("{$apiBase}/users/me/blocks",                        fn($r) => $apiSocial->meBlocks($r),    [$requireBearer]);
@@ -597,6 +600,8 @@ $router->get("{$apiBase}/routes/{id}/likes",                      fn($r) => $api
 $router->get("{$apiBase}/routes/{id}/comments",                   fn($r) => $apiComment->list($r),   [$optionalBearer]);
 $router->post("{$apiBase}/routes/{id}/comments",                  fn($r) => $apiComment->create($r), [$requireBearer, $requireVerified]);
 $router->delete("{$apiBase}/routes/{id}/comments/{cid}",          fn($r) => $apiComment->delete($r), [$requireBearer]);
+$router->post("{$apiBase}/routes/{id}/report",                    fn($r) => $apiReport->reportRoute($r),   [$requireBearer]);
+$router->post("{$apiBase}/routes/{id}/comments/{cid}/report",     fn($r) => $apiReport->reportComment($r), [$requireBearer]);
 
 // ---- Notifications (M4c) ----
 // Alle auth-required. Pull-Modell: Client pollt Liste + unread-count.
