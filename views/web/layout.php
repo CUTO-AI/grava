@@ -70,6 +70,7 @@ $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
             <a href="/routes">Routen</a>
             <a href="/discover">Entdecken</a>
             <a href="/heatmap">Heatmap</a>
+            <a href="/pulse">Heute im Spiel</a>
             <?php if ($_surfaceCheck): ?><a href="/surface-check">Belag prüfen</a><?php endif; ?>
             <a href="/feed">Feed</a>
             <?php $_notifUnread = $_notifUnread ?? 0; ?>
@@ -85,6 +86,7 @@ $_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
             <a href="/features">Funktionen</a>
             <a href="/discover">Entdecken</a>
             <a href="/heatmap">Heatmap</a>
+            <a href="/pulse">Heute im Spiel</a>
             <a href="/login">Login</a>
             <a href="/register">Registrieren</a>
         <?php endif; ?>

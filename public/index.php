@@ -459,9 +459,12 @@ $presenceSvc  = new \App\Presence\PresenceService($presenceRepo, $gameConfig);
 $apiPresence  = new \App\Controllers\Api\PresenceController($presenceSvc);
 $communitySvc = new \App\Community\CommunityTodayService($routeRepo, $presenceSvc, $gameRepo);
 $apiCommunity = new \App\Controllers\Api\CommunityTodayController($communitySvc);
+// „Heute im Spiel" (Pulse): öffentliches Live-Aggregat + Webseite.
+$apiPulse   = new \App\Controllers\Api\PulseController(new \App\Game\PulseService(Db::pdo(), $presenceSvc));
 $webAuth    = new AuthPagesController($auth, $cookieAuth, $webSession, $rate, $basePath . '/views');
 $webHome    = new DashboardController($webSession, $auth, $basePath . '/views');
 $webFeatures = new \App\Controllers\Web\FeaturesPagesController($webSession, $auth, $basePath . '/views');
+$webPulse   = new \App\Controllers\Web\PulsePagesController($webSession, $auth, $basePath . '/views');
 $webRefresh = new WebRefreshController($cookieAuth, $webSession);
 $webRoutes  = new RoutePagesController($webSession, $auth, $routeService, $shareTokens, $config, $routeGeoJson, $basePath . '/views', $routeInsights);
 $webShare   = new PublicSharePageController($shareTokens, $basePath . '/views', $routeService, $routeGeoJson, $routeInsights, $privacyZoneRepo, $privacyTrimmer);
@@ -687,6 +690,9 @@ $router->get ("{$apiBase}/presence/active",       fn($r) => $apiPresence->active
 // ---- Community (Tages-Aggregat — COMMUNITY_TODAY_BACKEND.md) ----
 $router->get ("{$apiBase}/community/today",       fn($r) => $apiCommunity->today($r));
 
+// ---- Pulse („Heute im Spiel" — öffentliches Live-Aggregat) ----
+$router->get ("{$apiBase}/pulse",                 fn($r) => $apiPulse->index($r));
+
 // ---- Web pages ----
 $router->get('/',                  fn($r) => $webLanding->home());
 $router->get('/landing',           fn($r) => $webLanding->home());
@@ -705,6 +711,7 @@ $router->get('/terms',             fn($r) => $webLegal->terms($r));
 $router->get('/imprint',           fn($r) => $webLegal->imprint($r));
 $router->get('/dashboard',         fn($r) => $webHome->show($r));
 $router->get('/features',          fn($r) => $webFeatures->show($r));
+$router->get('/pulse',             fn($r) => $webPulse->show($r));
 $router->post('/logout',           fn($r) => $webAuth->doLogout($r),          [$csrf]);
 // H5: Einziger Punkt, an dem ein Refresh-Token-Cookie konsumiert wird.
 // Pfad-Scoped Cookie sorgt dafür, dass es nur hier eintrifft.

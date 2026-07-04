@@ -1,0 +1,108 @@
+/*
+ * pulse.css — Layout für die „Heute im Spiel"-Seite.
+ * Nutzt die globalen Cyber-Design-Tokens (cyberride.css) — hier nur Raster,
+ * Kacheln, Listenzeilen, Fraktionsbalken und Feed.
+ */
+
+.pulse-updated { font-family: var(--font-mono); font-size: var(--text-xs); }
+.small { font-size: var(--text-sm); }
+
+/* #7 Kennzahlen-Kacheln */
+.pulse-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 14px;
+    margin: 20px 0 26px;
+}
+.pulse-tile {
+    background: var(--surface-1, #0D111B);
+    border: 1px solid var(--line-soft, rgba(150,180,210,.14));
+    border-radius: var(--radius-lg, 8px);
+    padding: 16px 18px;
+}
+.pulse-tile .val {
+    font-family: var(--font-display, sans-serif);
+    font-size: 30px;
+    line-height: 1.05;
+    color: var(--text-hi, #EAF6FF);
+    font-variant-numeric: tabular-nums;
+}
+.pulse-tile .lbl {
+    display: block;
+    margin-top: 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs, 11px);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted, #7C8CA3);
+}
+.pulse-tile.is-live { border-color: var(--line-cyan, rgba(0,229,255,.22)); }
+.pulse-tile.is-live .val { color: var(--accent, #00E5FF); text-shadow: 0 0 12px rgba(0,229,255,.4); }
+.pulse-tile .live-dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--accent, #00E5FF); margin-right: 7px; vertical-align: middle;
+    box-shadow: 0 0 8px rgba(0,229,255,.8);
+    animation: pulse-blink 1.6s ease-in-out infinite;
+}
+@keyframes pulse-blink { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .pulse-tile .live-dot { animation: none; } }
+
+/* Karten-Raster */
+.pulse-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px;
+    align-items: start;
+}
+.pulse-card--wide { grid-column: 1 / -1; }
+.pulse-card h2 { margin: 0 0 2px; }
+.pulse-card .small { margin: 0 0 14px; }
+
+/* Listenzeilen (Teams, Regionen, Pioniere, Rekorde, hot) */
+.pulse-list { display: flex; flex-direction: column; }
+.pulse-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; border-bottom: 1px solid var(--line-soft, rgba(150,180,210,.10));
+}
+.pulse-row:last-child { border-bottom: 0; }
+.pulse-rank {
+    font-family: var(--font-mono, monospace); font-size: var(--text-xs, 11px);
+    color: var(--text-muted, #7C8CA3); min-width: 20px;
+}
+.pulse-dot {
+    width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto;
+    border: 1px solid rgba(255,255,255,.35);
+}
+.pulse-name { flex: 1 1 auto; color: var(--text-hi, #EAF6FF); min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pulse-sub { color: var(--text-muted, #7C8CA3); font-size: var(--text-sm, 13px); }
+.pulse-metric {
+    font-family: var(--font-mono, monospace); font-variant-numeric: tabular-nums;
+    color: var(--accent-territory, #B6FF2E); flex: 0 0 auto;
+}
+.pulse-empty { color: var(--text-muted, #7C8CA3); font-size: var(--text-sm, 13px); padding: 10px 0; }
+
+/* #4 Fraktionsbalken */
+.pulse-factions { display: flex; flex-direction: column; gap: 14px; }
+.pulse-fac-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.pulse-fac-name { color: var(--text-hi, #EAF6FF); }
+.pulse-fac-val { font-family: var(--font-mono, monospace); font-size: var(--text-sm, 13px); color: var(--text-muted, #7C8CA3); }
+.pulse-bar { height: 10px; border-radius: 999px; background: var(--surface-2, #141A28); overflow: hidden; }
+.pulse-bar > span { display: block; height: 100%; border-radius: 999px; transition: width .5s ease; }
+
+/* #10 Feed */
+.pulse-feed { display: flex; flex-direction: column; }
+.pulse-feed-row {
+    display: flex; align-items: baseline; gap: 12px;
+    padding: 8px 0; border-bottom: 1px solid var(--line-soft, rgba(150,180,210,.10));
+}
+.pulse-feed-row:last-child { border-bottom: 0; }
+.pulse-feed-time {
+    font-family: var(--font-mono, monospace); font-size: var(--text-xs, 11px);
+    color: var(--text-muted, #7C8CA3); flex: 0 0 auto; min-width: 52px;
+}
+.pulse-feed-icon { flex: 0 0 auto; }
+.pulse-feed-text { flex: 1 1 auto; color: var(--text, #B6C6DA); }
+.pulse-feed-text b { color: var(--text-hi, #EAF6FF); }
+
+.pulse-foot { margin-top: 22px; }
