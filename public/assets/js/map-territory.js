@@ -120,13 +120,17 @@
 
   // ---- Zoom-adaptive Auswahl (nach Grad-Spanne des Ausschnitts) -----------
 
+  // Schwellen exakt wie in der App (GameStore): Marker ab 2.5° Spanne aus
+  // Landkreis-Zentren (Level 6), sonst Landkreise (6) bzw. Gemeinden (8) als
+  // Polygone, ganz nah einzelne Wege. So verschwinden die Pins beim
+  // Rauszoomen nicht (frühere level4-Übersicht blieb ohne Level-4-Gebiete leer).
   var lastKey = '';
   function reload() {
     var s = spanDeg();
     var bb = bboxParam();
     var mode;
-    if (s >= 3.0) { mode = 'level4'; }
-    else if (s >= 0.5) { mode = 'level6'; }
+    if (s >= 2.5) { mode = 'markers'; }
+    else if (s >= 0.4) { mode = 'level6'; }
     else if (s >= 0.15) { mode = 'level8'; }
     else { mode = 'edges'; }
 
@@ -145,16 +149,19 @@
       return;
     }
 
-    var level = mode === 'level4' ? 4 : (mode === 'level6' ? 6 : 8);
-    fetchJson('/api/v1/game/regions?bbox=' + encodeURIComponent(bb) + '&level=' + level + '&geometry=1')
+    // Marker-Modus: Level-6-Zentren ohne Geometrie — spart Payload und
+    // schweres Polygon-Rendering bei weitem Zoom (wie in der App).
+    var asMarkers = (mode === 'markers');
+    var level = (mode === 'level8') ? 8 : 6;
+    var geometry = asMarkers ? 0 : 1;
+    fetchJson('/api/v1/game/regions?bbox=' + encodeURIComponent(bb) + '&level=' + level + '&geometry=' + geometry)
       .then(function (d) {
         clearLayer();
         var regs = (d && d.regions) || [];
-        var asMarkers = (mode === 'level4');
         layer = drawRegions(regs, asMarkers);
         layer.addTo(map);
         setMode(
-          mode === 'level4' ? 'Übersicht · besetzte Regionen — reinzoomen für Gebiete'
+          asMarkers ? 'Übersicht · besetzte Regionen — reinzoomen für Gebiete'
             : (level === 6 ? 'Landkreise' : 'Gemeinden')
         );
       }).catch(noop);
