@@ -872,6 +872,8 @@ $runInternal = function (Request $r, string $command)
 
 $router->get('/internal/migrate',       fn($r) => $runInternal($r, 'cli:migrate'));
 $router->post('/internal/migrate',      fn($r) => $runInternal($r, 'cli:migrate'));
+$router->get('/internal/user-verify',   fn($r) => $runInternal($r, 'user:verify'));
+$router->post('/internal/user-verify',  fn($r) => $runInternal($r, 'user:verify'));
 $router->get('/internal/cron/cleanup',  fn($r) => $runInternal($r, 'cron:cleanup'));
 $router->post('/internal/cron/cleanup', fn($r) => $runInternal($r, 'cron:cleanup'));
 $router->get('/internal/cron/heatmap',  fn($r) => $runInternal($r, 'cron:heatmap'));
