@@ -32,14 +32,17 @@ final class RegionImportService
     public function __construct(private readonly RegionRepository $repo) {}
 
     /**
-     * Kompletter Import aus einer GeoJSONSeq-Datei. Löscht vorhandene Gebiete
-     * (sauberer Re-Import) und liefert Zählungen je Ebene.
+     * Import aus einer GeoJSONSeq-Datei. Mit `$replace=true` (Default) wird der
+     * Bestand vorab geleert (sauberer Voll-Import); mit `$replace=false` werden die
+     * Gebiete ANGEHÄNGT — nötig, um einen weiteren Kontinent (z. B. USA) zu EU
+     * hinzuzufügen, ohne EU zu verlieren. `linkHierarchy` läuft danach ortsbasiert
+     * über den gesamten Bestand und verknüpft die neuen Gebiete korrekt.
      *
      * @param list<int> $levels  z. B. [2,4,6,8]
      * @param callable(string):void|null $log
      * @return array{inserted:array<int,int>,linked:int}
      */
-    public function importFromGeojsonSeq(string $path, array $levels, ?callable $log = null): array
+    public function importFromGeojsonSeq(string $path, array $levels, ?callable $log = null, bool $replace = true): array
     {
         $log ??= static function (string $_): void {};
         if (!is_readable($path)) {
@@ -47,8 +50,12 @@ final class RegionImportService
         }
         $want = array_fill_keys($levels, true);
 
-        $log("Lösche vorhandene Gebiete …");
-        $this->repo->deleteAll();
+        if ($replace) {
+            $log("Lösche vorhandene Gebiete …");
+            $this->repo->deleteAll();
+        } else {
+            $log("Append-Modus: bestehende Gebiete bleiben erhalten.");
+        }
 
         $handle = fopen($path, 'rb');
         if ($handle === false) {

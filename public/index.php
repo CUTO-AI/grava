@@ -225,10 +225,9 @@ $gameRecalc   = new EdgeRecalculator($gameRepo, $gameConfig);
 // S8 Privatzonen (§17): Repository früh, da Ingestion + Heatmap es brauchen.
 $privacyZoneRepo    = new \App\Privacy\PrivacyZoneRepository(Db::pdo());
 $privacyTrimmer     = new \App\Privacy\RoutePrivacyTrimmer();
-$gameValhalla = new ValhallaClient(
-    (string)($config->get('VALHALLA_BASE_URL', $config->get('VALHALLA_URL', 'http://localhost:8002')) ?? 'http://localhost:8002'),
-    (string)($config->get('VALHALLA_COSTING', 'bicycle') ?? 'bicycle'),
-);
+// Regions-fähiger Client: bei gesetztem VALHALLA_URL_US wählt er pro Fahrt EU/US
+// (RegionalValhallaClient), sonst Einzel-Instanz wie bisher (VALHALLA_BASE_URL).
+$gameValhalla = \App\Heatmap\ValhallaClientFactory::fromConfig($config);
 $gameMatcher   = new ValhallaEdgeMatcher($gameValhalla);
 // Phase A Teil 1: Ereignis-Strom. Der GameEventRecorder löst den
 // TerritoryTakeoverNotifier ab — statt direkt Notifications zu schreiben,
@@ -290,13 +289,8 @@ $routeInsights = new RouteInsights(new GeometryParser(), new SurfaceTrack());
 
 // M6: Heatmap-Streckenlinien via Map-Matching (Valhalla). Der Valhalla-Client
 // wird nur im Precompute (CLI cron:heatmap-lines) benutzt, nie im Request-Pfad.
-// Gleiche ENV-Auflösung wie $gameValhalla (Zeile ~224): VALHALLA_BASE_URL bevorzugt,
-// Fallback VALHALLA_URL, sonst localhost. Sonst liefe der Rebuild bei gesetztem
-// VALHALLA_BASE_URL fälschlich gegen localhost (→ valhalla_unavailable).
-$valhalla = new ValhallaClient(
-    (string)($config->get('VALHALLA_BASE_URL', $config->get('VALHALLA_URL', 'http://localhost:8002')) ?? 'http://localhost:8002'),
-    (string)($config->get('VALHALLA_COSTING', 'bicycle') ?? 'bicycle'),
-);
+// Gleiche Regions-Auflösung wie $gameValhalla (EU/US bei gesetztem VALHALLA_URL_US).
+$valhalla = \App\Heatmap\ValhallaClientFactory::fromConfig($config);
 $heatmapLines = new HeatmapLinesService(
     $valhalla,
     $routeService,
@@ -1010,7 +1004,18 @@ $router->get('/healthz', function ($r) use ($basePath, $gameValhalla, $apnsConfi
     if ($wantValhalla) {
         $v = $gameValhalla->status();
         $body['checks']['valhalla'] = $v;
-        if (!$v['reachable']) {
+        // Multi-Instanz (EU/US): zusätzlich Status je Region ausweisen und
+        // "degraded", sobald IRGENDEINE Region unerreichbar ist.
+        if ($gameValhalla instanceof \App\Heatmap\RegionalValhallaClient) {
+            $regionStatuses = $gameValhalla->statuses();
+            $body['checks']['valhalla_regions'] = $regionStatuses;
+            foreach ($regionStatuses as $rs) {
+                if (!$rs['reachable']) {
+                    $body['status'] = 'degraded';
+                    $httpStatus = 503;
+                }
+            }
+        } elseif (!$v['reachable']) {
             $body['status'] = 'degraded';
             $httpStatus = 503;
         }

@@ -6,13 +6,15 @@
 # Europa-PBF und exportiert die assemblierten (Multi)Polygone als GeoJSONSeq; der
 # PHP-Befehl regions:import streamt das dann in die DB.
 #
-#   scripts/import_admin_boundaries.sh [PBF] [--backfill]
+#   scripts/import_admin_boundaries.sh [PBF] [--backfill] [--append]
 #
 # PBF        Pfad zum OSM-Extrakt (Default: das bereits gebaute Europa-Tileset-PBF).
 # --backfill Nach dem Import zusätzlich game_edge.region_id füllen (regions:backfill).
+# --append   Gebiete ANHÄNGEN statt ersetzen — für einen weiteren Kontinent (z. B.
+#            USA: north-america-latest.osm.pbf), ohne den EU-Bestand zu löschen.
 #
-# Die Zwischendateien liegen unter storage/regions/ (gitignored). Der Import ist
-# idempotent (löscht die Gebiete vorab) — bei OSM-Updates einfach erneut laufen lassen.
+# Die Zwischendateien liegen unter storage/regions/ (gitignored). Ohne --append ist
+# der Import idempotent (löscht die Gebiete vorab) — bei OSM-Updates erneut laufen.
 
 set -euo pipefail
 
@@ -21,9 +23,13 @@ cd "$ROOT"
 
 PBF="${1:-docker/valhalla/custom_files/europe-latest.osm.pbf}"
 BACKFILL=0
+APPEND=0
 for arg in "$@"; do
   [[ "$arg" == "--backfill" ]] && BACKFILL=1
+  [[ "$arg" == "--append" ]] && APPEND=1
 done
+IMPORT_FLAGS=""
+[[ "$APPEND" == "1" ]] && IMPORT_FLAGS="--append"
 
 OUT_DIR="storage/regions"
 BOUNDARIES_PBF="${OUT_DIR}/boundaries.osm.pbf"
@@ -39,8 +45,8 @@ osmium tags-filter "$PBF" r/boundary=administrative -o "$BOUNDARIES_PBF" --overw
 echo "[2/3] Polygone exportieren → ${GEOJSONSEQ}"
 osmium export "$BOUNDARIES_PBF" --geometry-types=polygon -f geojsonseq -o "$GEOJSONSEQ" --overwrite
 
-echo "[3/3] Import in game_region"
-php -d memory_limit=3G public/index.php regions:import --file="$GEOJSONSEQ" --levels=2,4,6,8
+echo "[3/3] Import in game_region${IMPORT_FLAGS:+ (Append)}"
+php -d memory_limit=3G public/index.php regions:import --file="$GEOJSONSEQ" --levels=2,4,6,8 $IMPORT_FLAGS
 
 if [[ "$BACKFILL" == "1" ]]; then
   echo "Backfill game_edge.region_id"

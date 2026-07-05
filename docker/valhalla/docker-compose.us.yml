@@ -1,0 +1,42 @@
+# Zweite Valhalla-Instanz für Nordamerika (Map-Matching USA).
+#
+# Spiegelt docker-compose.yml (EU/DACH), aber:
+#   - eigener Container ge_valhalla_us
+#   - Port 8003 (EU bleibt 8002)
+#   - eigenes Tile-/PBF-Verzeichnis custom_files_us/
+#
+# So laufen EU (8002) und US (8003) parallel; das Backend wählt pro Fahrt anhand
+# der Koordinaten (RegionalValhallaClient / VALHALLA_URL_US). Siehe docs/USA_ROLLOUT.md.
+#
+# Start:   docker compose -f docker/valhalla/docker-compose.us.yml up -d
+# Logs:    docker compose -f docker/valhalla/docker-compose.us.yml logs -f
+# Status:  curl http://localhost:8003/status
+#
+# In custom_files_us/ darf nur EIN PBF liegen (north-america-latest.osm.pbf).
+
+services:
+  valhalla_us:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    container_name: ge_valhalla_us
+    ports:
+      - "8003:8002"          # Host 8003 → Container-Standardport 8002
+    volumes:
+      - ./custom_files_us:/custom_files
+    environment:
+      - tile_urls=${VALHALLA_TILE_URLS:-}
+      - serve_tiles=True
+      - use_tiles_ignore_pbf=False
+      - force_rebuild=False
+      - build_elevation=False
+      # Wie EU: Admins beim Tile-Build AUS (nur Map-Matching; die Verwaltungs-
+      # grenzen kommen separat via osmium → game_region, nicht aus Valhalla).
+      - build_admins=False
+      - build_time_zones=False
+      - server_threads=4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8002/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 600s

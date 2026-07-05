@@ -677,9 +677,13 @@ final class Commands
         if ($levels === []) {
             $levels = [2, 4, 6, 8];
         }
+        // --append: weiteren Kontinent (z. B. USA) hinzufügen, ohne EU zu löschen.
+        // Bloßes Flag (--append) ODER --append=1; parseOptions erfasst nur letzteres,
+        // daher zusätzlich argv direkt prüfen.
+        $replace = !isset($opts['append']) && !in_array('--append', $argv, true);
         $log = static fn(string $m): int => fwrite(STDERR, $m . "\n");
         try {
-            $res = $this->regionImport->importFromGeojsonSeq($file, $levels, $log);
+            $res = $this->regionImport->importFromGeojsonSeq($file, $levels, $log, $replace);
         } catch (\Throwable $e) {
             fwrite(STDERR, "Fehler: {$e->getMessage()}\n");
             return 1;
