@@ -10,6 +10,7 @@ use App\Game\GameIngestionService;
 use App\Game\GameRepository;
 use App\Game\GameRideSummaryService;
 use App\Game\MatchedSegment;
+use App\Game\RegionRepository;
 use App\Game\RideSummaryNotIngestedException;
 use App\Game\Rush\RushRepository;
 use App\Privacy\PrivacyZoneRepository;
@@ -36,6 +37,7 @@ final class GameRideSummaryTest extends IntegrationTestCase
             new RushRepository($this->pdo),
             new PrivacyZoneRepository($this->pdo),
             new RoutePrivacyTrimmer(),
+            new RegionRepository($this->pdo),
         );
     }
 
