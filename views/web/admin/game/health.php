@@ -2,6 +2,7 @@
 /** @var array{nodes:int,edges:int,passes_total:int,passes_24h:int,active_riders_90d:int} $metrics */
 /** @var array{ok:int,pending:int,failed:int,match_rate:float} $ingestHealth */
 /** @var array{reachable:bool,base_url:string,version:?string,tileset_last_modified:?string,latency_ms:?int,error:?string} $valhalla */
+/** @var list<array{name:string,reachable:bool,base_url:string,version:?string,tileset_last_modified:?string,latency_ms:?int,error:?string}>|null $valhallaRegions */
 /** @var list<array<string,mixed>> $audits */
 /** @var string $_csrf */
 $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
@@ -61,6 +62,48 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
         </p>
     <?php endif; ?>
 </section>
+<?php if (!empty($valhallaRegions)): ?>
+<section class="card">
+    <h2>Valhalla-Instanzen · <?= t('pro Kontinent (Cloudflare)') ?></h2>
+    <p class="muted"><?= t('Jede Region hat eine eigene lokale Valhalla-Instanz über einen eigenen Cloudflare-Tunnel. Das Backend wählt pro Fahrt anhand der Koordinaten.') ?></p>
+    <table class="data">
+        <thead>
+            <tr>
+                <th><?= t('Region') ?></th>
+                <th><?= t('Status') ?></th>
+                <th>URL</th>
+                <th>Version</th>
+                <th>Tileset</th>
+                <th><?= t('Antwortzeit') ?></th>
+            </tr>
+        </thead>
+        <tbody>
+        <?php foreach ($valhallaRegions as $vr): ?>
+            <tr>
+                <td><strong><?= $e(strtoupper($vr['name'])) ?></strong></td>
+                <td>
+                    <?php if ($vr['reachable']): ?>
+                        <span class="badge badge-ok"><?= t('erreichbar') ?></span>
+                    <?php else: ?>
+                        <span class="badge" style="background:var(--error-bg);color:var(--error-text)"><?= t('nicht erreichbar') ?></span>
+                    <?php endif; ?>
+                </td>
+                <td class="muted"><?= $e($vr['base_url']) ?></td>
+                <td class="muted"><?= $e($vr['version'] ?? '—') ?></td>
+                <td class="muted"><?= $e($vr['tileset_last_modified'] ?? '—') ?></td>
+                <td class="muted">
+                    <?php if ($vr['reachable']): ?>
+                        <?= (int)($vr['latency_ms'] ?? 0) ?>&nbsp;ms
+                    <?php elseif (($vr['error'] ?? null) !== null): ?>
+                        <?= t('Fehler') ?>: <?= $e($vr['error']) ?>
+                    <?php else: ?>—<?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+</section>
+<?php endif; ?>
 <section class="card">
     <h2><?= t('Letzte Admin-Aktionen') ?></h2>
     <?php if ($audits === []): ?>

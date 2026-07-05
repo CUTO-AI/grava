@@ -61,6 +61,10 @@ final class GameAdminController
             // Map-Matching-Abhängigkeit: ohne erreichbaren Valhalla schlägt die
             // Game-Ingestion fehl (routing_unavailable). Ping mit kurzem Timeout.
             'valhalla' => $this->valhalla->status(),
+            // Multi-Instanz (EU/US): Status je Cloudflare-Verbindung, sonst null.
+            'valhallaRegions' => $this->valhalla instanceof \App\Heatmap\RegionalValhallaClient
+                ? $this->valhalla->statuses()
+                : null,
             'audits' => $this->audit->recent(15),
         ]);
     }
