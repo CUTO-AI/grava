@@ -26,13 +26,14 @@
 
         <h2><?= t('Vertretungsberechtigter Vorstand') ?></h2>
         <p>
-            <?= t('Der Vorstand der benX AG (Name bitte ergänzen)') ?>
+            Armin Lorenz
         </p>
 
         <h2><?= t('Handelsregister') ?></h2>
         <p>
-            <?= t('Registergericht und Handelsregisternummer (HRB): bitte ergänzen') ?><br>
-            <?= t('USt-IdNr. gemäß § 27a UStG: bitte ergänzen') ?>
+            <?= t('Registergericht:') ?> Traunstein<br>
+            <?= t('Registernummer:') ?> HRB 19651<br>
+            <?= t('USt-IdNr. gemäß § 27a UStG:') ?> DE273141469
         </p>
 
         <h2><?= t('Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV') ?></h2>
