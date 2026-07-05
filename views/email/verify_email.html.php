@@ -3,42 +3,19 @@
 /** @var string $verify_url */
 /** @var int $hours_valid */
 /** @var string $app_name */
-// L8: getrennte Begrüßung, sonst entstand bei leerem display_name
-// die Doppelung „Hallo Hallo,".
 $greeting = ($display_name !== null && $display_name !== '')
     ? 'Hallo ' . $display_name
     : 'Hallo';
+$email_kicker    = '// KONTO';
+$email_heading   = 'Bestätige deine E-Mail-Adresse';
+$email_preheader = 'Bestätige deine E-Mail-Adresse und leg bei CYBERRIDE los.';
+include __DIR__ . '/_head.php';
 ?>
-<!doctype html>
-<html lang="de">
-<head><meta charset="utf-8"><title>E-Mail bestätigen</title></head>
-<body style="margin:0;padding:0;background:#f6f7f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2421;">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6f7f4;padding:24px 0;">
-    <tr><td align="center">
-        <table role="presentation" width="560" cellspacing="0" cellpadding="0" style="background:#ffffff;border:1px solid #e3e6df;border-radius:10px;overflow:hidden;">
-            <tr><td style="padding:24px 24px 12px;">
-                <h1 style="margin:0 0 8px;font-size:22px;color:#1f2421;"><?= htmlspecialchars((string)$app_name, ENT_QUOTES, 'UTF-8') ?></h1>
-                <p style="margin:0 0 16px;color:#6b7268;">Bestätige deine E-Mail-Adresse</p>
-            </td></tr>
-            <tr><td style="padding:0 24px 16px;">
-                <p><?= htmlspecialchars($greeting, ENT_QUOTES, 'UTF-8') ?>,</p>
-                <p>willkommen bei CYBERRIDE! Bitte bestätige deine E-Mail-Adresse, indem du auf den folgenden Button klickst:</p>
-                <p style="text-align:center;margin:24px 0;">
-                    <a href="<?= htmlspecialchars($verify_url, ENT_QUOTES, 'UTF-8') ?>"
-                       style="display:inline-block;background:#2f5233;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;">
-                        E-Mail-Adresse bestätigen
-                    </a>
-                </p>
-                <p style="font-size:13px;color:#6b7268;">Dieser Link ist <?= (int)$hours_valid ?> Stunden gültig.</p>
-                <p style="font-size:13px;color:#6b7268;">Falls der Button nicht funktioniert, kopiere folgende URL in deinen Browser:</p>
-                <p style="font-size:13px;word-break:break-all;color:#2f5233;"><?= htmlspecialchars($verify_url, ENT_QUOTES, 'UTF-8') ?></p>
-                <p style="font-size:13px;color:#6b7268;">Wenn du dich nicht bei CYBERRIDE registriert hast, kannst du diese E-Mail ignorieren.</p>
-            </td></tr>
-            <tr><td style="padding:16px 24px 24px;border-top:1px solid #e3e6df;color:#6b7268;font-size:12px;">
-                &copy; <?= date('Y') ?> CYBERRIDE
-            </td></tr>
-        </table>
-    </td></tr>
-</table>
-</body>
-</html>
+        <p style="margin:0 0 14px;color:#EAF6FF;"><?= $e($greeting) ?>,</p>
+        <p style="margin:0 0 14px;">Willkommen bei CYBERRIDE! Bestätige deine E-Mail-Adresse, um dein Konto zu aktivieren und Reviere zu erobern.</p>
+<?php $button_url = $verify_url; $button_label = 'E-Mail-Adresse bestätigen'; include __DIR__ . '/_button.php'; ?>
+        <p style="margin:14px 0 6px;font-size:13px;color:#7C8CA3;">Dieser Link ist <?= (int)$hours_valid ?> Stunden gültig.</p>
+        <p style="margin:0 0 6px;font-size:13px;color:#7C8CA3;">Falls der Button nicht funktioniert, kopiere diese URL in deinen Browser:</p>
+        <p style="margin:0 0 6px;font-size:13px;word-break:break-all;"><a href="<?= $e($verify_url) ?>" style="color:#00E5FF;text-decoration:none;"><?= $e($verify_url) ?></a></p>
+        <p style="margin:14px 0 0;font-size:13px;color:#7C8CA3;">Wenn du dich nicht bei CYBERRIDE registriert hast, kannst du diese E-Mail ignorieren.</p>
+<?php include __DIR__ . '/_foot.php'; ?>
