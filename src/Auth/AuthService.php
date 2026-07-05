@@ -592,9 +592,24 @@ final class AuthService
         $this->sendVerifyMail($email, $displayName, $raw);
     }
 
+    /**
+     * Basis-URL für nutzerseitige Web-Links in E-Mails (Verify/Reset).
+     * PUBLIC_WEB_URL erlaubt eine marken-gleiche Domain (z. B. cyberride.world)
+     * für die Links, ohne APP_URL anzufassen (dort hängen Strava-OAuth-Callback
+     * und die Admin-Host-Ableitung). Fällt auf APP_URL zurück, wenn nicht gesetzt.
+     */
+    private function publicWebBase(): string
+    {
+        $base = (string)$this->config->get('PUBLIC_WEB_URL', '');
+        if ($base === '') {
+            $base = (string)$this->config->get('APP_URL', '');
+        }
+        return rtrim($base, '/');
+    }
+
     private function sendVerifyMail(string $email, ?string $displayName, string $rawToken): void
     {
-        $url = rtrim((string)$this->config->get('APP_URL', ''), '/') . '/verify-email?token=' . urlencode($rawToken);
+        $url = $this->publicWebBase() . '/verify-email?token=' . urlencode($rawToken);
         $hours = max(1, (int)round($this->config->int('EMAIL_VERIFY_TTL', 86400) / 3600));
         $ok = $this->mailer->send($email, $displayName, 'verify_email', [
             'display_name' => $displayName,
@@ -612,7 +627,7 @@ final class AuthService
 
     private function sendResetMail(string $email, ?string $displayName, string $rawToken): void
     {
-        $url = rtrim((string)$this->config->get('APP_URL', ''), '/') . '/reset-password?token=' . urlencode($rawToken);
+        $url = $this->publicWebBase() . '/reset-password?token=' . urlencode($rawToken);
         $minutes = max(1, (int)round($this->config->int('PASSWORD_RESET_TTL', 3600) / 60));
         $ok = $this->mailer->send($email, $displayName, 'reset_password', [
             'display_name' => $displayName,
