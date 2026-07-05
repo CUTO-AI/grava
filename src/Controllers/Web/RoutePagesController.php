@@ -454,8 +454,12 @@ final class RoutePagesController
 
     private function shareBaseUrl(): string
     {
-        $appUrl = rtrim((string)$this->config->get('APP_URL', ''), '/');
-        return $appUrl . '/share/';
+        // Marken-Domain (PUBLIC_WEB_URL) für nutzerseitige Share-Links; Fallback APP_URL.
+        $base = (string)$this->config->get('PUBLIC_WEB_URL', '');
+        if ($base === '') {
+            $base = (string)$this->config->get('APP_URL', '');
+        }
+        return rtrim($base, '/') . '/share/';
     }
 
     private function setFlash(string $msg): void

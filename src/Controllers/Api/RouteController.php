@@ -272,11 +272,13 @@ final class RouteController
             Response::error('not_found', 'Route nicht gefunden.', 404);
         }
 
-        $appUrl   = rtrim((string)$this->config->get('APP_URL', ''), '/');
-        $apiBase  = rtrim((string)$this->config->get('API_BASE_PATH', '/api/v1'), '/');
-        // Vorerst: Share-URL zeigt auf das API. Phase 6 ergänzt eine
-        // hübschere Web-Page mit gleichem Token an der gleichen URL.
-        $shareUrl = $appUrl . $apiBase . '/share/' . $share['token'];
+        // Nutzerseitiger Share-Link zeigt auf die Web-Seite /share/{token}
+        // (universal-link-fähig, Marken-Domain via PUBLIC_WEB_URL; Fallback APP_URL).
+        $webBase = (string)$this->config->get('PUBLIC_WEB_URL', '');
+        if ($webBase === '') {
+            $webBase = (string)$this->config->get('APP_URL', '');
+        }
+        $shareUrl = rtrim($webBase, '/') . '/share/' . $share['token'];
         Response::json([
             'share_id'   => $share['share_id'],
             'token'      => $share['token'],

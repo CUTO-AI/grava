@@ -233,6 +233,9 @@ final class ReferralService
     {
         $base = (string)$this->config->get('REFERRAL_LINK_BASE', '');
         if ($base === '') {
+            $base = (string)$this->config->get('PUBLIC_WEB_URL', '');
+        }
+        if ($base === '') {
             $base = (string)$this->config->get('APP_URL', '');
         }
         return rtrim($base, '/') . '/i/' . rawurlencode($code);
