@@ -13,28 +13,32 @@
     <div class="legal-container">
         <h2><?= t('Verantwortlich für den Inhalt') ?></h2>
         <p>
-            <?= t('[Platzhalter – Name / Firma]') ?><br>
-            <?= t('[Platzhalter – Straße und Hausnummer]') ?><br>
-            <?= t('[Platzhalter – PLZ und Ort]') ?><br>
-            <?= t('[Platzhalter – Land]') ?>
+            benX AG<br>
+            Richard-Wagner-Str. 38<br>
+            84478 Waldkraiburg<br>
+            <?= t('Deutschland') ?>
         </p>
 
         <h2><?= t('Kontakt') ?></h2>
         <p>
-            <?= t('E-Mail:') ?> <?= t('[Platzhalter – Kontakt-E-Mail]') ?><br>
-            <?= t('Telefon:') ?> <?= t('[Platzhalter – optional]') ?>
+            <?= t('E-Mail:') ?> <a href="mailto:grava@benx.de" style="color: var(--primary);">grava@benx.de</a>
+        </p>
+
+        <h2><?= t('Vertretungsberechtigter Vorstand') ?></h2>
+        <p>
+            <?= t('Der Vorstand der benX AG (Name bitte ergänzen)') ?>
         </p>
 
         <h2><?= t('Handelsregister') ?></h2>
         <p>
-            <?= t('[Platzhalter – falls zutreffend: Registergericht, Registernummer]') ?><br>
-            <?= t('[Platzhalter – falls zutreffend: USt-IdNr.]') ?>
+            <?= t('Registergericht und Handelsregisternummer (HRB): bitte ergänzen') ?><br>
+            <?= t('USt-IdNr. gemäß § 27a UStG: bitte ergänzen') ?>
         </p>
 
-        <h2><?= t('Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV') ?></h2>
+        <h2><?= t('Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV') ?></h2>
         <p>
-            <?= t('[Platzhalter – Name]') ?><br>
-            <?= t('[Platzhalter – Anschrift wie oben]') ?>
+            <?= t('Der Vorstand der benX AG') ?><br>
+            <?= t('Anschrift wie oben') ?>
         </p>
 
         <h2><?= t('Haftungsausschluss') ?></h2>
