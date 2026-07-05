@@ -220,6 +220,8 @@ $notifServ   = new NotificationService($pushServ, $notifPrefs);
 // Stufe 1 Gamification. Lokaler Valhalla via VALHALLA_BASE_URL (Fallback VALHALLA_URL).
 $gameEnabled  = $config->bool('GAME_ENABLED', true);
 $gameConfig   = new GameConfig(Db::pdo());
+// Registrierungs-Tagesdrossel liest den server-justierbaren Cap aus game_config.
+$auth->setGameConfig($gameConfig);
 $gameRepo     = new GameRepository(Db::pdo());
 $gameRecalc   = new EdgeRecalculator($gameRepo, $gameConfig);
 // S8 Privatzonen (§17): Repository früh, da Ingestion + Heatmap es brauchen.

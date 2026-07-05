@@ -45,6 +45,9 @@ final class GameConfig
         'group_ride_bonus'          => '1.5',
         'group_ride_min_members'    => '3',
         'crew_max_members'          => '0',
+        // Registrierungs-Drossel: max. neue Accounts pro UTC-Kalendertag
+        // (0 = unbegrenzt). Server-justierbar im Admin (/admin/game/config).
+        'register_daily_max'        => '10',
         // Radar-Verkehr (RADAR_TRAFFIC_BACKEND.md §B4).
         'traffic_t0'                => '5.0',
         'traffic_k'                 => '0.5',

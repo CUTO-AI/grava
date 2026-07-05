@@ -15,6 +15,8 @@ final class GameConfigAdminService
         'auth_min_speed_kmh',
         'auth_max_hacc_m','start_buffer_m','auth_max_speed_kmh','mod_max_new_edges_per_min',
         'mod_max_passes_per_day','game_chunk_size_m','game_chunk_overlap_m',
+        // Registrierungs-Tageskontingent (Wachstums-Drossel, 0 = aus).
+        'register_daily_max',
         // Radar-Verkehr im Kantenwert (RADAR_TRAFFIC_BACKEND.md §B3): Abschlag für
         // dicht befahrene Straßen. traffic_f_min = max. Abschlag (0.7 = −30 %),
         // traffic_f_max = max. Bonus, traffic_t0 = Schwell-Dichte (Vorbeifahrten/km),

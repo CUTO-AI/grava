@@ -41,6 +41,19 @@ final class AuthService
     }
 
     /**
+     * Server-justierbares Tages-Kontingent für Neuregistrierungen
+     * (game_config.register_daily_max). Per Setter verdrahtet, weil GameConfig
+     * in public/index.php erst nach AuthService konstruiert wird; fehlt er
+     * (z. B. in reinen Auth-Tests), ist die Drossel wirkungslos.
+     */
+    private ?\App\Game\GameConfig $gameConfig = null;
+
+    public function setGameConfig(\App\Game\GameConfig $gameConfig): void
+    {
+        $this->gameConfig = $gameConfig;
+    }
+
+    /**
      * Registrierung. Antwortet aus Sicht des Aufrufers immer identisch
      * (kein Tokens-Response, generischer 202-Status), damit es keine
      * Account-Enumeration über diesen Endpoint gibt.
@@ -62,6 +75,27 @@ final class AuthService
     {
         $pdo = Db::pdo();
         $now = Clock::nowUtcString();
+
+        // Wachstums-Drossel: globales Tages-Kontingent für Neuregistrierungen
+        // (game_config.register_daily_max, 0 = aus). Bewusst VOR dem E-Mail-
+        // Lookup, damit an vollen Tagen für ALLE Anfragen dieselbe Antwort
+        // kommt — sonst ließe sich über 202-vs-429 die Existenz einer E-Mail
+        // ableiten (Account-Enumeration). Zählt alle heute (UTC) angelegten
+        // Accounts; die kleine Race zweier gleichzeitiger Signups ist bei
+        // einer weichen Drossel akzeptabel.
+        $dailyMax = $this->gameConfig?->int('register_daily_max') ?? 0;
+        if ($dailyMax > 0) {
+            $dayStartUtc = substr($now, 0, 10) . ' 00:00:00';
+            $cnt = $pdo->prepare('SELECT COUNT(*) FROM users WHERE created_at >= ?');
+            $cnt->execute([$dayStartUtc]);
+            if ((int)$cnt->fetchColumn() >= $dailyMax) {
+                throw new AuthException(
+                    'registration_limit_reached',
+                    'Wir nehmen aktuell nur eine begrenzte Zahl neuer Mitglieder pro Tag auf. Bitte versuche es später noch einmal.',
+                    429,
+                );
+            }
+        }
 
         $stmt = $pdo->prepare('SELECT id, status, email_verified_at FROM users WHERE email = ? LIMIT 1');
         $stmt->execute([$email]);
