@@ -125,7 +125,7 @@ final class PushService
             'region_lost'     => $isDigest
                 ? ['Gebiete verloren', $n . ' deiner Gebiete wurden übernommen.']
                 : ['Gebiet verloren', $actorLabel . ' hat ' . $gebiet . ' übernommen.'],
-            default           => ['GRAVA', $actorLabel . ' hat eine Aktion ausgeführt.'],
+            default           => ['CYBERRIDE', $actorLabel . ' hat eine Aktion ausgeführt.'],
         };
 
         $payload = [

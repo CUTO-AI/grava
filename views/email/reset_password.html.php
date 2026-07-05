@@ -33,7 +33,7 @@ $greeting = ($display_name !== null && $display_name !== '')
                 <p style="font-size:13px;color:#6b7268;"><strong>Wenn du diese Anfrage nicht gestellt hast, ignoriere diese E-Mail.</strong> Dein Passwort bleibt unverändert.</p>
             </td></tr>
             <tr><td style="padding:16px 24px 24px;border-top:1px solid #e3e6df;color:#6b7268;font-size:12px;">
-                &copy; <?= date('Y') ?> GRAVA
+                &copy; <?= date('Y') ?> CYBERRIDE
             </td></tr>
         </table>
     </td></tr>

@@ -600,7 +600,7 @@ final class AuthService
             'display_name' => $displayName,
             'verify_url'   => $url,
             'hours_valid'  => $hours,
-            'app_name'     => 'GRAVA',
+            'app_name'     => 'CYBERRIDE',
         ]);
         // H7/L6: bei Mail-Fehlern den Operator informieren, aber den
         // User-Flow nicht hart brechen — der Resend-Endpoint kann es
@@ -618,7 +618,7 @@ final class AuthService
             'display_name' => $displayName,
             'reset_url'    => $url,
             'minutes_valid'=> $minutes,
-            'app_name'     => 'GRAVA',
+            'app_name'     => 'CYBERRIDE',
         ]);
         if (!$ok) {
             error_log("AuthService: Reset-Mail an {$email} konnte nicht versendet werden.");

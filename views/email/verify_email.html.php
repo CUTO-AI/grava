@@ -22,7 +22,7 @@ $greeting = ($display_name !== null && $display_name !== '')
             </td></tr>
             <tr><td style="padding:0 24px 16px;">
                 <p><?= htmlspecialchars($greeting, ENT_QUOTES, 'UTF-8') ?>,</p>
-                <p>willkommen bei GRAVA! Bitte bestätige deine E-Mail-Adresse, indem du auf den folgenden Button klickst:</p>
+                <p>willkommen bei CYBERRIDE! Bitte bestätige deine E-Mail-Adresse, indem du auf den folgenden Button klickst:</p>
                 <p style="text-align:center;margin:24px 0;">
                     <a href="<?= htmlspecialchars($verify_url, ENT_QUOTES, 'UTF-8') ?>"
                        style="display:inline-block;background:#2f5233;color:#ffffff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:600;">
@@ -32,10 +32,10 @@ $greeting = ($display_name !== null && $display_name !== '')
                 <p style="font-size:13px;color:#6b7268;">Dieser Link ist <?= (int)$hours_valid ?> Stunden gültig.</p>
                 <p style="font-size:13px;color:#6b7268;">Falls der Button nicht funktioniert, kopiere folgende URL in deinen Browser:</p>
                 <p style="font-size:13px;word-break:break-all;color:#2f5233;"><?= htmlspecialchars($verify_url, ENT_QUOTES, 'UTF-8') ?></p>
-                <p style="font-size:13px;color:#6b7268;">Wenn du dich nicht bei GRAVA registriert hast, kannst du diese E-Mail ignorieren.</p>
+                <p style="font-size:13px;color:#6b7268;">Wenn du dich nicht bei CYBERRIDE registriert hast, kannst du diese E-Mail ignorieren.</p>
             </td></tr>
             <tr><td style="padding:16px 24px 24px;border-top:1px solid #e3e6df;color:#6b7268;font-size:12px;">
-                &copy; <?= date('Y') ?> GRAVA
+                &copy; <?= date('Y') ?> CYBERRIDE
             </td></tr>
         </table>
     </td></tr>
