@@ -22,3 +22,8 @@
 /.superpowers/
 # Lokale Ops-/Runbook-Notizen (enthalten Secrets wie INTERNAL_TOKEN — NIE committen)
 *.local.md
+# Cutover-Material: DB-Dump, alte Prod-.env, APNs-Keys — HOCHSENSIBEL, NIE committen
+# (deckt dbs*.sql + .env + *.p8 in dem Ordner ab; migrations/*.sql bleiben getrackt!)
+/000_CUTOVER/
+# APNs-Signing-Keys gehören generell nie ins Repo
+*.p8
