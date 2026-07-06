@@ -50,7 +50,12 @@ final class HeatmapService
             // ein (LEFT JOIN + Haversine-Ausschluss). Distanz in Metern.
             $sql = "
                 INSERT INTO heatmap_cells (cell_key, lat, lon, weight, updated_at)
-                SELECT CONCAT(blat, ':', blon) AS cell_key, blat, blon, COUNT(*) AS weight, ?
+                -- cell_key deterministisch + längenbegrenzt: blat/blon sind
+                -- DOUBLE (ROUND(x/GRID)*GRID) und tragen Float-Artefakte wie
+                -- 48.150000000000006, die CONCAT auf >32 Zeichen aufblähen
+                -- konnten. CAST auf DECIMAL(9,6) (= Spaltentyp) macht den Key
+                -- stabil und kurz (~23 Zeichen). Idempotent: Rebuild ist DELETE+INSERT.
+                SELECT CONCAT(CAST(blat AS DECIMAL(9,6)), ':', CAST(blon AS DECIMAL(9,6))) AS cell_key, blat, blon, COUNT(*) AS weight, ?
                 FROM (
                     SELECT
                         ROUND(ST_Latitude(r.centroid)  / {$grid}) * {$grid} AS blat,

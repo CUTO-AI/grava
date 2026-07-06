@@ -1,0 +1,13 @@
+-- Verbreitert heatmap_cells.cell_key von VARCHAR(32) auf VARCHAR(64).
+--
+-- Grund: Der Rebuild baut cell_key aus CONCAT(blat, ':', blon), wobei blat/blon
+-- als DOUBLE (ROUND(lat/GRID)*GRID) Float-Artefakte tragen können, z. B.
+-- "48.150000000000006:12.450000000000001" (~37 Zeichen) — das sprengt VARCHAR(32)
+-- und ließ cron:cleanup/Heatmap mit "Data too long for column 'cell_key'" scheitern
+-- (v. a. bei negativen/3-stelligen US-Koordinaten).
+--
+-- Der eigentliche Fix ist der CAST auf DECIMAL(9,6) in HeatmapService::rebuild()
+-- (Key ~23 Zeichen). VARCHAR(64) ist die Absicherung, damit frische DBs zum
+-- bereits auf Prod ausgeführten ALTER passen. Idempotent: MODIFY auf denselben
+-- Typ ist ein No-Op.
+ALTER TABLE heatmap_cells MODIFY cell_key VARCHAR(64) NOT NULL;
