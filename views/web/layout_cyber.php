@@ -31,7 +31,9 @@ $_metaKeywords    = $_metaKeywords    ?? 'Gravel, Bikepacking, Radtouren, Wegqua
 $_ogTitle         = $_ogTitle         ?? ($_title ?? 'CYBERRIDE');
 $_ogDescription   = $_ogDescription   ?? $_metaDescription;
 $_ogImage         = $_ogImage         ?? '/assets/brand/icon-512.png';
-$_ogUrl           = $_ogUrl           ?? ($_SERVER['REQUEST_URI'] ?? '/');
+$_canonical       = $_canonical       ?? ($_ogUrl ?? ($_SERVER['REQUEST_URI'] ?? '/'));
+$_ogUrl           = $_ogUrl           ?? $_canonical;
+$_robots          = $_robots          ?? 'index, follow';
 
 $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 ?><!doctype html>
@@ -44,17 +46,18 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <meta name="description" content="<?= htmlspecialchars($_metaDescription, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="keywords" content="<?= htmlspecialchars($_metaKeywords, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="author" content="CYBERRIDE">
-<meta name="robots" content="index, follow">
-<link rel="canonical" href="<?= htmlspecialchars($_ogUrl, ENT_QUOTES, 'UTF-8') ?>">
+<meta name="robots" content="<?= htmlspecialchars($_robots, ENT_QUOTES, 'UTF-8') ?>">
+<link rel="canonical" href="<?= htmlspecialchars($_canonical, ENT_QUOTES, 'UTF-8') ?>">
 
 <meta property="og:type" content="website">
-<meta property="og:url" content="<?= htmlspecialchars($_ogUrl, ENT_QUOTES, 'UTF-8') ?>">
+<meta property="og:url" content="<?= htmlspecialchars($_canonical, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:title" content="<?= htmlspecialchars($_ogTitle, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:description" content="<?= htmlspecialchars($_ogDescription, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:image" content="<?= htmlspecialchars($_ogImage, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:locale" content="de_DE">
 <meta property="og:site_name" content="CYBERRIDE">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:url" content="<?= htmlspecialchars($_canonical, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="twitter:title" content="<?= htmlspecialchars($_ogTitle, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="twitter:description" content="<?= htmlspecialchars($_ogDescription, ENT_QUOTES, 'UTF-8') ?>">
 <meta name="twitter:image" content="<?= htmlspecialchars($_ogImage, ENT_QUOTES, 'UTF-8') ?>">

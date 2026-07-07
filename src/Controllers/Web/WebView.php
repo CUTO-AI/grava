@@ -33,6 +33,19 @@ final class WebView
         $vars['_title'] = $vars['_title'] ?? ucfirst($view) . ' · CYBERRIDE';
         $vars['_view']  = $view;
 
+        // --- SEO: Canonical + Robots zentral setzen -------------------------
+        // Canonical = absolute Marken-URL OHNE Query-String (konsolidiert
+        // ?theme=… / ?lang=… / Filter-Parameter zu einer indexierbaren URL).
+        // og:url erbt den Canonical. Robots wird pfadbasiert differenziert:
+        // private/dünne Bereiche (Auth, Dashboard, eigene Routen, Token-Shares
+        // …) bekommen noindex. Controller können jeden Wert explizit überschreiben.
+        $path = strtok((string)($_SERVER['REQUEST_URI'] ?? '/'), '?');
+        $path = ($path === false || $path === '') ? '/' : $path;
+        $canonical = \App\Support\SiteUrl::absolute($path);
+        $vars['_canonical'] = $vars['_canonical'] ?? $canonical;
+        $vars['_ogUrl']     = $vars['_ogUrl']     ?? $canonical;
+        $vars['_robots']    = $vars['_robots']    ?? (self::isNoindexPath($path) ? 'noindex, follow' : 'index, follow');
+
         $base    = rtrim($this->viewsPath, '/') . '/web/';
         $partial = $base . $view . '.php';
         $layout  = $base . 'layout.php';
@@ -63,5 +76,26 @@ final class WebView
 
         include $layout;
         exit;
+    }
+
+    /**
+     * Pfade, die NICHT indexiert werden sollen: Auth-Formulare, persönlicher
+     * App-Bereich und tokenisierte/geteilte Ansichten. Öffentliche Inhalte
+     * (Landing, /features, /pulse, /discover, /heatmap, /u/…, Legal, /i/…)
+     * bleiben index,follow. Präfix-Match, damit Unterpfade mitgreifen.
+     */
+    private static function isNoindexPath(string $path): bool
+    {
+        $noindex = [
+            '/login', '/register', '/forgot-password', '/reset-password',
+            '/verify-email', '/dashboard', '/routes', '/settings',
+            '/feed', '/notifications', '/surface-check', '/share/', '/auth/',
+        ];
+        foreach ($noindex as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

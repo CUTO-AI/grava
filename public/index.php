@@ -697,6 +697,37 @@ $router->get ("{$apiBase}/pulse",                 fn($r) => $apiPulse->index($r)
 // ---- Web pages ----
 $router->get('/',                  fn($r) => $webLanding->home());
 $router->get('/landing',           fn($r) => $webLanding->home());
+// robots.txt: Crawler-Steuerung. Auf der Admin-Subdomain alles sperren; auf
+// der Hauptdomain private/tokenisierte Bereiche ausschließen, öffentliche
+// Inhalte (Landing, Features, Discover, Heatmap, Profile, Legal) freigeben.
+$router->get('/robots.txt', function ($r) {
+    header('Content-Type: text/plain; charset=utf-8');
+    $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
+    if (str_starts_with($host, 'admin.')) {
+        echo "User-agent: *\nDisallow: /\n";
+        exit;
+    }
+    $lines = [
+        'User-agent: *',
+        'Disallow: /admin/',
+        'Disallow: /internal/',
+        'Disallow: /login',
+        'Disallow: /register',
+        'Disallow: /forgot-password',
+        'Disallow: /reset-password',
+        'Disallow: /verify-email',
+        'Disallow: /dashboard',
+        'Disallow: /settings/',
+        'Disallow: /feed',
+        'Disallow: /notifications',
+        'Disallow: /routes',
+        'Disallow: /surface-check',
+        'Disallow: /share/',
+        'Disallow: /auth/',
+    ];
+    echo implode("\n", $lines) . "\n";
+    exit;
+});
 $router->get('/login',             fn($r) => $webAuth->showLogin($r));
 $router->post('/login',            fn($r) => $webAuth->doLogin($r),           [$csrf]);
 $router->get('/register',          fn($r) => $webAuth->showRegister($r));
@@ -1074,7 +1105,7 @@ if ($isAdminHost) {
         Response::redirect('/admin/game');
     }
     $allowed = $isAdminPath
-        || in_array($reqPath, ['/login', '/logout', '/auth/web-refresh', '/healthz'], true)
+        || in_array($reqPath, ['/login', '/logout', '/auth/web-refresh', '/healthz', '/robots.txt'], true)
         || str_starts_with($reqPath, '/internal/')
         || str_starts_with($reqPath, '/assets/')
         || $reqPath === '/favicon.ico'

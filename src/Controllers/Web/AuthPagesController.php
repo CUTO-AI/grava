@@ -253,6 +253,21 @@ final class AuthPagesController
     /** @param array<string,mixed> $vars */
     private function render(string $view, array $vars = [], int $status = 200): never
     {
+        // SEO: sprechende, lokalisierte Titel je Auth-Seite (statt Fallback
+        // „Login · CYBERRIDE"). Nutzt vorhandene Übersetzungsschlüssel, greift
+        // für alle Render-Pfade (initial + Re-Render bei Validierungsfehlern).
+        if (!isset($vars['_title'])) {
+            $titles = [
+                'login'    => t('Anmelden'),
+                'register' => t('Registrieren'),
+                'forgot'   => t('Passwort vergessen'),
+                'reset'    => t('Neues Passwort festlegen'),
+                'verify'   => t('E-Mail-Bestätigung'),
+            ];
+            if (isset($titles[$view])) {
+                $vars['_title'] = $titles[$view] . ' · CYBERRIDE';
+            }
+        }
         $this->view->render($view, $vars, $status);
     }
 
