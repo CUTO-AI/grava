@@ -4,6 +4,12 @@ $CR_ASSETS = $CR_ASSETS ?? 'assets';
 $CR_LANG = $CR_LANG ?? 'en';
 $T = $T ?? (require __DIR__ . '/../lang/en.php');
 $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+
+// SEO/Canonical: absolute Marken-URL der Startseite (unabhängig vom Request-Host).
+$CR_BASE      = class_exists('\\App\\Support\\SiteUrl') ? \App\Support\SiteUrl::base() : '';
+$CR_CANONICAL = ($CR_BASE !== '' ? $CR_BASE : '') . '/';
+$CR_OG_IMAGE  = '/assets/brand/icon-512.png';
+$CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
 ?>
 <!DOCTYPE html>
 <html lang="<?= $e($CR_LANG) ?>" data-theme="cyber">
@@ -12,10 +18,32 @@ $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title><?= $e($T['meta']['title']) ?></title>
 <meta name="description" content="<?= $e($T['meta']['description']) ?>" />
+<meta name="author" content="CYBERRIDE" />
+<meta name="robots" content="index, follow" />
+<link rel="canonical" href="<?= $e($CR_CANONICAL) ?>" />
+
+<meta property="og:type" content="website" />
+<meta property="og:url" content="<?= $e($CR_CANONICAL) ?>" />
+<meta property="og:title" content="<?= $e($T['meta']['title']) ?>" />
+<meta property="og:description" content="<?= $e($T['meta']['description']) ?>" />
+<meta property="og:image" content="<?= $e($CR_OG_IMAGE) ?>" />
+<meta property="og:locale" content="<?= $e($CR_OG_LOCALE) ?>" />
+<meta property="og:site_name" content="CYBERRIDE" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content="<?= $e($CR_CANONICAL) ?>" />
+<meta name="twitter:title" content="<?= $e($T['meta']['title']) ?>" />
+<meta name="twitter:description" content="<?= $e($T['meta']['description']) ?>" />
+<meta name="twitter:image" content="<?= $e($CR_OG_IMAGE) ?>" />
+
+<meta name="theme-color" content="#04060B" />
+<!-- Google tag (gtag.js) — Loader extern, Init aus same-origin /assets/js/ga.js (CSP) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
+<script src="/assets/js/ga.js"></script>
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/cyberride.css" />
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/site.css" />
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/app.css" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
 </head>
 <body>
 <header class="site-header" id="siteHeader">
