@@ -15,7 +15,8 @@ $code = htmlspecialchars($referral_code, ENT_QUOTES, 'UTF-8');
 
     <?php if ($app_store_url !== ''): ?>
         <p>
-            <a href="<?= htmlspecialchars($app_store_url, ENT_QUOTES, 'UTF-8') ?>" class="button">
+            <a href="<?= htmlspecialchars($app_store_url, ENT_QUOTES, 'UTF-8') ?>" class="button"
+               data-ga-event="appstore_click" data-ga-source="referral">
                 <?= t('App laden') ?>
             </a>
         </p>
@@ -27,7 +28,7 @@ $code = htmlspecialchars($referral_code, ENT_QUOTES, 'UTF-8');
     </p>
 
     <p>
-        <?= t('Lieber im Browser?') ?> <a href="<?= htmlspecialchars($register_url, ENT_QUOTES, 'UTF-8') ?>"><?= t('Hier registrieren') ?></a>
+        <?= t('Lieber im Browser?') ?> <a href="<?= htmlspecialchars($register_url, ENT_QUOTES, 'UTF-8') ?>" data-ga-event="register_click" data-ga-source="referral"><?= t('Hier registrieren') ?></a>
         <?= t('– der Code ist bereits hinterlegt.') ?>
     </p>
 </section>

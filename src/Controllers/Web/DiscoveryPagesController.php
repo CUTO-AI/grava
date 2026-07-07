@@ -17,6 +17,8 @@ use App\Privacy\RoutePrivacyTrimmer;
 use App\Routes\RouteGeoJson;
 use App\Routes\RouteInsights;
 use App\Routes\RouteService;
+use App\Support\SiteUrl;
+use App\Support\StructuredData;
 
 /**
  * M3 Phase 6: Read-only Web-Pages für Discovery + Profile + Feed.
@@ -173,8 +175,30 @@ final class DiscoveryPagesController
         // viewer != owner.
         $isSelf = $profile['is_self'] ?? false;
 
+        // SEO: sprechende Meta-Description + Avatar als og:image + JSON-LD
+        // (Person + Breadcrumb). Avatar-Endpoint liefert immer ein Bild.
+        $displayName = $profile['display_name'] ?? null;
+        $name        = ($displayName !== null && $displayName !== '') ? $displayName : '@' . $profile['handle'];
+        $profileUrl  = SiteUrl::absolute('/u/' . rawurlencode($profile['handle']));
+        $avatarUrl   = SiteUrl::absolute('/u/' . rawurlencode($profile['handle']) . '/avatar');
+        $metaDesc    = sprintf(
+            t('%s auf CYBERRIDE — %d öffentliche Routen, %d Follower. Gravel- & Bikepacking-Touren entdecken.'),
+            $name,
+            (int)($profile['route_count_public'] ?? 0),
+            (int)($profile['follower_count'] ?? 0),
+        );
+
         $this->renderPage('profile/show', $authedUser, [
             '_title'     => '@' . $profile['handle'] . ' · CYBERRIDE',
+            '_metaDescription' => $metaDesc,
+            '_ogImage'   => $avatarUrl,
+            '_jsonLd'    => [
+                StructuredData::person((string)$profile['handle'], $displayName, $profileUrl, $avatarUrl),
+                StructuredData::breadcrumb([
+                    ['CYBERRIDE', SiteUrl::absolute('/')],
+                    ['@' . $profile['handle'], $profileUrl],
+                ]),
+            ],
             'profile'    => $profile,
             'routes'     => $routes['routes'] ?? [],
             'pagination' => $routes['pagination'] ?? ['total' => 0, 'has_more' => false, 'limit' => 20, 'offset' => 0],
@@ -252,8 +276,33 @@ final class DiscoveryPagesController
             }
         }
 
+        // SEO: Meta-Description aus Distanz/Höhenmetern + Breadcrumb-JSON-LD.
+        $stats       = $route['stats'] ?? [];
+        $distanceM   = isset($stats['distance_m']) ? (float)$stats['distance_m'] : null;
+        $elevM       = isset($stats['elevation_gain_m']) ? (int)$stats['elevation_gain_m'] : null;
+        $km          = $distanceM !== null ? number_format($distanceM / 1000, 1) : '–';
+        $displayName = $profile['display_name'] ?? null;
+        $ownerName   = ($displayName !== null && $displayName !== '') ? $displayName : '@' . $profile['handle'];
+        $metaDesc    = sprintf(
+            t('%s — %s km, %d Höhenmeter. Gravel-/Bikepacking-Route von %s auf CYBERRIDE.'),
+            (string)$route['title'],
+            $km,
+            (int)($elevM ?? 0),
+            $ownerName,
+        );
+        $profileUrl = SiteUrl::absolute('/u/' . rawurlencode($profile['handle']));
+        $routeUrl   = SiteUrl::absolute('/u/' . rawurlencode($profile['handle']) . '/r/' . rawurlencode((string)$route['id']));
+
         $this->renderPage('profile/route', $authedUser, [
             '_title'   => $route['title'] . ' · @' . $profile['handle'],
+            '_metaDescription' => $metaDesc,
+            '_jsonLd'  => [
+                StructuredData::breadcrumb([
+                    ['CYBERRIDE', SiteUrl::absolute('/')],
+                    ['@' . $profile['handle'], $profileUrl],
+                    [(string)$route['title'], $routeUrl],
+                ]),
+            ],
             'route'    => $route,
             'profile'  => $profile,
             'likes'    => $likes,

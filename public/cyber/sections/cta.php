@@ -12,7 +12,7 @@ $C = $T['cta'];
     <h2 class="cr-display"><?= $e($C['title1']) ?><br /><span class="cr-neon"><?= $e($C['title2']) ?></span></h2>
     <p class="cr-lead"><?= $e($C['lead']) ?></p>
     <div class="ctas">
-      <?= cr_button($C['ctaApp'], ['size' => 'lg', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#']) ?>
+      <?= cr_button($C['ctaApp'], ['size' => 'lg', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#', 'attrs' => 'data-ga-event="appstore_click" data-ga-source="landing_cta"']) ?>
       <?= cr_button($C['ctaHeatmap'], ['size' => 'lg', 'variant' => 'ghost', 'iconRight' => 'arrow-right', 'href' => '/heatmap']) ?>
     </div>
     <div class="fine"><?= $e($C['fine']) ?></div>

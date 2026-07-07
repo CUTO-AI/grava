@@ -66,7 +66,7 @@ final class SitemapController
             }
 
             $routes = $pdo->query(
-                "SELECT r.id, r.updated_at, u.public_handle
+                "SELECT r.public_id, r.updated_at, u.public_handle
                    FROM routes r
                    JOIN users u ON u.id = r.user_id
                   WHERE r.visibility = 'public'
@@ -78,8 +78,10 @@ final class SitemapController
             )->fetchAll(PDO::FETCH_ASSOC);
             foreach ($routes as $r) {
                 $handle = (string)$r['public_handle'];
+                // Öffentliche Routen-URL nutzt die public_id (UUID), NICHT die
+                // numerische PK — sonst 404.
                 $out[] = self::urlEntry(
-                    $base . '/u/' . rawurlencode($handle) . '/r/' . (int)$r['id'],
+                    $base . '/u/' . rawurlencode($handle) . '/r/' . rawurlencode((string)$r['public_id']),
                     self::w3c($r['updated_at'] ?? null)
                 );
             }
