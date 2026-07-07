@@ -40,17 +40,24 @@
             <li><strong><?= t('Hosting:') ?></strong> <?= t('Unser Webhosting-Anbieter innerhalb der EU (Auftragsverarbeiter). Details bitte ergänzen.') ?></li>
             <li><strong><?= t('Push-Benachrichtigungen:') ?></strong> <?= t('Apple Push Notification service (APNs), Apple Inc.') ?></li>
             <li><strong><?= t('Strava-Import/-Export:') ?></strong> <?= t('nur sofern von dir aktiv verbunden – Strava, Inc. Beim Verbinden werden Aktivitäten importiert bzw. beim Teilen als Aktivität exportiert (inkl. Herzfrequenz, sofern aufgezeichnet).') ?></li>
+            <li><strong><?= t('Web-Analyse:') ?></strong> <?= t('Google Analytics (Google Ireland Ltd.) auf unseren Webseiten – nur nach deiner Einwilligung (siehe Abschnitt 5).') ?></li>
         </ul>
 
-        <h2>5. <?= t('Speicherdauer') ?></h2>
+        <h2>5. <?= t('Web-Analyse & Einwilligung (Cookies)') ?></h2>
+        <p>
+            <?= t('Auf unseren öffentlichen Webseiten setzen wir Google Analytics (GA4) zur anonymen Reichweiten-Messung ein, um das Angebot zu verbessern. Die Analyse startet erst, nachdem du im Cookie-Banner zugestimmt hast (Consent Mode v2); ohne Zustimmung werden keine Analyse-Cookies gesetzt.') ?>
+            <?= t('Du kannst deine Wahl jederzeit ändern, indem du das Consent-Cookie in deinem Browser löschst – dann erscheint das Banner erneut. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).') ?>
+        </p>
+
+        <h2>6. <?= t('Speicherdauer') ?></h2>
         <p><?= t('Kontodaten und deine Routen speichern wir bis zur Löschung deines Kontos. Nach dem Löschen einer Route oder deines Kontos werden die zugehörigen Daten innerhalb von 30 Tagen endgültig entfernt. Aggregierte, anonyme Kennzahlen (z. B. Heatmap) haben keinen Personenbezug.') ?></p>
 
-        <h2>6. <?= t('Deine Rechte') ?></h2>
+        <h2>7. <?= t('Deine Rechte') ?></h2>
         <p>
             <?= t('Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch. Dein Konto kannst du jederzeit in der App löschen („Account löschen") – dabei werden die zugehörigen personenbezogenen Daten entfernt.') ?> <?= t('Zuständige Aufsichtsbehörde ist das Bayerische Landesamt für Datenschutzaufsicht (BayLDA), Ansbach.') ?>
         </p>
 
-        <h2>7. <?= t('Kontakt') ?></h2>
+        <h2>8. <?= t('Kontakt') ?></h2>
         <p><?= t('Für Datenschutzanfragen:') ?> <a href="mailto:grava@benx.de" style="color: var(--primary);">grava@benx.de</a></p>
 
         <p style="margin-top: 40px; text-align: center;">

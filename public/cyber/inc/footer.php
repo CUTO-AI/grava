@@ -50,6 +50,8 @@
   </div>
 </div>
 
+<?php require dirname(__DIR__, 3) . '/views/web/partials/consent-banner.php'; ?>
+
 <script src="<?= $e($CR_ASSETS) ?>/lucide.min.js"></script>
 <script src="<?= $e($CR_ASSETS) ?>/site.js"></script>
 <script src="<?= $e($CR_ASSETS) ?>/pulse-teaser.js"></script>
