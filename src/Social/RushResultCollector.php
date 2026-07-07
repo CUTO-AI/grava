@@ -16,7 +16,6 @@ final class RushResultCollector implements PostSource
         private readonly PDO $pdo,
         private readonly PostCopy $copy,
         private readonly string $lang,
-        private readonly string $channel,
     ) {}
 
     public function collect(string $date): array
@@ -55,7 +54,7 @@ final class RushResultCollector implements PostSource
 
             $out[] = new PostCandidate(
                 kind:        'rush_result',
-                dedupeKey:   "rush_result:{$rushId}:{$this->lang}:{$this->channel}",
+                dedupeKey:   "rush_result:{$rushId}:{$this->lang}",
                 entityKey:   "rush:{$rushId}",
                 score:       55 + min(40, $edges),
                 body:        $this->copy->rushResult($crew, $edges, $riders, $mult, $this->lang),

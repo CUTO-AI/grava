@@ -17,7 +17,6 @@ final class RecordBeatenCollector implements PostSource
         private readonly PDO $pdo,
         private readonly PostCopy $copy,
         private readonly string $lang,
-        private readonly string $channel,
     ) {}
 
     public function collect(string $date): array
@@ -61,7 +60,7 @@ final class RecordBeatenCollector implements PostSource
 
             $out[] = new PostCandidate(
                 kind:        'record_beaten',
-                dedupeKey:   "record_beaten:{$edgeId}:" . (int)$row['actor_user_id'] . ":{$date}:{$this->lang}:{$this->channel}",
+                dedupeKey:   "record_beaten:{$edgeId}:" . (int)$row['actor_user_id'] . ":{$date}:{$this->lang}",
                 entityKey:   "record:{$edgeId}",
                 score:       65,
                 body:        $this->copy->komRecord($handle, $region, $speed, $this->lang),

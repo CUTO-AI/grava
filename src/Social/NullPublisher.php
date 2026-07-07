@@ -17,9 +17,14 @@ final class NullPublisher implements Publisher
         return $this->channel;
     }
 
-    public function publish(string $text, ?string $imagePng = null): PublishResult
+    public function publish(string $text, ?string $imagePng = null, ?string $imageUrl = null): PublishResult
     {
         $media = $imagePng !== null ? (', +card ' . strlen($imagePng) . ' bytes') : '';
         return PublishResult::dryRun('dry-run: not sent (' . mb_strlen($text) . ' chars' . $media . ')');
+    }
+
+    public function verify(): array
+    {
+        return ['ok' => false, 'handle' => null, 'error' => 'null_publisher'];
     }
 }

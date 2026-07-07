@@ -53,7 +53,9 @@ Alles unter `src/Social/` (Namespace `App\Social`):
 | `SocialCardRenderer` | Media-Cards (Phase D): GD, 1200×675, Marken-Palette/Fonts (`resources/fonts`), je Meldungstyp ein Layout; `region_taken` zeichnet die Landkreis-Grenze (aus `game_region.boundary_geojson`). Best-effort → null = text-only. |
 | `Publisher` (Interface) | kanal-agnostische Sende-Schnittstelle; `publish(text, ?imagePng)` |
 | `TwitterPublisher` | X API v2 `POST /2/tweets` (OAuth 1.0a); Media via v1.1 `media/upload` (multipart) → `media_ids` |
+| `InstagramPublisher` | Meta Graph API: Media-Container (`image_url`+`caption`) → `media_publish`; nutzt die öffentliche Card-URL |
 | `NullPublisher` | Dry-Run — sendet nichts |
+| Card-Endpunkt | `GET /social/card/{queueId}.png` (public, gecacht) — rendert die Card einer Queue-Zeile für Instagram |
 | `SocialService` | Orchestrierung: `gatherCandidates` (Tagesbericht + alle Quellen) → `preview` / `collectDaily` / `publishPending`, Publisher-Wahl, Tages-Cap |
 
 CLI (`src/Cli/Commands.php`), auch als Internal-HTTP-Route:
@@ -88,7 +90,8 @@ CLI (`src/Cli/Commands.php`), auch als Internal-HTTP-Route:
 ```bash
 SOCIAL_ENABLED=false        # Gesamtschalter. false => immer Dry-Run.
 SOCIAL_DRY_RUN=true         # true => sendet nie, nur Queue+Log.
-SOCIAL_CHANNEL=twitter      # kanal-agnostisch; nur 'twitter' implementiert.
+SOCIAL_CHANNELS=twitter     # Multi-Channel, kommagetrennt: 'twitter,instagram'.
+SOCIAL_CHANNEL=twitter      # Fallback (Einzahl), wenn SOCIAL_CHANNELS leer.
 SOCIAL_LANG=en              # Go-Live-Sprache (E4). 'de' ist im Code hinterlegt.
 SOCIAL_MAX_POSTS_PER_DAY=1  # Free-Tier-Schutz (E8).
 SOCIAL_MAX_AGE_HOURS=36        # Kandidat älter als N h → verfällt (kein verspätetes Posten).
@@ -101,7 +104,19 @@ TWITTER_CONSUMER_KEY=
 TWITTER_CONSUMER_SECRET=
 TWITTER_ACCESS_TOKEN=
 TWITTER_ACCESS_TOKEN_SECRET=
+
+# Instagram (Meta Graph API) — Business-Account + Meta-App-Review + long-lived Token.
+IG_USER_ID=
+IG_ACCESS_TOKEN=
+IG_GRAPH_VERSION=v21.0
 ```
+
+> **Multi-Channel & Instagram:** Jede Meldung wird auf ALLE in `SOCIAL_CHANNELS`
+> gelisteten Kanäle ausgespielt (kanal-neutrale Kandidaten → je Kanal eine
+> Queue-Zeile; Tages-Cap + Cooldown pro Kanal; ein Kanal-Fehler blockiert die
+> anderen nicht). X lädt die Media-Card als Bytes hoch; Instagram lädt sie per
+> öffentlicher URL `GET /social/card/{queueId}.png` (gecacht). Design + Meta-
+> Prerequisites: `Instagram_Automation_Concept.md`.
 
 **Sicherer Default:** Es wird erst gesendet, wenn `SOCIAL_ENABLED=1` **und**
 `SOCIAL_DRY_RUN=0` **und** alle vier `TWITTER_*` gesetzt sind. Fehlt etwas,

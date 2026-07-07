@@ -19,7 +19,6 @@ final class FactionStandingCollector implements PostSource
         private readonly PDO $pdo,
         private readonly PostCopy $copy,
         private readonly string $lang,
-        private readonly string $channel,
     ) {}
 
     public function collect(string $date): array
@@ -64,7 +63,7 @@ final class FactionStandingCollector implements PostSource
 
         return [new PostCandidate(
             kind:        'faction_standing',
-            dedupeKey:   "faction_standing:{$isoWeek}:{$this->lang}:{$this->channel}",
+            dedupeKey:   "faction_standing:{$isoWeek}:{$this->lang}",
             entityKey:   "faction:{$isoWeek}",
             score:       45,
             body:        $this->copy->factionStanding($factions, $this->lang),

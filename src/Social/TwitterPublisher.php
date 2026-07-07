@@ -39,7 +39,7 @@ final class TwitterPublisher implements Publisher
             && $this->accessTokenSecret !== '';
     }
 
-    public function publish(string $text, ?string $imagePng = null): PublishResult
+    public function publish(string $text, ?string $imagePng = null, ?string $imageUrl = null): PublishResult
     {
         if (!$this->usable()) {
             return PublishResult::failure('twitter_not_configured');

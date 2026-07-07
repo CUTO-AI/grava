@@ -17,7 +17,6 @@ final class BadgeEarnedCollector implements PostSource
         private readonly PDO $pdo,
         private readonly PostCopy $copy,
         private readonly string $lang,
-        private readonly string $channel,
     ) {}
 
     public function collect(string $date): array
@@ -50,7 +49,7 @@ final class BadgeEarnedCollector implements PostSource
 
             $out[] = new PostCandidate(
                 kind:        'badge_earned',
-                dedupeKey:   "badge_earned:{$userId}:{$family}:{$tier}:{$this->lang}:{$this->channel}",
+                dedupeKey:   "badge_earned:{$userId}:{$family}:{$tier}:{$this->lang}",
                 entityKey:   "badge:{$userId}:{$family}:{$tier}",
                 score:       $tier >= 4 ? 90 : 80,
                 body:        $this->copy->badgeEarned($handle, $family, $tier, $this->lang),

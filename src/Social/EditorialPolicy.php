@@ -44,19 +44,20 @@ final class EditorialPolicy
      * gesendeten (published) Einträgen; datums-eindeutige Entities
      * (day:…, faction:…) sind praktisch nie betroffen.
      */
-    public function entityOnCooldown(string $kind, string $entityKey): bool
+    public function entityOnCooldown(string $kind, string $entityKey, string $channel): bool
     {
         if ($entityKey === '' || $this->cooldownDays <= 0) {
             return false;
         }
         $days = (int)$this->cooldownDays;
+        // Cooldown gilt pro Kanal: dieselbe Region auf X blockiert Instagram nicht.
         $stmt = $this->pdo->prepare(
             "SELECT 1 FROM social_post_queue
-              WHERE kind = :kind AND entity_key = :ek AND status = 'published'
+              WHERE kind = :kind AND entity_key = :ek AND channel = :ch AND status = 'published'
                 AND published_at >= UTC_TIMESTAMP(3) - INTERVAL {$days} DAY
               LIMIT 1"
         );
-        $stmt->execute([':kind' => $kind, ':ek' => $entityKey]);
+        $stmt->execute([':kind' => $kind, ':ek' => $entityKey, ':ch' => $channel]);
         return $stmt->fetchColumn() !== false;
     }
 }

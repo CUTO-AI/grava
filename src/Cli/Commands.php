@@ -970,12 +970,17 @@ final class Commands
             return 1;
         }
         $res = $this->social->publishPending();
-        echo sprintf(
-            "Social-Publish [%s%s]: gesendet=%d, übersprungen=%d, cooldown=%d, verfallen=%d, fehlgeschlagen=%d, Rest-Kontingent=%d\n",
-            $res['channel'], $res['dry_run'] ? ' DRY-RUN' : '',
-            $res['published'], $res['skipped'], $res['cooldown'], $res['expired'], $res['failed'], $res['remaining_quota'],
-        );
-        return $res['failed'] > 0 ? 1 : 0;
+        $dry = $res['dry_run'] ? ' DRY-RUN' : '';
+        echo sprintf("Social-Publish%s: verfallen=%d\n", $dry, (int)$res['expired']);
+        $anyFailed = false;
+        foreach (($res['channels'] ?? []) as $channel => $r) {
+            echo sprintf(
+                "  [%s] gesendet=%d, übersprungen=%d, cooldown=%d, fehlgeschlagen=%d, Rest-Kontingent=%d\n",
+                $channel, $r['published'], $r['skipped'], $r['cooldown'], $r['failed'], $r['remaining_quota'],
+            );
+            $anyFailed = $anyFailed || ($r['failed'] > 0);
+        }
+        return $anyFailed ? 1 : 0;
     }
 
     /**
@@ -1060,8 +1065,15 @@ final class Commands
         }
         $res = $this->social->doctor();
         echo json_encode($res, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
-        // Exit 0 nur, wenn Migrationen + (falls konfiguriert) X-Verbindung ok sind.
-        return ($res['migrations_ok'] && (!$res['twitter_configured'] || $res['twitter_ok'])) ? 0 : 1;
+        // Exit 0, wenn Migrationen ok und mindestens ein konfigurierter Kanal
+        // verbunden ist (oder noch kein Kanal konfiguriert wurde).
+        $anyConfigured = false;
+        $anyOk = false;
+        foreach (($res['channels'] ?? []) as $c) {
+            $anyConfigured = $anyConfigured || ($c['configured'] ?? false);
+            $anyOk = $anyOk || ($c['ok'] ?? false);
+        }
+        return ($res['migrations_ok'] && (!$anyConfigured || $anyOk)) ? 0 : 1;
     }
 
     private function help(): void

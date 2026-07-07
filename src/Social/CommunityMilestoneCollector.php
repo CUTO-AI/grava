@@ -24,7 +24,6 @@ final class CommunityMilestoneCollector implements PostSource
         private readonly PDO $pdo,
         private readonly PostCopy $copy,
         private readonly string $lang,
-        private readonly string $channel,
     ) {}
 
     public function collect(string $date): array
@@ -51,7 +50,7 @@ final class CommunityMilestoneCollector implements PostSource
 
         return [new PostCandidate(
             kind:        'community_milestone',
-            dedupeKey:   "community_milestone:{$reached}:{$this->lang}:{$this->channel}",
+            dedupeKey:   "community_milestone:{$reached}:{$this->lang}",
             entityKey:   "milestone_km:{$reached}",
             score:       70,
             body:        $this->copy->communityMilestone($reached, $this->lang),

@@ -838,6 +838,30 @@ $router->get ('/u/{handle}',                             fn($r) => $webDiscover-
 $router->get ('/u/{handle}/r/{id}',                      fn($r) => $webDiscover->profileRoute($r),        [$optionalBearer]);
 $router->get ('/u/{handle}/r/{id}/geojson',              fn($r) => $webDiscover->profileRouteGeojson($r), [$optionalBearer]);
 $router->get ('/u/{handle}/r/{id}/og-image.png',         fn($r) => $webDiscover->profileRouteOgImage($r), [$optionalBearer]);
+// Öffentliche Media-Card einer Social-Queue-Zeile (Instagram lädt sie per URL,
+// Instagram_Automation_Concept.md §4/M4). Gecacht nach storage/social-cards/.
+$router->get ('/social/card/{id}.png', function (Request $r) use ($config, $basePath): void {
+    $id = (int)($r->routeParams['id'] ?? 0);
+    if ($id <= 0) {
+        Response::error('not_found', 'Nicht gefunden.', 404);
+    }
+    $cacheFile = $basePath . '/storage/social-cards/' . $id . '.png';
+    $png = is_file($cacheFile) ? (string)@file_get_contents($cacheFile) : '';
+    if ($png === '') {
+        $png = (string)(new \App\Social\SocialService($config))->renderCardForQueueId($id);
+        if ($png === '') {
+            Response::error('not_found', 'Keine Karte für diese ID.', 404);
+        }
+        $dir = dirname($cacheFile);
+        if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+        if (is_dir($dir) && is_writable($dir)) { @file_put_contents($cacheFile, $png); }
+    }
+    header('Content-Type: image/png');
+    header('Cache-Control: public, max-age=604800');
+    header('Content-Length: ' . (string)strlen($png));
+    echo $png;
+    exit;
+});
 $router->get ('/feed',                                   fn($r) => $webDiscover->feed($r));
 $router->get ('/notifications',                          fn($r) => $webDiscover->notifications($r));
 

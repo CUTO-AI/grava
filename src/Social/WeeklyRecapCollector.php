@@ -18,7 +18,6 @@ final class WeeklyRecapCollector implements PostSource
         private readonly PDO $pdo,
         private readonly PostCopy $copy,
         private readonly string $lang,
-        private readonly string $channel,
     ) {}
 
     public function collect(string $date): array
@@ -49,7 +48,7 @@ final class WeeklyRecapCollector implements PostSource
 
         return [new PostCandidate(
             kind:        'weekly_recap',
-            dedupeKey:   "weekly_recap:{$isoWeek}:{$this->lang}:{$this->channel}",
+            dedupeKey:   "weekly_recap:{$isoWeek}:{$this->lang}",
             entityKey:   "week:{$isoWeek}",
             score:       48,
             body:        $this->copy->weeklyRecap($payload, $this->lang),
