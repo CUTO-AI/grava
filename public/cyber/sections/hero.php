@@ -22,7 +22,7 @@ $H = $T['hero'];
       <h1 class="cr-display"><?= $e($H['title1']) ?><br /><span class="cr-neon"><?= $e($H['title2']) ?></span></h1>
       <p class="cr-lead"><?= $e($H['lead']) ?></p>
       <div class="hero__ctas">
-        <?= cr_button($H['ctaApp'], ['size' => 'lg', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#']) ?>
+        <?= cr_button($H['ctaApp'], ['size' => 'lg', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#', 'attrs' => 'data-ga-event="appstore_click" data-ga-source="landing_hero"']) ?>
         <button class="trailer-box" id="trailerOpen">
           <span class="play"><?= cr_icon('play', 18) ?></span>
           <span style="text-align:left">

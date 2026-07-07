@@ -42,11 +42,13 @@ $CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
 <script type="application/json" id="ga-data"><?= json_encode(['content_group' => 'landing', 'page_title' => $T['meta']['title'], 'page_location' => $CR_CANONICAL], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <script src="/assets/js/ga.js"></script>
+<script src="/assets/js/events.js"></script>
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/cyberride.css" />
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/site.css" />
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/app.css" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
+<?= \App\Support\StructuredData::render() ?>
 </head>
 <body>
 <header class="site-header" id="siteHeader">
@@ -68,7 +70,7 @@ $CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
       <a href="?lang=de" class="<?= $CR_LANG === 'de' ? 'is-active' : '' ?>"><?= $e($T['lang']['de']) ?></a>
     </span>
     <a class="login" href="/login"><?= $e($T['nav']['login']) ?></a>
-    <?= cr_button($T['nav']['getApp'], ['size' => 'sm', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#']) ?>
+    <?= cr_button($T['nav']['getApp'], ['size' => 'sm', 'variant' => 'primary', 'icon' => 'apple', 'href' => '#', 'attrs' => 'data-ga-event="appstore_click" data-ga-source="landing_nav"']) ?>
   </nav>
 </header>
 <main>

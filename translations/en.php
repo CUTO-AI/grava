@@ -11,6 +11,9 @@ return [
     'Mehr erfahren' => 'Learn more',
     'Ablehnen' => 'Decline',
     'Akzeptieren' => 'Accept',
+    // SEO Meta-Descriptions (Phase D)
+    '%s auf CYBERRIDE — %d öffentliche Routen, %d Follower. Gravel- & Bikepacking-Touren entdecken.' => '%s on CYBERRIDE — %d public routes, %d followers. Discover gravel & bikepacking rides.',
+    '%s — %s km, %d Höhenmeter. Gravel-/Bikepacking-Route von %s auf CYBERRIDE.' => '%s — %s km, %d m elevation gain. Gravel/bikepacking route by %s on CYBERRIDE.',
     // Datenschutz: Web-Analyse & Einwilligung (Phase C)
     'Web-Analyse:' => 'Web analytics:',
     'Google Analytics (Google Ireland Ltd.) auf unseren Webseiten – nur nach deiner Einwilligung (siehe Abschnitt 5).' => 'Google Analytics (Google Ireland Ltd.) on our websites — only after your consent (see section 5).',

@@ -67,11 +67,13 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
 <script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <script src="/assets/js/ga.js"></script>
+<script src="/assets/js/events.js"></script>
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/cyberride.css">
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/site.css">
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/app.css">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<?= \App\Support\StructuredData::render($_jsonLd ?? []) ?>
 <?php foreach ($_pageStyles as $_href): ?>
 <link rel="stylesheet" href="<?= htmlspecialchars((string)$_href, ENT_QUOTES, 'UTF-8') ?>">
 <?php endforeach; ?>
