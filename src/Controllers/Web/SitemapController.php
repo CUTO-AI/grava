@@ -38,7 +38,7 @@ final class SitemapController
         $base = SiteUrl::base();
         $out  = [];
         $out[] = '<?xml version="1.0" encoding="UTF-8"?>';
-        $out[] = '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
+        $out[] = '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">';
 
         foreach (self::STATIC_PATHS as $path) {
             $out[] = self::urlEntry($base . $path, null);
@@ -96,7 +96,13 @@ final class SitemapController
 
     private static function urlEntry(string $loc, ?string $lastmod): string
     {
-        $xml = '  <url><loc>' . htmlspecialchars($loc, ENT_QUOTES | ENT_XML1, 'UTF-8') . '</loc>';
+        $esc = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_XML1, 'UTF-8');
+        // $loc ist die Default-/EN-URL (paramlos). DE-Variante = ?lang=de.
+        $de = $loc . '?lang=de';
+        $xml  = '  <url><loc>' . $esc($loc) . '</loc>';
+        $xml .= '<xhtml:link rel="alternate" hreflang="de" href="' . $esc($de) . '"/>';
+        $xml .= '<xhtml:link rel="alternate" hreflang="en" href="' . $esc($loc) . '"/>';
+        $xml .= '<xhtml:link rel="alternate" hreflang="x-default" href="' . $esc($loc) . '"/>';
         if ($lastmod !== null) {
             $xml .= '<lastmod>' . $lastmod . '</lastmod>';
         }

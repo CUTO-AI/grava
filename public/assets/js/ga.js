@@ -17,6 +17,7 @@ try {
     if (_gaData.content_group) { _gaConfig.content_group = _gaData.content_group; }
     if (_gaData.page_title)    { _gaConfig.page_title    = _gaData.page_title; }
     if (_gaData.page_location) { _gaConfig.page_location = _gaData.page_location; }
+    if (_gaData.page_language) { _gaConfig.page_language = _gaData.page_language; }
   }
 } catch (e) { /* Fallback: Auto-Erfassung */ }
 
