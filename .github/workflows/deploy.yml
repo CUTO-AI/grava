@@ -1,83 +1,53 @@
-name: Deploy (SFTP)
+name: Deploy (SSH netcup)
 
-# Baut die Composer-Abhängigkeiten in der CI (der Server kann kein composer)
-# und lädt das fertige Projekt per SFTP (Port 22) auf grava.world hoch.
+# Deployt bei jedem Push auf main auf den netcup-Prod-Server (cyberride.world).
+# Der Server hat vollen Shell-Zugriff (SSH, git, composer, echtes Cron), zieht
+# also selbst per git + composer und wendet Migrationen an. Ersetzt den alten
+# SFTP-Deploy auf die (auslaufende) IONOS-Instanz.
 #
-# Auslöser:
-#   - automatisch bei Push auf main
-#   - manuell über den "Run workflow"-Button (Actions-Tab)
+# Login als non-root-User (armin), Rechte-Eskalation je Befehl via sudo
+# (NOPASSWD) — kein root-SSH-Login nötig. App-CLI läuft als www-data (wie Cron).
+#
+# Auslöser: Push auf main + manuell ("Run workflow").
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-# Verhindert, dass sich zwei Deploys überlappen.
+# Zwei Deploys nie überlappen lassen.
 concurrency:
-  group: sftp-deploy
+  group: netcup-deploy
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: PHP einrichten
-        uses: shivammathur/setup-php@v2
+      - name: SSH-Deploy auf netcup
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          GITHUB_SHA: ${{ github.sha }}
         with:
-          php-version: '8.2'
-          extensions: pdo_mysql, gd, mbstring, openssl, json
-          coverage: none
-
-      - name: Composer-Abhängigkeiten (ohne dev) installieren
-        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
-
-      # Versions-Marker schreiben, damit /healthz zeigt, welcher Commit
-      # produktiv liegt (.git ist auf dem Server nicht vorhanden).
-      - name: Versions-Datei schreiben
-        run: |
-          printf '{"commit":"%s","short":"%s","built_at":"%s","ref":"%s"}\n' \
-            "$GITHUB_SHA" \
-            "$(printf '%s' "$GITHUB_SHA" | cut -c1-7)" \
-            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            "${GITHUB_REF_NAME:-main}" \
-            > VERSION
-
-      # Sauberes Deploy-Paket bauen: nur das, was auf den Server soll.
-      # Schützt die Server-.env und die Nutzerdaten in storage/, weil diese
-      # gar nicht erst im Paket landen.
-      - name: Deploy-Paket zusammenstellen
-        run: |
-          rsync -a \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='tests' \
-            --exclude='docker' \
-            --exclude='docs' \
-            --exclude='.DS_Store' \
-            --exclude='.phpunit.cache' \
-            --exclude='.phpunit.result.cache' \
-            --exclude='phpunit.xml.dist' \
-            --exclude='.env' \
-            --exclude='.env.example' \
-            --exclude='storage' \
-            --exclude='__deploy' \
-            ./ __deploy/
-
-      - name: SFTP-Upload
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.6
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 22
-          # Inhalt des Deploy-Pakets …
-          local_path: './__deploy/*'
-          # … in das Zielverzeichnis auf dem Server (muss bereits existieren,
-          # da sftp_only es nicht automatisch anlegt). Mit / am Ende.
-          remote_path: ${{ secrets.FTP_SERVER_DIR }}
-          # Reines SFTP (kein rsync/Shell auf dem Server nötig).
-          sftp_only: true
-          # NIEMALS auf true setzen: würde Server-.env + storage/ löschen!
-          delete_remote_files: false
+          host: ${{ secrets.NETCUP_SSH_HOST }}
+          username: ${{ secrets.NETCUP_SSH_USER }}
+          key: ${{ secrets.NETCUP_SSH_KEY }}
+          port: ${{ secrets.NETCUP_SSH_PORT }}
+          envs: GITHUB_SHA
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /var/www/app
+            # Aktuellen main-Stand holen und hart darauf setzen (verwirft Drift).
+            # KEIN git clean — untracked Server-Secrets (.env*, *.p8, storage/keys)
+            # bleiben unangetastet.
+            sudo git fetch --all --prune
+            sudo git reset --hard origin/main
+            sudo composer install --no-dev --optimize-autoloader --no-interaction
+            # Versions-Marker für /healthz (kein .git-abhängiges Lesen zur Laufzeit).
+            printf '{"commit":"%s","short":"%s","built_at":"%s","ref":"main"}\n' \
+              "$GITHUB_SHA" "$(echo "$GITHUB_SHA" | cut -c1-7)" \
+              "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | sudo tee VERSION >/dev/null
+            # Migrationen als Laufzeit-User anwenden (idempotent; .env ist 640 root:www-data).
+            sudo -u www-data php public/index.php cli:migrate
+            # OPcache/FPM neu laden, damit der neue Code sofort greift.
+            sudo systemctl reload php8.4-fpm
