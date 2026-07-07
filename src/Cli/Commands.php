@@ -937,9 +937,14 @@ final class Commands
         $opts = $this->parseOptions($argv);
         $date = trim((string)($opts['date'] ?? '')) ?: $this->social->today();
         $res  = $this->social->collectDaily($date);
+        $kinds = [];
+        foreach (($res['by_kind'] ?? []) as $k => $n) {
+            $kinds[] = "{$k}={$n}";
+        }
         echo sprintf(
-            "Social-Collect %s: enqueued=%s (%s)\n",
-            $res['date'], $res['enqueued'] ? '1' : '0', $res['reason'],
+            "Social-Collect %s: %d Kandidat(en), neu=%d, schon vorhanden=%d%s\n",
+            $res['date'], $res['candidates'], $res['enqueued'], $res['already'],
+            $kinds === [] ? '' : ' [' . implode(', ', $kinds) . ']',
         );
         return 0;
     }

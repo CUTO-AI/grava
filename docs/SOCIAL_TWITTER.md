@@ -4,8 +4,10 @@ Automatisierte X/Twitter-Meldungen aus der Tagesaktivität von CYBERRIDE.
 Fachliches Konzept: `Twitter_Automation_Concept.md` (iOS-Repo). Dieses Dokument
 beschreibt die **Backend-Umsetzung** und den Betrieb.
 
-**Stand:** Phase A gebaut (Commit `bbed300`, Branch `feature/social-twitter-phase-a`),
+**Stand:** Phase A + B gebaut (Branch `feature/social-twitter-phase-a`),
 lokal getestet, **noch nicht deployt**, sendet per Default nichts (Dry-Run).
+Meldungstypen: `daily_report` (E1), `region_taken` (A1, Solo-Rider opt-in-gated),
+`rush_result` (B2), `faction_standing` (C2, wöchentlich sonntags).
 
 ---
 
@@ -30,12 +32,16 @@ Alles unter `src/Social/` (Namespace `App\Social`):
 
 | Datei | Rolle |
 |---|---|
+| `PostSource` (Interface) / `PostCandidate` | eine Meldungs-Quelle liefert fertige Kandidaten (kind, dedupeKey, score, body, payload) |
 | `DailyReport` / `DailyReportCollector` | aggregiert Tagesaktivität (rides, km, Kanten übernommen, Landkreise gewechselt, Rush des Tages). Jede Kennzahl fehlertolerant (fehlt eine Tabelle → 0 + `error_log`). |
-| `PostCopy` | sprach-keyed Textbausteine (EN Go-Live, DE hinterlegt), begrenzt auf ≤280 Zeichen |
+| `RegionTakenCollector` | „Landkreis erobert" (A1). Crew = öffentlich; Solo-Rider nur mit `social_optin=1` (E3), sonst übersprungen. |
+| `RushResultCollector` | „Rush-Ergebnis" (B2): heute abgeschlossene Crew-Rushes + eroberte Kanten. Öffentlich. |
+| `FactionStandingCollector` | „Fraktions-Wochenstand" (C2): Anteil je Fraktion, nur SONNTAGS (UTC). |
+| `PostCopy` | sprach-keyed Textbausteine (EN Go-Live, DE hinterlegt), begrenzt auf ≤280 Zeichen; je Meldungstyp eine Methode |
 | `Publisher` (Interface) | kanal-agnostische Sende-Schnittstelle |
 | `TwitterPublisher` | X API v2 `POST /2/tweets`, OAuth 1.0a User-Context (HMAC-SHA1) |
 | `NullPublisher` | Dry-Run — sendet nichts |
-| `SocialService` | Orchestrierung: `preview` / `collectDaily` / `publishPending`, Publisher-Wahl, Tages-Cap |
+| `SocialService` | Orchestrierung: `gatherCandidates` (Tagesbericht + alle Quellen) → `preview` / `collectDaily` / `publishPending`, Publisher-Wahl, Tages-Cap |
 
 CLI (`src/Cli/Commands.php`), auch als Internal-HTTP-Route:
 
@@ -48,8 +54,12 @@ CLI (`src/Cli/Commands.php`), auch als Internal-HTTP-Route:
 ## 3. Datenbank (Migration `0052_social_posts.sql`)
 
 - **`social_post_queue`** — ein Kandidat je Meldung. `dedupe_key` (unique) macht
-  das Einsammeln idempotent (`daily_report:<date>:<lang>:<channel>`). `status`:
-  `pending|published|skipped|failed`. `kind` heute nur `daily_report`.
+  das Einsammeln idempotent. `status`: `pending|published|skipped|failed`.
+  `kind`: `daily_report` | `region_taken` | `rush_result` | `faction_standing`.
+  Dedupe-Schemata: `daily_report:<date>:<lang>:<channel>`,
+  `region_taken:<regionId>:<date>:<lang>:<channel>`,
+  `rush_result:<rushId>:<lang>:<channel>`,
+  `faction_standing:<isoWeek>:<lang>:<channel>`.
 - **`social_post_log`** — ein Eintrag je Sendeversuch (`ok|error|dry_run`,
   `external_id` = Tweet-ID). Dient dem Tages-Cap und dem Audit.
 - **`users.social_optin`** — Default 0. In Phase A ungenutzt; Andockpunkt für
@@ -102,9 +112,11 @@ Links zeigen auf `PUBLIC_WEB_URL` (Fallback `APP_URL`).
 - **Idempotenz** über `dedupe_key`; erneutes `collect` desselben Tags = `already_queued`.
 - **Leerer Tag** (keine Fahrten/Kanten/Landkreise/Rush) → kein Kandidat (`no_activity`).
 
-## 7. Ausblick (Phase B+, Konzept §9)
+## 7. Ausblick (Phase C+, Konzept §9)
 
-Weitere Meldungstypen als eigene Collector+Copy-Bausteine in die bestehende
-Queue: `region_taken` (Landkreis erobert), `rush_result`, Fraktionsstand.
-Danach Redaktions-Scoring/Slots, serverseitiger Cyber-Card-Renderer (Medien),
-personenbezogene Opt-in-Highlights, weitere Publisher-Adapter (Mastodon/…).
+Phase B (region_taken/rush_result/faction_standing) ist gebaut. Als Nächstes:
+Redaktions-Scoring/Slots scharf schalten (§5) + Upgrade auf X-Basic;
+serverseitiger Cyber-Card-Renderer (Medien, §6/E6); weitere personenbezogene
+Opt-in-Highlights (KOM/Rang/Badge, D-Reihe) + iOS-Opt-in-UI; Live-Peak/
+Community-Meilenstein (E3/E4); DE zuschalten; weitere Publisher-Adapter
+(Mastodon/Threads/…). Neue Meldungstypen = neuer `PostSource` + `PostCopy`-Methode.

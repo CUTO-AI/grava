@@ -45,30 +45,28 @@ final class SocialService
     }
 
     /**
-     * Trocken-Vorschau (§9/A `social:preview`): baut den Bericht und rendert den
-     * Text, ohne etwas zu speichern oder zu senden.
+     * Trocken-Vorschau (§9/A `social:preview`): baut ALLE Kandidaten des Tages
+     * (Tagesbericht + Ereignisse) und rendert sie, ohne etwas zu speichern/senden.
      *
-     * @return array{date:string, lang:string, empty:bool, length:int, text:string, report:array<string,mixed>}
+     * @return array{date:string, lang:string, count:int, candidates:list<array<string,mixed>>}
      */
     public function preview(string $date, ?string $lang = null): array
     {
-        $lang   = $this->copy->normalizeLang($lang ?? $this->lang);
-        $report = $this->collector->collect($date);
-        $text   = $this->copy->dailyReport($report, $lang);
+        $lang = $this->copy->normalizeLang($lang ?? $this->lang);
+        $cands = array_map(static fn(PostCandidate $c) => [
+            'kind'   => $c->kind,
+            'dedupe' => $c->dedupeKey,
+            'score'  => $c->score,
+            'length' => mb_strlen($c->body),
+            'text'   => $c->body,
+            'payload'=> $c->payloadJson !== null ? json_decode($c->payloadJson, true) : null,
+        ], $this->gatherCandidates($date, $lang));
+
         return [
-            'date'   => $date,
-            'lang'   => $lang,
-            'empty'  => $report->isEmpty(),
-            'length' => mb_strlen($text),
-            'text'   => $text,
-            'report' => [
-                'rides'            => $report->rides,
-                'distance_km'      => $report->distanceKm,
-                'edges_taken_over' => $report->edgesTakenOver,
-                'counties_changed' => $report->countiesChanged,
-                'rush_crew'        => $report->rushCrewName,
-                'rush_edges'       => $report->rushEdges,
-            ],
+            'date'       => $date,
+            'lang'       => $lang,
+            'count'      => count($cands),
+            'candidates' => $cands,
         ];
     }
 
@@ -80,42 +78,100 @@ final class SocialService
      */
     public function collectDaily(string $date): array
     {
-        $report = $this->collector->collect($date);
-        if ($report->isEmpty()) {
-            return ['date' => $date, 'enqueued' => false, 'reason' => 'no_activity'];
+        $candidates = $this->gatherCandidates($date, $this->lang);
+
+        $enqueued = 0;
+        $already  = 0;
+        $byKind   = [];
+        foreach ($candidates as $c) {
+            $ok = $this->enqueue($c);
+            $ok ? $enqueued++ : $already++;
+            $byKind[$c->kind] = ($byKind[$c->kind] ?? 0) + ($ok ? 1 : 0);
         }
 
-        $text    = $this->copy->dailyReport($report, $this->lang);
-        $dedupe  = "daily_report:{$date}:{$this->lang}:{$this->channel}";
-        $payload = json_encode([
-            'rides'            => $report->rides,
-            'distance_km'      => $report->distanceKm,
-            'edges_taken_over' => $report->edgesTakenOver,
-            'counties_changed' => $report->countiesChanged,
-            'rush_crew'        => $report->rushCrewName,
-            'rush_edges'       => $report->rushEdges,
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        return [
+            'date'       => $date,
+            'candidates' => count($candidates),
+            'enqueued'   => $enqueued,
+            'already'    => $already,
+            'by_kind'    => $byKind,
+        ];
+    }
 
+    /**
+     * Alle Kandidaten des Tages in der gewünschten Sprache: Tagesbericht (E1)
+     * + Ereignis-Quellen (Phase B). Geteilt von preview() und collectDaily().
+     *
+     * @return list<PostCandidate>
+     */
+    private function gatherCandidates(string $date, string $lang): array
+    {
+        $candidates = [];
+        $daily = $this->buildDailyCandidate($date, $lang);
+        if ($daily !== null) {
+            $candidates[] = $daily;
+        }
+        foreach ($this->sources($lang) as $source) {
+            foreach ($source->collect($date) as $cand) {
+                $candidates[] = $cand;
+            }
+        }
+        return $candidates;
+    }
+
+    /** Baut den Tagesbericht-Kandidaten oder null, wenn keine Aktivität vorliegt. */
+    private function buildDailyCandidate(string $date, string $lang): ?PostCandidate
+    {
+        $report = $this->collector->collect($date);
+        if ($report->isEmpty()) {
+            return null;
+        }
+        return new PostCandidate(
+            kind:        'daily_report',
+            dedupeKey:   "daily_report:{$date}:{$lang}:{$this->channel}",
+            score:       50,
+            body:        $this->copy->dailyReport($report, $lang),
+            payloadJson: json_encode([
+                'rides'            => $report->rides,
+                'distance_km'      => $report->distanceKm,
+                'edges_taken_over' => $report->edgesTakenOver,
+                'counties_changed' => $report->countiesChanged,
+                'rush_crew'        => $report->rushCrewName,
+                'rush_edges'       => $report->rushEdges,
+            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        );
+    }
+
+    /**
+     * @return list<PostSource> Aktive Ereignis-Quellen (Phase B) in der Sprache.
+     */
+    private function sources(string $lang): array
+    {
+        return [
+            new RegionTakenCollector($this->pdo, $this->copy, $lang, $this->channel),
+            new RushResultCollector($this->pdo, $this->copy, $lang, $this->channel),
+            new FactionStandingCollector($this->pdo, $this->copy, $lang, $this->channel),
+        ];
+    }
+
+    /** Schreibt einen Kandidaten in die Queue; false = schon vorhanden (idempotent). */
+    private function enqueue(PostCandidate $c): bool
+    {
         $stmt = $this->pdo->prepare(
             "INSERT INTO social_post_queue (kind, channel, lang, dedupe_key, status, score, body, payload)
-             VALUES ('daily_report', :channel, :lang, :dedupe, 'pending', :score, :body, :payload)
+             VALUES (:kind, :channel, :lang, :dedupe, 'pending', :score, :body, :payload)
              ON DUPLICATE KEY UPDATE id = id"
         );
         $stmt->execute([
+            ':kind'    => $c->kind,
             ':channel' => $this->channel,
             ':lang'    => $this->lang,
-            ':dedupe'  => $dedupe,
-            ':score'   => 50,
-            ':body'    => $text,
-            ':payload' => $payload,
+            ':dedupe'  => $c->dedupeKey,
+            ':score'   => $c->score,
+            ':body'    => $c->body,
+            ':payload' => $c->payloadJson,
         ]);
-
-        $inserted = $stmt->rowCount() > 0;
-        return [
-            'date'     => $date,
-            'enqueued' => $inserted,
-            'reason'   => $inserted ? 'enqueued' : 'already_queued',
-        ];
+        return $stmt->rowCount() > 0;
     }
 
     /**

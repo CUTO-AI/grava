@@ -71,6 +71,71 @@ final class PostCopy
         return $this->clamp($line);
     }
 
+    /** „Landkreis erobert" (A1). $ownerType: 'group'|'rider'. */
+    public function regionTaken(string $region, string $owner, string $ownerType, float $fraction, string $lang): string
+    {
+        $lang = $this->normalizeLang($lang);
+        $url  = rtrim($this->publicWebUrl, '/');
+        $pct  = (int)round(max(0.0, min(1.0, $fraction)) * 100);
+
+        if ($lang === 'de') {
+            $subject = $ownerType === 'group' ? "Crew {$owner}" : $owner;
+            return $this->clamp("⚡ Neuer Herrscher im {$region}: {$subject} übernimmt die Kontrolle ({$pct} % gehalten). Wer holt ihn zurück? 🗺️ {$url}");
+        }
+        $subject = $ownerType === 'group' ? "crew {$owner}" : $owner;
+        return $this->clamp("⚡ New ruler of {$region}: {$subject} takes control ({$pct}% held). Who takes it back? 🗺️ {$url} #CYBERRIDE");
+    }
+
+    /** „Rush-Ergebnis" (B2). */
+    public function rushResult(string $crew, int $edges, int $riders, float $multiplier, string $lang): string
+    {
+        $lang = $this->normalizeLang($lang);
+        $url  = rtrim($this->publicWebUrl, '/');
+        $mult = $this->fmtMultiplier($multiplier);
+
+        if ($lang === 'de') {
+            $rider = $riders === 1 ? '1 Fahrer' : "{$riders} Fahrer";
+            return $this->clamp("🏁 Rush beendet: {$crew} — {$rider}, {$mult}, {$edges} Kanten erobert. 💪 {$url}");
+        }
+        $rider = $riders === 1 ? '1 rider' : "{$riders} riders";
+        return $this->clamp("🏁 Rush done: {$crew} — {$rider}, {$mult}, {$edges} edges taken. 💪 {$url} #CYBERRIDE");
+    }
+
+    /**
+     * „Fraktions-Wochenstand" (C2).
+     * @param list<array{name:string,key:string,share:int,edges:int,len_m:float}> $factions
+     */
+    public function factionStanding(array $factions, string $lang): string
+    {
+        $lang = $this->normalizeLang($lang);
+        $url  = rtrim($this->publicWebUrl, '/');
+        $top  = array_slice($factions, 0, 2);
+        $line = implode(' · ', array_map(
+            fn($f) => $this->factionEmoji((string)$f['key']) . ' ' . $f['name'] . ' ' . $f['share'] . '%',
+            $top,
+        ));
+
+        if ($lang === 'de') {
+            return $this->clamp("Fraktions-Wochenstand — {$line}. #FactionWar {$url}");
+        }
+        return $this->clamp("Faction standings — {$line}. #FactionWar {$url}");
+    }
+
+    private function factionEmoji(string $key): string
+    {
+        return match ($key) {
+            'green' => '🟩',
+            'blue'  => '🟦',
+            default => '⬛',
+        };
+    }
+
+    private function fmtMultiplier(float $m): string
+    {
+        $s = rtrim(rtrim(number_format($m, 1, '.', ''), '0'), '.');
+        return '×' . ($s === '' ? '0' : $s);
+    }
+
     private function kmEn(float $km): string
     {
         return number_format($km, ($km >= 100 ? 0 : 1), '.', ',') . ' km';
