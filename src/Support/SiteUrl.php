@@ -38,4 +38,35 @@ final class SiteUrl
         }
         return self::base() . $path;
     }
+
+    // --- Zweisprachigkeit (SEO) --------------------------------------------
+    // Sprache läuft über ?lang= + Cookie (I18n), Default ist Englisch. Für SEO
+    // gilt: Default (EN) = paramlose URL, DE = ?lang=de. So ist jede Sprach-URL
+    // eindeutig crawlbar und kann sich selbst kanonisieren.
+    private const DEFAULT_LANG = 'en';
+
+    /** Absolute, sprach-spezifische URL: paramlos für Default (en), ?lang=de sonst. */
+    public static function localized(string $path, string $lang): string
+    {
+        $url = self::absolute($path);
+        if ($lang !== self::DEFAULT_LANG) {
+            $url .= (str_contains($url, '?') ? '&' : '?') . 'lang=' . rawurlencode($lang);
+        }
+        return $url;
+    }
+
+    /**
+     * hreflang-`<link>`-Tags (de, en, x-default) für einen Pfad.
+     * Wird im <head> ausgegeben; erlaubt Google, die passende Sprachfassung
+     * auszuliefern. x-default zeigt auf die Default-Fassung (paramlos/EN).
+     */
+    public static function hreflangLinks(string $path): string
+    {
+        $en = self::localized($path, 'en');
+        $de = self::localized($path, 'de');
+        $esc = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+        return '<link rel="alternate" hreflang="de" href="' . $esc($de) . '">'
+             . '<link rel="alternate" hreflang="en" href="' . $esc($en) . '">'
+             . '<link rel="alternate" hreflang="x-default" href="' . $esc($en) . '">';
+    }
 }

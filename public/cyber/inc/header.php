@@ -6,10 +6,14 @@ $T = $T ?? (require __DIR__ . '/../lang/en.php');
 $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 
 // SEO/Canonical: absolute Marken-URL der Startseite (unabhängig vom Request-Host).
-$CR_BASE      = class_exists('\\App\\Support\\SiteUrl') ? \App\Support\SiteUrl::base() : '';
-$CR_CANONICAL = ($CR_BASE !== '' ? $CR_BASE : '') . '/';
+// Sprach-bewusst: DE = /?lang=de, EN/Default = paramlos.
+$_hasSiteUrl  = class_exists('\\App\\Support\\SiteUrl');
+$CR_BASE      = $_hasSiteUrl ? \App\Support\SiteUrl::base() : '';
+$CR_CANONICAL = $_hasSiteUrl ? \App\Support\SiteUrl::localized('/', $CR_LANG) : (($CR_BASE !== '' ? $CR_BASE : '') . '/');
+$CR_HREFLANG  = $_hasSiteUrl ? \App\Support\SiteUrl::hreflangLinks('/') : '';
 $CR_OG_IMAGE  = '/assets/brand/icon-512.png';
 $CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
+$CR_OG_LOCALE_ALT = $CR_LANG === 'de' ? 'en_US' : 'de_DE';
 ?>
 <!DOCTYPE html>
 <html lang="<?= $e($CR_LANG) ?>" data-theme="cyber">
@@ -21,6 +25,7 @@ $CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
 <meta name="author" content="CYBERRIDE" />
 <meta name="robots" content="index, follow" />
 <link rel="canonical" href="<?= $e($CR_CANONICAL) ?>" />
+<?= $CR_HREFLANG ?>
 
 <meta property="og:type" content="website" />
 <meta property="og:url" content="<?= $e($CR_CANONICAL) ?>" />
@@ -28,6 +33,7 @@ $CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
 <meta property="og:description" content="<?= $e($T['meta']['description']) ?>" />
 <meta property="og:image" content="<?= $e($CR_OG_IMAGE) ?>" />
 <meta property="og:locale" content="<?= $e($CR_OG_LOCALE) ?>" />
+<meta property="og:locale:alternate" content="<?= $e($CR_OG_LOCALE_ALT) ?>" />
 <meta property="og:site_name" content="CYBERRIDE" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:url" content="<?= $e($CR_CANONICAL) ?>" />
@@ -40,7 +46,7 @@ $CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
 <script src="/assets/js/consent.js"></script>
 <!-- Google tag (gtag.js) — Loader extern, Init aus same-origin /assets/js/ga.js (CSP) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
-<script type="application/json" id="ga-data"><?= json_encode(['content_group' => 'landing', 'page_title' => $T['meta']['title'], 'page_location' => $CR_CANONICAL], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
+<script type="application/json" id="ga-data"><?= json_encode(['content_group' => 'landing', 'page_title' => $T['meta']['title'], 'page_location' => $CR_CANONICAL, 'page_language' => $CR_LANG], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <script src="/assets/js/ga.js"></script>
 <script src="/assets/js/events.js"></script>
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/cyberride.css" />

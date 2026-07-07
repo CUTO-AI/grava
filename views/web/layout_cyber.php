@@ -34,6 +34,10 @@ $_ogImage         = $_ogImage         ?? '/assets/brand/icon-512.png';
 $_canonical       = $_canonical       ?? ($_ogUrl ?? ($_SERVER['REQUEST_URI'] ?? '/'));
 $_ogUrl           = $_ogUrl           ?? $_canonical;
 $_robots          = $_robots          ?? 'index, follow';
+$_hreflangPath    = $_hreflangPath    ?? (strtok((string)($_SERVER['REQUEST_URI'] ?? '/'), '?') ?: '/');
+$_pageLanguage    = $_pageLanguage    ?? $CR_LANG;
+$_ogLocale        = $_pageLanguage === 'de' ? 'de_DE' : 'en_US';
+$_ogLocaleAlt     = $_pageLanguage === 'de' ? 'en_US' : 'de_DE';
 
 $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 ?><!doctype html>
@@ -48,6 +52,7 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <meta name="author" content="CYBERRIDE">
 <meta name="robots" content="<?= htmlspecialchars($_robots, ENT_QUOTES, 'UTF-8') ?>">
 <link rel="canonical" href="<?= htmlspecialchars($_canonical, ENT_QUOTES, 'UTF-8') ?>">
+<?= \App\Support\SiteUrl::hreflangLinks($_hreflangPath) ?>
 
 <meta property="og:type" content="website">
 <meta property="og:url" content="<?= htmlspecialchars($_canonical, ENT_QUOTES, 'UTF-8') ?>">
@@ -58,7 +63,8 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <meta property="og:image:width" content="<?= (int)$_ogImageWidth ?>">
 <meta property="og:image:height" content="<?= (int)$_ogImageHeight ?>">
 <?php endif; ?>
-<meta property="og:locale" content="de_DE">
+<meta property="og:locale" content="<?= $_ogLocale ?>">
+<meta property="og:locale:alternate" content="<?= $_ogLocaleAlt ?>">
 <meta property="og:site_name" content="CYBERRIDE">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:url" content="<?= htmlspecialchars($_canonical, ENT_QUOTES, 'UTF-8') ?>">
@@ -69,7 +75,7 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <meta name="theme-color" content="#04060B">
 <script src="/assets/js/consent.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
-<script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
+<script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical, 'page_language' => $_pageLanguage], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <script src="/assets/js/ga.js"></script>
 <script src="/assets/js/events.js"></script>
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/cyberride.css">

@@ -41,10 +41,16 @@ final class WebView
         // …) bekommen noindex. Controller können jeden Wert explizit überschreiben.
         $path = strtok((string)($_SERVER['REQUEST_URI'] ?? '/'), '?');
         $path = ($path === false || $path === '') ? '/' : $path;
-        $canonical = \App\Support\SiteUrl::absolute($path);
-        $vars['_canonical'] = $vars['_canonical'] ?? $canonical;
-        $vars['_ogUrl']     = $vars['_ogUrl']     ?? $canonical;
-        $vars['_robots']    = $vars['_robots']    ?? (self::isNoindexPath($path) ? 'noindex, follow' : 'index, follow');
+        // Sprach-bewusster Canonical: Default (EN) paramlos, DE = ?lang=de —
+        // damit jede Sprachfassung sich selbst kanonisiert und die hreflang-
+        // Alternates nicht ins Leere zeigen. hreflangPath = sauberer Pfad.
+        $locale    = \App\Support\I18n::locale();
+        $canonical = \App\Support\SiteUrl::localized($path, $locale);
+        $vars['_canonical']    = $vars['_canonical']    ?? $canonical;
+        $vars['_ogUrl']        = $vars['_ogUrl']        ?? $canonical;
+        $vars['_hreflangPath'] = $vars['_hreflangPath'] ?? $path;
+        $vars['_pageLanguage'] = $vars['_pageLanguage'] ?? $locale;
+        $vars['_robots']       = $vars['_robots']       ?? (self::isNoindexPath($path) ? 'noindex, follow' : 'index, follow');
 
         // --- Analytics: Seitentyp-Gruppierung für GA4 -----------------------
         // content_group erlaubt Auswertungen nach Seitentyp (landing/discover/

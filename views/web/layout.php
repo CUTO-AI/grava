@@ -20,8 +20,12 @@ $_canonical       = $_canonical       ?? ($_ogUrl ?? ($_SERVER['REQUEST_URI'] ??
 $_ogUrl           = $_ogUrl           ?? $_canonical;
 $_robots          = $_robots          ?? 'index, follow';
 $_analyticsGroup  = $_analyticsGroup  ?? 'other';
+$_hreflangPath    = $_hreflangPath    ?? (strtok((string)($_SERVER['REQUEST_URI'] ?? '/'), '?') ?: '/');
+$_pageLanguage    = $_pageLanguage    ?? \App\Support\I18n::locale();
+$_ogLocale        = $_pageLanguage === 'de' ? 'de_DE' : 'en_US';
+$_ogLocaleAlt     = $_pageLanguage === 'de' ? 'en_US' : 'de_DE';
 ?><!doctype html>
-<html lang="de">
+<html lang="<?= htmlspecialchars($_pageLanguage, ENT_QUOTES, 'UTF-8') ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -33,6 +37,7 @@ $_analyticsGroup  = $_analyticsGroup  ?? 'other';
     <meta name="author" content="CYBERRIDE">
     <meta name="robots" content="<?= htmlspecialchars($_robots, ENT_QUOTES, 'UTF-8') ?>">
     <link rel="canonical" href="<?= htmlspecialchars($_canonical, ENT_QUOTES, 'UTF-8') ?>">
+    <?= \App\Support\SiteUrl::hreflangLinks($_hreflangPath) ?>
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -44,7 +49,8 @@ $_analyticsGroup  = $_analyticsGroup  ?? 'other';
     <meta property="og:image:width" content="<?= (int)$_ogImageWidth ?>">
     <meta property="og:image:height" content="<?= (int)$_ogImageHeight ?>">
     <?php endif; ?>
-    <meta property="og:locale" content="de_DE">
+    <meta property="og:locale" content="<?= $_ogLocale ?>">
+    <meta property="og:locale:alternate" content="<?= $_ogLocaleAlt ?>">
     <meta property="og:site_name" content="CYBERRIDE">
 
     <!-- Twitter Card -->
@@ -60,7 +66,7 @@ $_analyticsGroup  = $_analyticsGroup  ?? 'other';
     <script src="/assets/js/consent.js"></script>
     <!-- Google tag (gtag.js) — Loader extern, Init aus same-origin /assets/js/ga.js (CSP) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
-    <script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
+    <script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical, 'page_language' => $_pageLanguage], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
     <script src="/assets/js/ga.js"></script>
     <script src="/assets/js/events.js"></script>
     <link rel="stylesheet" href="/assets/style.css">
