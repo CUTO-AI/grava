@@ -23,6 +23,7 @@ final class SocialService
     private readonly string $lang;
     private readonly int $maxPerDay;
     private readonly bool $dryRun;
+    private readonly EditorialPolicy $policy;
 
     public function __construct(private readonly Config $config, ?PDO $pdo = null)
     {
@@ -36,6 +37,11 @@ final class SocialService
         // Sicher standardmäßig trocken: es wird erst gesendet, wenn der
         // Betreiber SOCIAL_ENABLED=1 UND SOCIAL_DRY_RUN=0 setzt.
         $this->dryRun    = !$config->bool('SOCIAL_ENABLED', false) || $config->bool('SOCIAL_DRY_RUN', true);
+        $this->policy    = new EditorialPolicy(
+            $this->pdo,
+            $config->int('SOCIAL_MAX_AGE_HOURS', 36),
+            $config->int('SOCIAL_ENTITY_COOLDOWN_DAYS', 3),
+        );
     }
 
     /** Heutiges UTC-Datum (Fallback für die Kommandos). */
@@ -129,6 +135,7 @@ final class SocialService
         return new PostCandidate(
             kind:        'daily_report',
             dedupeKey:   "daily_report:{$date}:{$lang}:{$this->channel}",
+            entityKey:   "day:{$date}",
             score:       50,
             body:        $this->copy->dailyReport($report, $lang),
             payloadJson: json_encode([
@@ -158,8 +165,8 @@ final class SocialService
     private function enqueue(PostCandidate $c): bool
     {
         $stmt = $this->pdo->prepare(
-            "INSERT INTO social_post_queue (kind, channel, lang, dedupe_key, status, score, body, payload)
-             VALUES (:kind, :channel, :lang, :dedupe, 'pending', :score, :body, :payload)
+            "INSERT INTO social_post_queue (kind, channel, lang, dedupe_key, entity_key, status, score, body, payload)
+             VALUES (:kind, :channel, :lang, :dedupe, :entity, 'pending', :score, :body, :payload)
              ON DUPLICATE KEY UPDATE id = id"
         );
         $stmt->execute([
@@ -167,6 +174,7 @@ final class SocialService
             ':channel' => $this->channel,
             ':lang'    => $this->lang,
             ':dedupe'  => $c->dedupeKey,
+            ':entity'  => $c->entityKey,
             ':score'   => $c->score,
             ':body'    => $c->body,
             ':payload' => $c->payloadJson,
@@ -175,13 +183,17 @@ final class SocialService
     }
 
     /**
-     * Senden (§5.5): nimmt fällige pending-Kandidaten des Kanals, respektiert das
-     * Tages-Limit (E8), postet über den gewählten Publisher und protokolliert.
+     * Senden (§5.5): Redaktions-Layer (§5) + Sendung. Verfallene Kandidaten
+     * werden aussortiert; die verbleibenden werden score-sortiert unter dem
+     * Tages-Limit (E8) und Cooldown gesendet und protokolliert.
      *
-     * @return array{channel:string, dry_run:bool, published:int, skipped:int, failed:int, remaining_quota:int}
+     * @return array{channel:string, dry_run:bool, published:int, skipped:int, cooldown:int, expired:int, failed:int, remaining_quota:int}
      */
     public function publishPending(): array
     {
+        // §5.1: veraltete Kandidaten verfallen lassen (kein verspätetes Posten).
+        $expired = $this->policy->pruneStale();
+
         $publisher = $this->makePublisher();
         $sentToday = $this->publishedToday();
         $quota     = max(0, $this->maxPerDay - $sentToday);
@@ -189,9 +201,10 @@ final class SocialService
         $published = 0;
         $failed    = 0;
         $skipped   = 0;
+        $cooldown  = 0;
 
         $rows = $this->pdo->prepare(
-            "SELECT id, body FROM social_post_queue
+            "SELECT id, kind, entity_key, body FROM social_post_queue
               WHERE status = 'pending' AND channel = :channel
                 AND (scheduled_for IS NULL OR scheduled_for <= UTC_TIMESTAMP(3))
            ORDER BY score DESC, id ASC
@@ -202,6 +215,14 @@ final class SocialService
 
         foreach ($candidates as $c) {
             $id = (int)$c['id'];
+
+            // §5.3: dasselbe Objekt nicht binnen Cooldown erneut posten.
+            if ($this->policy->entityOnCooldown((string)$c['kind'], (string)($c['entity_key'] ?? ''))) {
+                $this->markSkipped($id, 'cooldown');
+                $cooldown++;
+                continue;
+            }
+
             if ($quota <= 0 && !$this->dryRun) {
                 // Kontingent erschöpft: für heute liegen lassen (bleibt pending).
                 $skipped++;
@@ -228,6 +249,8 @@ final class SocialService
             'dry_run'         => $this->dryRun,
             'published'       => $published,
             'skipped'         => $skipped,
+            'cooldown'        => $cooldown,
+            'expired'         => $expired,
             'failed'          => $failed,
             'remaining_quota' => max(0, $quota),
         ];
@@ -284,6 +307,52 @@ final class SocialService
             "UPDATE social_post_queue SET status = 'failed', error = ? WHERE id = ?"
         );
         $stmt->execute([mb_substr((string)$r->error, 0, 500), $id]);
+    }
+
+    private function markSkipped(int $id, string $reason): void
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE social_post_queue SET status = 'skipped', error = ? WHERE id = ?"
+        );
+        $stmt->execute([$reason, $id]);
+    }
+
+    /**
+     * Betriebs-Überblick (`social:status`): Queue-Zustand + letzte Sendungen.
+     *
+     * @return array<string,mixed>
+     */
+    public function status(): array
+    {
+        $byStatus = [];
+        foreach ($this->pdo->query(
+            "SELECT status, COUNT(*) c FROM social_post_queue GROUP BY status"
+        ) as $r) {
+            $byStatus[(string)$r['status']] = (int)$r['c'];
+        }
+
+        $pendingByKind = [];
+        foreach ($this->pdo->query(
+            "SELECT kind, COUNT(*) c FROM social_post_queue WHERE status = 'pending' GROUP BY kind"
+        ) as $r) {
+            $pendingByKind[(string)$r['kind']] = (int)$r['c'];
+        }
+
+        $lastPublished = $this->pdo->query(
+            "SELECT kind, body, published_at FROM social_post_queue
+              WHERE status = 'published' ORDER BY published_at DESC LIMIT 3"
+        )->fetchAll() ?: [];
+
+        return [
+            'channel'         => $this->channel,
+            'dry_run'         => $this->dryRun,
+            'lang'            => $this->lang,
+            'max_per_day'     => $this->maxPerDay,
+            'published_today' => $this->publishedToday(),
+            'by_status'       => $byStatus,
+            'pending_by_kind' => $pendingByKind,
+            'last_published'  => $lastPublished,
+        ];
     }
 
     private function log(int $queueId, PublishResult $r): void

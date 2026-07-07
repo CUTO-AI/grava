@@ -65,6 +65,7 @@ final class FactionStandingCollector implements PostSource
         return [new PostCandidate(
             kind:        'faction_standing',
             dedupeKey:   "faction_standing:{$isoWeek}:{$this->lang}:{$this->channel}",
+            entityKey:   "faction:{$isoWeek}",
             score:       45,
             body:        $this->copy->factionStanding($factions, $this->lang),
             payloadJson: json_encode(['iso_week' => $isoWeek, 'factions' => $factions], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),

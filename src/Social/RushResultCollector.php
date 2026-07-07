@@ -56,6 +56,7 @@ final class RushResultCollector implements PostSource
             $out[] = new PostCandidate(
                 kind:        'rush_result',
                 dedupeKey:   "rush_result:{$rushId}:{$this->lang}:{$this->channel}",
+                entityKey:   "rush:{$rushId}",
                 score:       55 + min(40, $edges),
                 body:        $this->copy->rushResult($crew, $edges, $riders, $mult, $this->lang),
                 payloadJson: json_encode([

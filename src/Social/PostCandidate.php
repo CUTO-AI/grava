@@ -13,6 +13,7 @@ final class PostCandidate
     public function __construct(
         public readonly string $kind,        // 'daily_report' | 'region_taken' | 'rush_result' | 'faction_standing'
         public readonly string $dedupeKey,   // idempotenter Schlüssel (unique in social_post_queue)
+        public readonly string $entityKey,   // datums-unabhängiges Objekt (Cooldown), z. B. 'region:4711'
         public readonly int $score,          // Newsworthiness (Konzept §5)
         public readonly string $body,        // fertiger Post-Text
         public readonly ?string $payloadJson, // strukturierte Rohdaten (JSON) oder null

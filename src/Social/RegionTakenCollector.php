@@ -69,6 +69,7 @@ final class RegionTakenCollector implements PostSource
             $out[] = new PostCandidate(
                 kind:        'region_taken',
                 dedupeKey:   "region_taken:{$regionId}:{$date}:{$this->lang}:{$this->channel}",
+                entityKey:   "region:{$regionId}",
                 score:       60 + (int)round(max(0.0, min(1.0, $fraction)) * 40),
                 body:        $this->copy->regionTaken($region, $ownerName, $type, $fraction, $this->lang),
                 payloadJson: json_encode([

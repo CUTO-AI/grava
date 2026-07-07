@@ -933,9 +933,12 @@ $router->get('/internal/cron/social-collect',  fn($r) => $runInternal($r, 'socia
 $router->post('/internal/cron/social-collect', fn($r) => $runInternal($r, 'social:collect'));
 $router->get('/internal/cron/social-publish',  fn($r) => $runInternal($r, 'social:publish'));
 $router->post('/internal/cron/social-publish', fn($r) => $runInternal($r, 'social:publish'));
-// Trocken-Vorschau des Tagesbericht-Textes (kein Speichern/Senden).
+// Trocken-Vorschau aller Kandidaten des Tages (kein Speichern/Senden).
 $router->get('/internal/social/preview',  fn($r) => $runInternal($r, 'social:preview'));
 $router->post('/internal/social/preview', fn($r) => $runInternal($r, 'social:preview'));
+// Betriebs-Überblick über die Post-Queue.
+$router->get('/internal/social/status',  fn($r) => $runInternal($r, 'social:status'));
+$router->post('/internal/social/status', fn($r) => $runInternal($r, 'social:status'));
 // Einmaliger Push-Feldtest: erzeugt eine edge_taken-Mitteilung (Inbox + APNs).
 $router->get('/internal/game/test-push',  fn($r) => $runInternal($r, 'game:test-push'));
 $router->post('/internal/game/test-push', fn($r) => $runInternal($r, 'game:test-push'));

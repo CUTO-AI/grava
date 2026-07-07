@@ -111,6 +111,9 @@ final class Commands
             case 'social:preview':
                 return $this->socialPreview($argv);
 
+            case 'social:status':
+                return $this->socialStatus();
+
             case 'internal:logtail':
             case 'logtail':
                 return $this->logTail($argv);
@@ -962,9 +965,9 @@ final class Commands
         }
         $res = $this->social->publishPending();
         echo sprintf(
-            "Social-Publish [%s%s]: gesendet=%d, übersprungen=%d, fehlgeschlagen=%d, Rest-Kontingent=%d\n",
+            "Social-Publish [%s%s]: gesendet=%d, übersprungen=%d, cooldown=%d, verfallen=%d, fehlgeschlagen=%d, Rest-Kontingent=%d\n",
             $res['channel'], $res['dry_run'] ? ' DRY-RUN' : '',
-            $res['published'], $res['skipped'], $res['failed'], $res['remaining_quota'],
+            $res['published'], $res['skipped'], $res['cooldown'], $res['expired'], $res['failed'], $res['remaining_quota'],
         );
         return $res['failed'] > 0 ? 1 : 0;
     }
@@ -989,6 +992,17 @@ final class Commands
         return 0;
     }
 
+    /** social:status — Betriebs-Überblick über Queue + letzte Sendungen. */
+    private function socialStatus(): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:status nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        echo json_encode($this->social->status(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        return 0;
+    }
+
     private function help(): void
     {
         echo "GRAVA Backend CLI\n";
@@ -1009,7 +1023,8 @@ final class Commands
         echo "  game:test-push      (Feldtest) edge_taken-Mitteilung erzeugen: --handle=<@h>|--user=<id> [--actor=<@h>] [--edge=<id>]\n";
         echo "  social:collect      Tagesbericht bauen + in die Post-Queue legen [--date=YYYY-MM-DD]\n";
         echo "  social:publish      Fällige Post-Kandidaten senden (Dry-Run, solange SOCIAL_ENABLED=0/SOCIAL_DRY_RUN=1)\n";
-        echo "  social:preview      Trocken-Vorschau des Tagesbericht-Textes [--date=YYYY-MM-DD] [--lang=en|de]\n";
+        echo "  social:preview      Trocken-Vorschau ALLER Kandidaten des Tages [--date=YYYY-MM-DD] [--lang=en|de]\n";
+        echo "  social:status       Betriebs-Überblick: Queue-Zustand + letzte Sendungen\n";
         echo "  help                Zeigt diese Hilfe\n";
     }
 }
