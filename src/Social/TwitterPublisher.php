@@ -15,6 +15,7 @@ namespace App\Social;
 final class TwitterPublisher implements Publisher
 {
     private const TWEETS_URL = 'https://api.twitter.com/2/tweets';
+    private const MEDIA_URL  = 'https://upload.twitter.com/1.1/media/upload.json';
 
     public function __construct(
         private readonly string $consumerKey,
@@ -37,13 +38,24 @@ final class TwitterPublisher implements Publisher
             && $this->accessTokenSecret !== '';
     }
 
-    public function publish(string $text): PublishResult
+    public function publish(string $text, ?string $imagePng = null): PublishResult
     {
         if (!$this->usable()) {
             return PublishResult::failure('twitter_not_configured');
         }
 
-        $body = json_encode(['text' => $text], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        // Optional eine Media-Card hochladen. Schlägt der Upload fehl, posten wir
+        // trotzdem text-only weiter (Bild ist Beiwerk, kein harter Blocker).
+        $mediaId = null;
+        if ($imagePng !== null && $imagePng !== '') {
+            $mediaId = $this->uploadMedia($imagePng);
+        }
+
+        $payload = ['text' => $text];
+        if ($mediaId !== null) {
+            $payload['media'] = ['media_ids' => [$mediaId]];
+        }
+        $body = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($body === false) {
             return PublishResult::failure('json_encode_failed');
         }
@@ -84,9 +96,48 @@ final class TwitterPublisher implements Publisher
     }
 
     /**
-     * Baut den OAuth-1.0a-`Authorization`-Header. Bei JSON-Body fließt der Body
-     * NICHT in die Signaturbasis ein (nur oauth_*-Parameter, da keine
-     * Query-Parameter vorhanden sind).
+     * Lädt ein PNG als Media hoch (v1.1 media/upload, multipart). Der
+     * multipart-Body fließt — wie ein JSON-Body — NICHT in die OAuth-Signatur
+     * ein. Gibt die media_id oder null zurück (Fehler werden geloggt, nie
+     * geworfen — der Post geht dann text-only raus).
+     */
+    private function uploadMedia(string $png): ?string
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'cr_card_') ?: '';
+        if ($tmp === '' || @file_put_contents($tmp, $png) === false) {
+            error_log('twitter media: temp-Datei fehlgeschlagen');
+            return null;
+        }
+        try {
+            $ch = curl_init(self::MEDIA_URL);
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => ['media' => new \CURLFile($tmp, 'image/png', 'card.png')],
+                CURLOPT_HTTPHEADER     => ['Authorization: ' . $this->authorizationHeader('POST', self::MEDIA_URL)],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 30,
+            ]);
+            $resp   = curl_exec($ch);
+            $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err    = curl_error($ch);
+            curl_close($ch);
+        } finally {
+            @unlink($tmp);
+        }
+
+        if ($resp === false || $status < 200 || $status >= 300) {
+            error_log("twitter media: Upload fehlgeschlagen (HTTP {$status}) {$err} " . substr((string)$resp, 0, 200));
+            return null;
+        }
+        $decoded = json_decode((string)$resp, true);
+        $id = is_array($decoded) ? (string)($decoded['media_id_string'] ?? '') : '';
+        return $id !== '' ? $id : null;
+    }
+
+    /**
+     * Baut den OAuth-1.0a-`Authorization`-Header. Bei JSON-/multipart-Body
+     * fließt der Body NICHT in die Signaturbasis ein (nur oauth_*-Parameter, da
+     * keine Query-Parameter vorhanden sind).
      */
     private function authorizationHeader(string $method, string $url): string
     {

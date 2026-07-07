@@ -24,6 +24,8 @@ final class SocialService
     private readonly int $maxPerDay;
     private readonly bool $dryRun;
     private readonly EditorialPolicy $policy;
+    private readonly bool $mediaEnabled;
+    private readonly SocialCardRenderer $cards;
 
     public function __construct(private readonly Config $config, ?PDO $pdo = null)
     {
@@ -42,6 +44,12 @@ final class SocialService
             $config->int('SOCIAL_MAX_AGE_HOURS', 36),
             $config->int('SOCIAL_ENTITY_COOLDOWN_DAYS', 3),
         );
+        $this->mediaEnabled = $config->bool('SOCIAL_MEDIA_ENABLED', true);
+        $fontDir = (string)($config->get('SOCIAL_FONT_DIR', '') ?? '');
+        if ($fontDir === '') {
+            $fontDir = dirname(__DIR__, 2) . '/resources/fonts';
+        }
+        $this->cards = new SocialCardRenderer($fontDir, $this->pdo);
     }
 
     /** Heutiges UTC-Datum (Fallback für die Kommandos). */
@@ -204,7 +212,7 @@ final class SocialService
         $cooldown  = 0;
 
         $rows = $this->pdo->prepare(
-            "SELECT id, kind, entity_key, body FROM social_post_queue
+            "SELECT id, kind, entity_key, body, payload FROM social_post_queue
               WHERE status = 'pending' AND channel = :channel
                 AND (scheduled_for IS NULL OR scheduled_for <= UTC_TIMESTAMP(3))
            ORDER BY score DESC, id ASC
@@ -229,7 +237,8 @@ final class SocialService
                 continue;
             }
 
-            $result = $publisher->publish((string)$c['body']);
+            $card = $this->renderCard((string)$c['kind'], $c['payload'] ?? null);
+            $result = $publisher->publish((string)$c['body'], $card);
             $this->log($id, $result);
 
             if ($result->ok) {
@@ -254,6 +263,43 @@ final class SocialService
             'failed'          => $failed,
             'remaining_quota' => max(0, $quota),
         ];
+    }
+
+    /** Rendert die Media-Card für einen Kandidaten (oder null: aus/fehlerhaft/text-only). */
+    private function renderCard(string $kind, ?string $payloadJson): ?string
+    {
+        if (!$this->mediaEnabled || $payloadJson === null || $payloadJson === '') {
+            return null;
+        }
+        $payload = json_decode($payloadJson, true);
+        if (!is_array($payload)) {
+            return null;
+        }
+        return $this->cards->render($kind, $payload);
+    }
+
+    /**
+     * Vorschau einer Media-Card (`social:card`): rendert die Karte des ersten
+     * Kandidaten des gewünschten Typs für den Tag, ohne zu speichern/senden.
+     *
+     * @return array{found:bool, kind:string, text:?string, png:?string}
+     */
+    public function previewCard(string $date, string $kind, ?string $lang = null): array
+    {
+        $lang = $this->copy->normalizeLang($lang ?? $this->lang);
+        foreach ($this->gatherCandidates($date, $lang) as $c) {
+            if ($c->kind === $kind) {
+                return [
+                    'found' => true,
+                    'kind'  => $kind,
+                    'text'  => $c->body,
+                    'png'   => $c->payloadJson !== null
+                        ? $this->cards->render($kind, (array)json_decode($c->payloadJson, true))
+                        : null,
+                ];
+            }
+        }
+        return ['found' => false, 'kind' => $kind, 'text' => null, 'png' => null];
     }
 
     /** Wählt den Sende-Adapter: Dry-Run oder fehlende Credentials → NullPublisher. */

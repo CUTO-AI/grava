@@ -114,6 +114,9 @@ final class Commands
             case 'social:status':
                 return $this->socialStatus();
 
+            case 'social:card':
+                return $this->socialCard($argv);
+
             case 'internal:logtail':
             case 'logtail':
                 return $this->logTail($argv);
@@ -1003,6 +1006,48 @@ final class Commands
         return 0;
     }
 
+    /**
+     * social:card --kind=<typ> [--date=YYYY-MM-DD] [--lang=en|de] [--out=datei.png]
+     * Rendert die Media-Card des ersten Kandidaten dieses Typs in eine PNG-Datei
+     * (Standard: storage/social-cards/<kind>-<date>.png). Speichert/sendet nichts
+     * in die Queue.
+     *
+     * @param list<string> $argv
+     */
+    private function socialCard(array $argv): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:card nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $kind = trim((string)($opts['kind'] ?? 'daily_report'));
+        $date = trim((string)($opts['date'] ?? '')) ?: $this->social->today();
+        $lang = trim((string)($opts['lang'] ?? ''));
+        $res  = $this->social->previewCard($date, $kind, $lang !== '' ? $lang : null);
+
+        if (!$res['found']) {
+            echo "Kein Kandidat vom Typ '{$kind}' für {$date}.\n";
+            return 0;
+        }
+        if ($res['png'] === null) {
+            echo "Karte nicht renderbar (GD/Schrift fehlt oder Media aus). Text:\n{$res['text']}\n";
+            return 0;
+        }
+        $out = trim((string)($opts['out'] ?? ''));
+        if ($out === '') {
+            $dir = $this->basePath . '/storage/social-cards';
+            if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+            $out = $dir . '/' . preg_replace('/[^a-z_]/', '', $kind) . '-' . $date . '.png';
+        }
+        if (@file_put_contents($out, $res['png']) === false) {
+            echo "Konnte nicht schreiben: {$out}\n";
+            return 1;
+        }
+        echo "Karte gerendert (" . strlen((string)$res['png']) . " Bytes) → {$out}\nText: {$res['text']}\n";
+        return 0;
+    }
+
     private function help(): void
     {
         echo "GRAVA Backend CLI\n";
@@ -1025,6 +1070,7 @@ final class Commands
         echo "  social:publish      Fällige Post-Kandidaten senden (Dry-Run, solange SOCIAL_ENABLED=0/SOCIAL_DRY_RUN=1)\n";
         echo "  social:preview      Trocken-Vorschau ALLER Kandidaten des Tages [--date=YYYY-MM-DD] [--lang=en|de]\n";
         echo "  social:status       Betriebs-Überblick: Queue-Zustand + letzte Sendungen\n";
+        echo "  social:card         Media-Card rendern: --kind=<typ> [--date=] [--lang=] [--out=datei.png]\n";
         echo "  help                Zeigt diese Hilfe\n";
     }
 }

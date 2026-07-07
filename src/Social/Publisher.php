@@ -13,6 +13,9 @@ interface Publisher
     /** Stabiler Kanal-Schlüssel, wie er in social_post_queue.channel steht. */
     public function channel(): string;
 
-    /** Sendet den fertigen Text. Wirft nie — Fehler stecken im Ergebnis. */
-    public function publish(string $text): PublishResult;
+    /**
+     * Sendet den fertigen Text, optional mit einem PNG-Bild (Media-Card).
+     * Wirft nie — Fehler stecken im Ergebnis.
+     */
+    public function publish(string $text, ?string $imagePng = null): PublishResult;
 }

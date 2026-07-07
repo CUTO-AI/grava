@@ -4,11 +4,13 @@ Automatisierte X/Twitter-Meldungen aus der Tagesaktivität von CYBERRIDE.
 Fachliches Konzept: `Twitter_Automation_Concept.md` (iOS-Repo). Dieses Dokument
 beschreibt die **Backend-Umsetzung** und den Betrieb.
 
-**Stand:** Phase A + B + C gebaut (Branch `feature/social-twitter-phase-a`),
+**Stand:** Phase A–D gebaut (Branch `feature/social-twitter-phase-a`),
 lokal getestet, **noch nicht deployt**, sendet per Default nichts (Dry-Run).
 Meldungstypen: `daily_report` (E1), `region_taken` (A1, Solo-Rider opt-in-gated),
 `rush_result` (B2), `faction_standing` (C2, wöchentlich sonntags).
 Redaktions-Layer (Phase C): Expiry + Per-Entity-Cooldown + `social:status`.
+Media-Cards (Phase D): gebrandete 1200×675-PNGs je Meldungstyp (Region mit
+gezeichneter Grenze) + X-Media-Upload; best-effort, sonst text-only.
 
 ---
 
@@ -40,8 +42,9 @@ Alles unter `src/Social/` (Namespace `App\Social`):
 | `FactionStandingCollector` | „Fraktions-Wochenstand" (C2): Anteil je Fraktion, nur SONNTAGS (UTC). |
 | `PostCopy` | sprach-keyed Textbausteine (EN Go-Live, DE hinterlegt), begrenzt auf ≤280 Zeichen; je Meldungstyp eine Methode |
 | `EditorialPolicy` | Redaktions-Regeln (Phase C): `pruneStale()` verfallen lassen + `entityOnCooldown()` prüfen |
-| `Publisher` (Interface) | kanal-agnostische Sende-Schnittstelle |
-| `TwitterPublisher` | X API v2 `POST /2/tweets`, OAuth 1.0a User-Context (HMAC-SHA1) |
+| `SocialCardRenderer` | Media-Cards (Phase D): GD, 1200×675, Marken-Palette/Fonts (`resources/fonts`), je Meldungstyp ein Layout; `region_taken` zeichnet die Landkreis-Grenze (aus `game_region.boundary_geojson`). Best-effort → null = text-only. |
+| `Publisher` (Interface) | kanal-agnostische Sende-Schnittstelle; `publish(text, ?imagePng)` |
+| `TwitterPublisher` | X API v2 `POST /2/tweets` (OAuth 1.0a); Media via v1.1 `media/upload` (multipart) → `media_ids` |
 | `NullPublisher` | Dry-Run — sendet nichts |
 | `SocialService` | Orchestrierung: `gatherCandidates` (Tagesbericht + alle Quellen) → `preview` / `collectDaily` / `publishPending`, Publisher-Wahl, Tages-Cap |
 
@@ -53,6 +56,7 @@ CLI (`src/Cli/Commands.php`), auch als Internal-HTTP-Route:
 | `social:collect [--date=]` | `GET /internal/cron/social-collect` | Tagesbericht → Queue (idempotent) |
 | `social:publish` | `GET /internal/cron/social-publish` | Redaktions-Layer + fällige Posts senden |
 | `social:status` | `GET /internal/social/status` | Betriebs-Überblick (Queue-Zustand, letzte Sendungen) |
+| `social:card --kind= [--date= --lang= --out=]` | — (CLI) | Media-Card in eine PNG-Datei rendern (Vorschau; storage/social-cards/) |
 
 ## 3. Datenbank (Migration `0052_social_posts.sql`)
 
@@ -80,6 +84,8 @@ SOCIAL_LANG=en              # Go-Live-Sprache (E4). 'de' ist im Code hinterlegt.
 SOCIAL_MAX_POSTS_PER_DAY=1  # Free-Tier-Schutz (E8).
 SOCIAL_MAX_AGE_HOURS=36        # Kandidat älter als N h → verfällt (kein verspätetes Posten).
 SOCIAL_ENTITY_COOLDOWN_DAYS=3  # dieselbe Region/Objekt nicht binnen N Tagen erneut posten.
+SOCIAL_MEDIA_ENABLED=true      # gebrandete Media-Card an Posts anhängen (best-effort).
+# SOCIAL_FONT_DIR=             # optionaler TTF-Pfad; Default: <repo>/resources/fonts
 
 # X API v2 — OAuth 1.0a User-Context für EINEN eigenen Account (@cyberride).
 TWITTER_CONSUMER_KEY=
@@ -125,12 +131,12 @@ Links zeigen auf `PUBLIC_WEB_URL` (Fallback `APP_URL`).
 - **Idempotenz** über `dedupe_key`; erneutes `collect` desselben Tags = `already_queued`.
 - **Leerer Tag** (keine Fahrten/Kanten/Landkreise/Rush) → kein Kandidat (`no_activity`).
 
-## 7. Ausblick (Phase D+, Konzept §9)
+## 7. Ausblick (Phase E+, Konzept §9)
 
-Phase A–C sind gebaut (Meldungstypen + Redaktions-Layer). Als Nächstes:
-Upgrade auf X-Basic + voller Slot-Plan (§5); serverseitiger Cyber-Card-Renderer
-(Medien, §6/E6); personenbezogene Opt-in-Highlights (KOM/Rang/Badge, D-Reihe)
-+ iOS-Opt-in-UI; Live-Peak/Community-Meilenstein (E3/E4); DE zuschalten;
-weitere Publisher-Adapter (Mastodon/Threads/…). Neue Meldungstypen = neuer
-`PostSource` + `PostCopy`-Methode + `entity_key`. Optional: per-kind-Tageslimit,
-wenn X-Basic mehrere Posts/Tag erlaubt.
+Phase A–D sind gebaut (Meldungstypen + Redaktions-Layer + Media-Cards). Als
+Nächstes: Upgrade auf X-Basic + voller Slot-Plan (§5); personenbezogene
+Opt-in-Highlights (KOM/Rang/Badge, D-Reihe) + iOS-Opt-in-UI; Live-Peak/
+Community-Meilenstein (E3/E4); B1 Rush-Ankündigung; DE zuschalten; weitere
+Publisher-Adapter (Mastodon/Threads/…). Neue Meldungstypen = neuer `PostSource`
++ `PostCopy`-Methode (+ `entity_key`, optional ein `SocialCardRenderer`-Layout).
+Optional: per-kind-Tageslimit, wenn X-Basic mehrere Posts/Tag erlaubt.
