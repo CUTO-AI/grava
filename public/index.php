@@ -324,7 +324,7 @@ $routeSurface = new RouteSurfaceService(
 // ---------------------------------------------------------------------------
 if (PHP_SAPI === 'cli') {
     $cliRegionRepo = new \App\Game\RegionRepository(Db::pdo());
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig));
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config));
     exit($cli->run($_SERVER['argv'] ?? []));
 }
 
@@ -870,9 +870,9 @@ $runInternal = function (Request $r, string $command)
     if ($provided === '' || !hash_equals($internalToken, $provided)) {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc);
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config));
     $argv = ['internal', $command];
-    foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email'] as $opt) {
+    foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email', 'date', 'lang'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {
             $argv[] = '--' . $opt . '=' . (string)$r->query[$opt];
         }
@@ -926,6 +926,16 @@ $router->post('/internal/cron/game-snapshot', fn($r) => $runInternal($r, 'game:s
 // Gebiets-Besitz neu rechnen (CityConquest_Backend_Spec.md).
 $router->get('/internal/cron/region-ownership',  fn($r) => $runInternal($r, 'regions:ownership-refresh'));
 $router->post('/internal/cron/region-ownership', fn($r) => $runInternal($r, 'regions:ownership-refresh'));
+// Social-Automatik (Twitter_Automation_Concept.md §6): Tagesbericht einsammeln
+// (~19:55 UTC) + senden (~20:00 UTC). Sendet nichts, solange SOCIAL_ENABLED=0
+// oder SOCIAL_DRY_RUN=1 gesetzt ist (Dry-Run).
+$router->get('/internal/cron/social-collect',  fn($r) => $runInternal($r, 'social:collect'));
+$router->post('/internal/cron/social-collect', fn($r) => $runInternal($r, 'social:collect'));
+$router->get('/internal/cron/social-publish',  fn($r) => $runInternal($r, 'social:publish'));
+$router->post('/internal/cron/social-publish', fn($r) => $runInternal($r, 'social:publish'));
+// Trocken-Vorschau des Tagesbericht-Textes (kein Speichern/Senden).
+$router->get('/internal/social/preview',  fn($r) => $runInternal($r, 'social:preview'));
+$router->post('/internal/social/preview', fn($r) => $runInternal($r, 'social:preview'));
 // Einmaliger Push-Feldtest: erzeugt eine edge_taken-Mitteilung (Inbox + APNs).
 $router->get('/internal/game/test-push',  fn($r) => $runInternal($r, 'game:test-push'));
 $router->post('/internal/game/test-push', fn($r) => $runInternal($r, 'game:test-push'));

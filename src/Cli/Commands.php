@@ -29,6 +29,7 @@ final class Commands
         private readonly ?\App\Game\GameHistoryService $gameHistory = null,
         private readonly ?\App\Game\RegionImportService $regionImport = null,
         private readonly ?\App\Game\RegionOwnershipService $regionOwnership = null,
+        private readonly ?\App\Social\SocialService $social = null,
     ) {}
 
     public function run(array $argv): int
@@ -98,6 +99,17 @@ final class Commands
 
             case 'game:test-push':
                 return $this->gameTestPush($argv);
+
+            case 'cron:social-collect':
+            case 'social:collect':
+                return $this->socialCollect($argv);
+
+            case 'cron:social-publish':
+            case 'social:publish':
+                return $this->socialPublish();
+
+            case 'social:preview':
+                return $this->socialPreview($argv);
 
             case 'internal:logtail':
             case 'logtail':
@@ -908,6 +920,70 @@ final class Commands
         return $res['errors'] > 0 ? 1 : 0;
     }
 
+    /**
+     * social:collect [--date=YYYY-MM-DD] — baut den Tagesbericht aus der
+     * Aktivität und legt ihn (falls nicht leer) als pending-Kandidat in die
+     * Redaktions-Queue (Twitter_Automation_Concept.md §5.1, E1). Idempotent.
+     * Für Cron gedacht (z. B. täglich ~19:55 UTC, vor dem Sende-Slot).
+     *
+     * @param list<string> $argv
+     */
+    private function socialCollect(array $argv): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:collect nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $date = trim((string)($opts['date'] ?? '')) ?: $this->social->today();
+        $res  = $this->social->collectDaily($date);
+        echo sprintf(
+            "Social-Collect %s: enqueued=%s (%s)\n",
+            $res['date'], $res['enqueued'] ? '1' : '0', $res['reason'],
+        );
+        return 0;
+    }
+
+    /**
+     * social:publish — sendet fällige pending-Kandidaten des Kanals unter dem
+     * Tages-Limit (E8). Solange SOCIAL_ENABLED=0 oder SOCIAL_DRY_RUN=1, wird
+     * nichts gesendet (Dry-Run), nur protokolliert. Für Cron (z. B. 20:00).
+     */
+    private function socialPublish(): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:publish nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $res = $this->social->publishPending();
+        echo sprintf(
+            "Social-Publish [%s%s]: gesendet=%d, übersprungen=%d, fehlgeschlagen=%d, Rest-Kontingent=%d\n",
+            $res['channel'], $res['dry_run'] ? ' DRY-RUN' : '',
+            $res['published'], $res['skipped'], $res['failed'], $res['remaining_quota'],
+        );
+        return $res['failed'] > 0 ? 1 : 0;
+    }
+
+    /**
+     * social:preview [--date=YYYY-MM-DD] [--lang=en|de] — Trocken-Vorschau des
+     * Tagesbericht-Textes samt Rohdaten. Speichert nichts, sendet nichts.
+     *
+     * @param list<string> $argv
+     */
+    private function socialPreview(array $argv): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:preview nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $date = trim((string)($opts['date'] ?? '')) ?: $this->social->today();
+        $lang = trim((string)($opts['lang'] ?? ''));
+        $res  = $this->social->preview($date, $lang !== '' ? $lang : null);
+        echo json_encode($res, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        return 0;
+    }
+
     private function help(): void
     {
         echo "GRAVA Backend CLI\n";
@@ -926,6 +1002,9 @@ final class Commands
         echo "  game:backfill-speed Rekord-Daten auf Bestands-Pässe [--limit=100] [--sleep-ms=500] [--after-route-id=0]\n";
         echo "  game:notify-dispatch Stellt den Spiel-Ereignis-Strom als Inbox+APNs zu (Digest-Fenster)\n";
         echo "  game:test-push      (Feldtest) edge_taken-Mitteilung erzeugen: --handle=<@h>|--user=<id> [--actor=<@h>] [--edge=<id>]\n";
+        echo "  social:collect      Tagesbericht bauen + in die Post-Queue legen [--date=YYYY-MM-DD]\n";
+        echo "  social:publish      Fällige Post-Kandidaten senden (Dry-Run, solange SOCIAL_ENABLED=0/SOCIAL_DRY_RUN=1)\n";
+        echo "  social:preview      Trocken-Vorschau des Tagesbericht-Textes [--date=YYYY-MM-DD] [--lang=en|de]\n";
         echo "  help                Zeigt diese Hilfe\n";
     }
 }
