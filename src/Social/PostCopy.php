@@ -121,6 +121,64 @@ final class PostCopy
         return $this->clamp("Faction standings — {$line}. #FactionWar {$url}");
     }
 
+    /** „Seltenes Abzeichen" (D3). $tier: 3=Platin, 4=Onyx. */
+    public function badgeEarned(string $handle, string $family, int $tier, string $lang): string
+    {
+        $lang = $this->normalizeLang($lang);
+        $url  = rtrim($this->publicWebUrl, '/');
+        $fam  = $this->badgeFamilyLabel($family, $lang);
+        $tn   = $this->tierName($tier, $lang);
+
+        if ($lang === 'de') {
+            return $this->clamp("🏅 {$handle} holt {$fam} — {$tn}. Extrem selten. {$url}");
+        }
+        return $this->clamp("🏅 {$handle} just earned {$fam} — {$tn}. Seriously rare. #CYBERRIDE {$url}");
+    }
+
+    /** „Neuer KOM / Bestzeit" (D1). $region + $speed optional. */
+    public function komRecord(string $handle, ?string $region, ?float $speed, string $lang): string
+    {
+        $lang = $this->normalizeLang($lang);
+        $url  = rtrim($this->publicWebUrl, '/');
+
+        if ($lang === 'de') {
+            $spd = $speed !== null ? ' (Ø ' . number_format($speed, 1, ',', '.') . ' km/h)' : '';
+            $loc = $region !== null ? "bei {$region}" : 'auf einem CYBERRIDE-Segment';
+            return $this->clamp("👑 Neue Bestzeit {$loc}: {$handle} ist jetzt am schnellsten{$spd}. {$url}");
+        }
+        $spd = $speed !== null ? ' (avg ' . number_format($speed, 1, '.', ',') . ' km/h)' : '';
+        $loc = $region !== null ? "near {$region}" : 'on a CYBERRIDE segment';
+        return $this->clamp("👑 New KOM {$loc}: {$handle} takes the fastest time{$spd}. #CYBERRIDE {$url}");
+    }
+
+    public function badgeFamilyLabel(string $family, string $lang): string
+    {
+        $en = [
+            'erschliesser' => 'Pioneer', 'revierhalter' => 'Territory Holder',
+            'flaechenfuerst' => 'Area Lord', 'kondition' => 'Endurance',
+            'stammfahrer' => 'Regular', 'schnellster' => 'Fastest',
+            'kurator' => 'Curator', 'crew' => 'Crew',
+            'climber' => 'Climber', 'challenger' => 'Challenger',
+        ];
+        $de = [
+            'erschliesser' => 'Erschließer', 'revierhalter' => 'Revierhalter',
+            'flaechenfuerst' => 'Flächenfürst', 'kondition' => 'Kondition',
+            'stammfahrer' => 'Stammfahrer', 'schnellster' => 'Schnellster',
+            'kurator' => 'Kurator', 'crew' => 'Crew',
+            'climber' => 'Climber', 'challenger' => 'Challenger',
+        ];
+        $map = $lang === 'de' ? $de : $en;
+        return $map[$family] ?? ucfirst($family);
+    }
+
+    public function tierName(int $tier, string $lang): string
+    {
+        $en = [0 => 'Bronze', 1 => 'Silver', 2 => 'Gold', 3 => 'Platinum', 4 => 'Onyx'];
+        $de = [0 => 'Bronze', 1 => 'Silber', 2 => 'Gold', 3 => 'Platin', 4 => 'Onyx'];
+        $map = $lang === 'de' ? $de : $en;
+        return $map[$tier] ?? (string)$tier;
+    }
+
     private function factionEmoji(string $key): string
     {
         return match ($key) {

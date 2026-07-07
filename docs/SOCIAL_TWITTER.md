@@ -4,13 +4,16 @@ Automatisierte X/Twitter-Meldungen aus der Tagesaktivität von CYBERRIDE.
 Fachliches Konzept: `Twitter_Automation_Concept.md` (iOS-Repo). Dieses Dokument
 beschreibt die **Backend-Umsetzung** und den Betrieb.
 
-**Stand:** Phase A–D gebaut (Branch `feature/social-twitter-phase-a`),
-lokal getestet, **noch nicht deployt**, sendet per Default nichts (Dry-Run).
+**Stand:** Phase A–E gebaut (Branch `feature/social-twitter-phase-a`; iOS-Teil im
+App-Repo), lokal getestet, **noch nicht deployt**, sendet per Default nichts (Dry-Run).
 Meldungstypen: `daily_report` (E1), `region_taken` (A1, Solo-Rider opt-in-gated),
-`rush_result` (B2), `faction_standing` (C2, wöchentlich sonntags).
+`rush_result` (B2), `faction_standing` (C2, wöchentlich sonntags),
+`badge_earned` (D3, opt-in), `record_beaten` (D1 KOM, opt-in).
 Redaktions-Layer (Phase C): Expiry + Per-Entity-Cooldown + `social:status`.
 Media-Cards (Phase D): gebrandete 1200×675-PNGs je Meldungstyp (Region mit
 gezeichneter Grenze) + X-Media-Upload; best-effort, sonst text-only.
+Opt-in (Phase E): `PUT /users/me/social-optin` + iOS-Toggle (ProfileView →
+Privatsphäre); personenbezogene Highlights (KOM, Abzeichen) NUR mit `social_optin=1`.
 
 ---
 
@@ -40,6 +43,8 @@ Alles unter `src/Social/` (Namespace `App\Social`):
 | `RegionTakenCollector` | „Landkreis erobert" (A1). Crew = öffentlich; Solo-Rider nur mit `social_optin=1` (E3), sonst übersprungen. |
 | `RushResultCollector` | „Rush-Ergebnis" (B2): heute abgeschlossene Crew-Rushes + eroberte Kanten. Öffentlich. |
 | `FactionStandingCollector` | „Fraktions-Wochenstand" (C2): Anteil je Fraktion, nur SONNTAGS (UTC). |
+| `BadgeEarnedCollector` | „Seltenes Abzeichen" (D3): heute erreichte Platin/Onyx (tier ≥ 3). **Opt-in-gated** (E3). |
+| `RecordBeatenCollector` | „Neuer KOM" (D1): `game_event` record_beaten heute, Region-Name der Kante. **Opt-in-gated** (E3). |
 | `PostCopy` | sprach-keyed Textbausteine (EN Go-Live, DE hinterlegt), begrenzt auf ≤280 Zeichen; je Meldungstyp eine Methode |
 | `EditorialPolicy` | Redaktions-Regeln (Phase C): `pruneStale()` verfallen lassen + `entityOnCooldown()` prüfen |
 | `SocialCardRenderer` | Media-Cards (Phase D): GD, 1200×675, Marken-Palette/Fonts (`resources/fonts`), je Meldungstyp ein Layout; `region_taken` zeichnet die Landkreis-Grenze (aus `game_region.boundary_geojson`). Best-effort → null = text-only. |
@@ -131,12 +136,12 @@ Links zeigen auf `PUBLIC_WEB_URL` (Fallback `APP_URL`).
 - **Idempotenz** über `dedupe_key`; erneutes `collect` desselben Tags = `already_queued`.
 - **Leerer Tag** (keine Fahrten/Kanten/Landkreise/Rush) → kein Kandidat (`no_activity`).
 
-## 7. Ausblick (Phase E+, Konzept §9)
+## 7. Ausblick (Phase F+, Konzept §9)
 
-Phase A–D sind gebaut (Meldungstypen + Redaktions-Layer + Media-Cards). Als
-Nächstes: Upgrade auf X-Basic + voller Slot-Plan (§5); personenbezogene
-Opt-in-Highlights (KOM/Rang/Badge, D-Reihe) + iOS-Opt-in-UI; Live-Peak/
-Community-Meilenstein (E3/E4); B1 Rush-Ankündigung; DE zuschalten; weitere
-Publisher-Adapter (Mastodon/Threads/…). Neue Meldungstypen = neuer `PostSource`
-+ `PostCopy`-Methode (+ `entity_key`, optional ein `SocialCardRenderer`-Layout).
-Optional: per-kind-Tageslimit, wenn X-Basic mehrere Posts/Tag erlaubt.
+Phase A–E sind gebaut (Meldungstypen inkl. opt-in-Highlights + Redaktions-Layer
++ Media-Cards + Opt-in-Endpoint/iOS-UI). Offen: **D2 Rang-Aufstieg** (braucht eine
+neue Rang-History-Tabelle — Rang ist derzeit rein abgeleitet, kein „heute erreicht"
+erkennbar); Live-Peak/Community-Meilenstein (E3/E4); B1 Rush-Ankündigung; Upgrade
+auf X-Basic + voller Slot-Plan; DE zuschalten; weitere Publisher-Adapter
+(Mastodon/Threads/…); optional per-kind-Tageslimit. Neue Meldungstypen = neuer
+`PostSource` + `PostCopy`-Methode (+ `entity_key`, optional ein `SocialCardRenderer`-Layout).

@@ -166,6 +166,9 @@ final class SocialService
             new RegionTakenCollector($this->pdo, $this->copy, $lang, $this->channel),
             new RushResultCollector($this->pdo, $this->copy, $lang, $this->channel),
             new FactionStandingCollector($this->pdo, $this->copy, $lang, $this->channel),
+            // Personenbezogen, strikt opt-in-gated (Konzept §8/E3):
+            new BadgeEarnedCollector($this->pdo, $this->copy, $lang, $this->channel),
+            new RecordBeatenCollector($this->pdo, $this->copy, $lang, $this->channel),
         ];
     }
 

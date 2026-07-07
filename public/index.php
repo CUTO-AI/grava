@@ -517,6 +517,8 @@ $router->delete("{$apiBase}/users/me",                    fn($r) => $apiUsers->d
 // statt PATCH /users/me, weil die Operation nicht idempotent ist
 // (One-Time-Lock) und einen klaren Konflikt-Code (409) braucht.
 $router->patch("{$apiBase}/users/me/handle",              fn($r) => $apiUsers->setHandle($r), [$requireBearer, $requireVerified]);
+// Opt-in für automatische personenbezogene Social-Posts (Twitter_Automation_Concept.md §8).
+$router->put("{$apiBase}/users/me/social-optin",          fn($r) => $apiUsers->setSocialOptIn($r), [$requireBearer]);
 
 // S8 Privatzonen / Heimat-Schutz (§17). Reine Account-Operation (Bearer).
 $router->get("{$apiBase}/me/privacy-zone",                fn($r) => $apiPrivacyZone->show($r),   [$requireBearer]);

@@ -80,6 +80,8 @@ final class SocialCardRenderer
             case 'rush_result':     $this->cardRush($img, $payload, $c, $accent, $chakra, $rajdhani); break;
             case 'faction_standing':$this->cardFaction($img, $payload, $c, $chakra, $rajdhani); break;
             case 'daily_report':    $this->cardDaily($img, $payload, $c, $accent, $chakra, $rajdhani); break;
+            case 'badge_earned':    $this->cardBadge($img, $payload, $c, $accent, $chakra, $rajdhani); break;
+            case 'record_beaten':   $this->cardRecord($img, $payload, $c, $accent, $chakra, $rajdhani); break;
             default:
                 imagedestroy($img);
                 return null;
@@ -183,6 +185,37 @@ final class SocialCardRenderer
         if (($p['rush_crew'] ?? null) !== null) {
             $this->ttf($img, 28, self::PAD, self::H - 44, $c['white'], $rajdhani, 'Rush of the day: ' . (string)$p['rush_crew']);
         }
+    }
+
+    /** @param array<string,mixed> $p */
+    private function cardBadge($img, array $p, array $c, int $accent, string $chakra, string $rajdhani): void
+    {
+        $fam    = (string)($p['family_label'] ?? ($p['family'] ?? ''));
+        $tier   = (string)($p['tier_name'] ?? '');
+        $handle = (string)($p['handle'] ?? '');
+
+        $this->ttf($img, 26, self::PAD, self::ART_TOP + 20, $accent, $chakra, 'RARE BADGE UNLOCKED');
+        $head = $this->fit($chakra, 100, $fam, self::W - 2 * self::PAD);
+        $this->ttf($img, 100, self::PAD, self::ART_BOTTOM - 30, $c['white'], $chakra, $head);
+        $this->ttf($img, 40, self::PAD, self::ART_BOTTOM + 46, $accent, $chakra, strtoupper($tier));
+        $this->ttf($img, 32, self::PAD, self::ART_BOTTOM + 110, $c['muted'], $rajdhani, $handle);
+    }
+
+    /** @param array<string,mixed> $p */
+    private function cardRecord($img, array $p, array $c, int $accent, string $chakra, string $rajdhani): void
+    {
+        $handle = (string)($p['handle'] ?? '');
+        $region = ($p['region'] ?? null) !== null ? (string)$p['region'] : null;
+        $speed  = isset($p['avg_speed_kmh']) && is_numeric($p['avg_speed_kmh']) ? (float)$p['avg_speed_kmh'] : null;
+
+        $this->ttf($img, 26, self::PAD, self::ART_TOP + 20, $accent, $chakra, 'NEW KOM');
+        if ($speed !== null) {
+            $this->ttf($img, 120, self::PAD, self::ART_BOTTOM, $accent, $chakra, number_format($speed, 1, '.', ',') . ' km/h');
+        } else {
+            $this->ttf($img, 96, self::PAD, self::ART_BOTTOM - 10, $accent, $chakra, 'FASTEST TIME');
+        }
+        $sub = $handle . ($region !== null ? '   ·   ' . $region : '');
+        $this->ttf($img, 34, self::PAD, self::ART_BOTTOM + 80, $c['white'], $rajdhani, $this->fit($rajdhani, 34, $sub, self::W - 2 * self::PAD));
     }
 
     // ---- Geometrie --------------------------------------------------------
@@ -298,6 +331,7 @@ final class SocialCardRenderer
         return match ($kind) {
             'region_taken' => $c['magenta'],
             'rush_result'  => $c['lime'],
+            'badge_earned' => $c['lime'],
             default        => $c['cyan'],
         };
     }
@@ -318,6 +352,8 @@ final class SocialCardRenderer
             'rush_result'      => 'RUSH',
             'faction_standing' => 'FACTIONS',
             'daily_report'     => 'DAILY',
+            'badge_earned'     => 'BADGE',
+            'record_beaten'    => 'KOM',
             default            => 'CYBERRIDE',
         };
     }
