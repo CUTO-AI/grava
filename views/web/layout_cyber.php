@@ -64,6 +64,7 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 
 <meta name="theme-color" content="#04060B">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
+<script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <script src="/assets/js/ga.js"></script>
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/cyberride.css">
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/site.css">

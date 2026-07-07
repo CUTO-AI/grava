@@ -46,6 +46,13 @@ final class WebView
         $vars['_ogUrl']     = $vars['_ogUrl']     ?? $canonical;
         $vars['_robots']    = $vars['_robots']    ?? (self::isNoindexPath($path) ? 'noindex, follow' : 'index, follow');
 
+        // --- Analytics: Seitentyp-Gruppierung für GA4 -----------------------
+        // content_group erlaubt Auswertungen nach Seitentyp (landing/discover/
+        // profile/route/legal/auth/app/referral) statt nur nach Einzel-URL.
+        // page_title/page_location werden im Layout explizit an gtag übergeben
+        // (robuster als die Auto-Erfassung; page_location = sauberer Canonical).
+        $vars['_analyticsGroup'] = $vars['_analyticsGroup'] ?? self::analyticsGroupForPath($path);
+
         $base    = rtrim($this->viewsPath, '/') . '/web/';
         $partial = $base . $view . '.php';
         $layout  = $base . 'layout.php';
@@ -97,5 +104,31 @@ final class WebView
             }
         }
         return false;
+    }
+
+    /**
+     * Ordnet einen Pfad einer GA4-content_group zu (Seitentyp). Reihenfolge
+     * ist wichtig: spezifischere Präfixe zuerst (Routen-Detail vor Profil).
+     */
+    private static function analyticsGroupForPath(string $path): string
+    {
+        $map = [
+            'route'    => ['#^/u/[^/]+/r/#'],
+            'profile'  => ['#^/u/[^/]+#'],
+            'landing'  => ['#^/$#', '#^/landing#', '#^/features#'],
+            'discover' => ['#^/discover#', '#^/heatmap#', '#^/pulse#'],
+            'legal'    => ['#^/privacy#', '#^/terms#', '#^/imprint#'],
+            'auth'     => ['#^/login#', '#^/register#', '#^/forgot-password#', '#^/reset-password#', '#^/verify-email#'],
+            'referral' => ['#^/i/#'],
+            'app'      => ['#^/dashboard#', '#^/routes#', '#^/settings#', '#^/feed#', '#^/notifications#', '#^/surface-check#', '#^/share/#'],
+        ];
+        foreach ($map as $group => $patterns) {
+            foreach ($patterns as $re) {
+                if (preg_match($re, $path) === 1) {
+                    return $group;
+                }
+            }
+        }
+        return 'other';
     }
 }
