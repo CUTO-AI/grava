@@ -26,6 +26,7 @@ final class SocialService
     private readonly EditorialPolicy $policy;
     private readonly bool $mediaEnabled;
     private readonly SocialCardRenderer $cards;
+    private readonly string $fontDir;
 
     public function __construct(private readonly Config $config, ?PDO $pdo = null)
     {
@@ -49,6 +50,7 @@ final class SocialService
         if ($fontDir === '') {
             $fontDir = dirname(__DIR__, 2) . '/resources/fonts';
         }
+        $this->fontDir = $fontDir;
         $this->cards = new SocialCardRenderer($fontDir, $this->pdo);
     }
 
@@ -269,6 +271,82 @@ final class SocialService
             'failed'          => $failed,
             'remaining_quota' => max(0, $quota),
         ];
+    }
+
+    /**
+     * Startklar-Check (`social:doctor`, analog /internal/push/doctor): prüft
+     * Konfiguration, Migrationen, Karten-Voraussetzungen und — sofern Credentials
+     * gesetzt — die X-Verbindung (GET /2/users/me). Postet NICHTS, gibt keine
+     * Secrets aus. Verdict = alles bereit für den Echtbetrieb?
+     *
+     * @return array<string,mixed>
+     */
+    public function doctor(): array
+    {
+        $enabled     = $this->config->bool('SOCIAL_ENABLED', false);
+        $twConfigured = ($this->config->get('TWITTER_CONSUMER_KEY', '') ?? '') !== ''
+            && ($this->config->get('TWITTER_CONSUMER_SECRET', '') ?? '') !== ''
+            && ($this->config->get('TWITTER_ACCESS_TOKEN', '') ?? '') !== ''
+            && ($this->config->get('TWITTER_ACCESS_TOKEN_SECRET', '') ?? '') !== '';
+
+        // Migrationen: existieren die Social-Tabellen?
+        $migrationsOk = true;
+        try {
+            $this->pdo->query('SELECT 1 FROM social_post_queue LIMIT 0');
+            $this->pdo->query('SELECT entity_key FROM social_post_queue LIMIT 0'); // 0053
+        } catch (\PDOException $e) {
+            $migrationsOk = false;
+        }
+
+        // Karten-Voraussetzungen.
+        $gd       = \function_exists('imagecreatetruecolor');
+        $freetype = \function_exists('imagettftext');
+        $fonts    = is_file($this->fontDir . '/ChakraPetch-Bold.ttf')
+            && is_file($this->fontDir . '/Rajdhani-SemiBold.ttf');
+
+        // X-Verbindung nur prüfen, wenn Credentials vorhanden.
+        $twVerify = ['ok' => false, 'handle' => null, 'error' => 'not_checked'];
+        if ($twConfigured && $this->channel === 'twitter') {
+            $twVerify = (new TwitterPublisher(
+                (string)$this->config->get('TWITTER_CONSUMER_KEY', ''),
+                (string)$this->config->get('TWITTER_CONSUMER_SECRET', ''),
+                (string)$this->config->get('TWITTER_ACCESS_TOKEN', ''),
+                (string)$this->config->get('TWITTER_ACCESS_TOKEN_SECRET', ''),
+            ))->verify();
+        }
+
+        $willActuallyPost = $enabled && !$this->dryRun && $twConfigured && $twVerify['ok'];
+        $mediaReady = !$this->mediaEnabled || ($gd && $freetype && $fonts);
+
+        return [
+            'enabled'            => $enabled,
+            'dry_run'            => $this->dryRun,
+            'channel'            => $this->channel,
+            'lang'               => $this->lang,
+            'max_per_day'        => $this->maxPerDay,
+            'migrations_ok'      => $migrationsOk,
+            'twitter_configured' => $twConfigured,
+            'twitter_ok'         => $twVerify['ok'],
+            'twitter_account'    => $twVerify['handle'],
+            'twitter_error'      => $twVerify['error'],
+            'media_enabled'      => $this->mediaEnabled,
+            'gd'                 => $gd,
+            'freetype'           => $freetype,
+            'fonts_present'      => $fonts,
+            'media_ready'        => $mediaReady,
+            'will_post_live'     => $willActuallyPost,
+            'verdict'            => $this->doctorVerdict($migrationsOk, $twConfigured, $twVerify['ok'], $enabled, $mediaReady),
+        ];
+    }
+
+    private function doctorVerdict(bool $migrationsOk, bool $twConfigured, bool $twOk, bool $enabled, bool $mediaReady): string
+    {
+        if (!$migrationsOk)   return 'NICHT bereit — Migrationen 0052/0053 fehlen (cli:migrate).';
+        if (!$twConfigured)   return 'NICHT bereit — TWITTER_*-Credentials fehlen in der .env.';
+        if (!$twOk)           return 'NICHT bereit — X-Verbindung schlägt fehl (siehe twitter_error).';
+        if (!$mediaReady)     return 'Text-only bereit, aber Media-Cards nicht renderbar (GD/Schrift prüfen).';
+        if (!$enabled || $this->dryRun) return 'Bereit — aber im Dry-Run. Für Echtbetrieb SOCIAL_ENABLED=1 + SOCIAL_DRY_RUN=0 setzen.';
+        return 'OK — versandbereit für den Echtbetrieb.';
     }
 
     /** Rendert die Media-Card für einen Kandidaten (oder null: aus/fehlerhaft/text-only). */

@@ -64,6 +64,7 @@ CLI (`src/Cli/Commands.php`), auch als Internal-HTTP-Route:
 | `social:collect [--date=]` | `GET /internal/cron/social-collect` | Tagesbericht → Queue (idempotent) |
 | `social:publish` | `GET /internal/cron/social-publish` | Redaktions-Layer + fällige Posts senden |
 | `social:status` | `GET /internal/social/status` | Betriebs-Überblick (Queue-Zustand, letzte Sendungen) |
+| `social:doctor` | `GET /internal/social/doctor` | Startklar-Check (Config, Migrationen, X-Verbindung); postet nichts |
 | `social:card --kind= [--date= --lang= --out=]` | — (CLI) | Media-Card in eine PNG-Datei rendern (Vorschau; storage/social-cards/) |
 
 ## 3. Datenbank (Migration `0052_social_posts.sql`)
@@ -109,6 +110,9 @@ fällt der Publisher automatisch auf Dry-Run zurück.
 Links zeigen auf `PUBLIC_WEB_URL` (Fallback `APP_URL`).
 
 ## 5. Go-Live-Checkliste
+
+> Ausführliches Schritt-für-Schritt-Runbook: **`docs/SOCIAL_GO_LIVE.md`**.
+> Vor dem Scharfschalten immer `social:doctor` grün bekommen.
 
 1. **X-Account** `@cyberride` anlegen; im X-Developer-Portal eine App mit
    **Read+Write** erstellen; Consumer-Keys + Access-Token/-Secret erzeugen.

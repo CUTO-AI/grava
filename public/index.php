@@ -941,6 +941,9 @@ $router->post('/internal/social/preview', fn($r) => $runInternal($r, 'social:pre
 // Betriebs-Überblick über die Post-Queue.
 $router->get('/internal/social/status',  fn($r) => $runInternal($r, 'social:status'));
 $router->post('/internal/social/status', fn($r) => $runInternal($r, 'social:status'));
+// Startklar-Check (Config, Migrationen, X-Verbindung); postet nichts.
+$router->get('/internal/social/doctor',  fn($r) => $runInternal($r, 'social:doctor'));
+$router->post('/internal/social/doctor', fn($r) => $runInternal($r, 'social:doctor'));
 // Einmaliger Push-Feldtest: erzeugt eine edge_taken-Mitteilung (Inbox + APNs).
 $router->get('/internal/game/test-push',  fn($r) => $runInternal($r, 'game:test-push'));
 $router->post('/internal/game/test-push', fn($r) => $runInternal($r, 'game:test-push'));

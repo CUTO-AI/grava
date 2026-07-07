@@ -117,6 +117,9 @@ final class Commands
             case 'social:card':
                 return $this->socialCard($argv);
 
+            case 'social:doctor':
+                return $this->socialDoctor();
+
             case 'internal:logtail':
             case 'logtail':
                 return $this->logTail($argv);
@@ -1048,6 +1051,19 @@ final class Commands
         return 0;
     }
 
+    /** social:doctor — Startklar-Check (Config, Migrationen, X-Verbindung, Cards). Postet nichts. */
+    private function socialDoctor(): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:doctor nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $res = $this->social->doctor();
+        echo json_encode($res, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        // Exit 0 nur, wenn Migrationen + (falls konfiguriert) X-Verbindung ok sind.
+        return ($res['migrations_ok'] && (!$res['twitter_configured'] || $res['twitter_ok'])) ? 0 : 1;
+    }
+
     private function help(): void
     {
         echo "GRAVA Backend CLI\n";
@@ -1071,6 +1087,7 @@ final class Commands
         echo "  social:preview      Trocken-Vorschau ALLER Kandidaten des Tages [--date=YYYY-MM-DD] [--lang=en|de]\n";
         echo "  social:status       Betriebs-Überblick: Queue-Zustand + letzte Sendungen\n";
         echo "  social:card         Media-Card rendern: --kind=<typ> [--date=] [--lang=] [--out=datei.png]\n";
+        echo "  social:doctor       Startklar-Check (Config, Migrationen, X-Verbindung) — postet nichts\n";
         echo "  help                Zeigt diese Hilfe\n";
     }
 }

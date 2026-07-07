@@ -16,6 +16,7 @@ final class TwitterPublisher implements Publisher
 {
     private const TWEETS_URL = 'https://api.twitter.com/2/tweets';
     private const MEDIA_URL  = 'https://upload.twitter.com/1.1/media/upload.json';
+    private const ME_URL     = 'https://api.twitter.com/2/users/me';
 
     public function __construct(
         private readonly string $consumerKey,
@@ -93,6 +94,36 @@ final class TwitterPublisher implements Publisher
         $decoded = json_decode((string)$resp, true);
         $id = is_array($decoded) ? (string)($decoded['data']['id'] ?? '') : '';
         return PublishResult::ok($id !== '' ? $id : null, $snippet);
+    }
+
+    /**
+     * Prüft die Credentials ohne zu posten: GET /2/users/me. Gibt bei Erfolg
+     * das Handle des authentifizierten Accounts zurück (für `social:doctor`).
+     *
+     * @return array{ok:bool, handle:?string, error:?string}
+     */
+    public function verify(): array
+    {
+        if (!$this->usable()) {
+            return ['ok' => false, 'handle' => null, 'error' => 'twitter_not_configured'];
+        }
+        $ch = curl_init(self::ME_URL);
+        curl_setopt_array($ch, [
+            CURLOPT_HTTPHEADER     => ['Authorization: ' . $this->authorizationHeader('GET', self::ME_URL)],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 15,
+        ]);
+        $resp   = curl_exec($ch);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err    = curl_error($ch);
+        curl_close($ch);
+
+        if ($resp === false || $status < 200 || $status >= 300) {
+            return ['ok' => false, 'handle' => null, 'error' => 'HTTP ' . $status . ' ' . $err . ' ' . substr((string)$resp, 0, 200)];
+        }
+        $decoded = json_decode((string)$resp, true);
+        $handle  = is_array($decoded) ? (string)($decoded['data']['username'] ?? '') : '';
+        return ['ok' => true, 'handle' => $handle !== '' ? $handle : null, 'error' => null];
     }
 
     /**
