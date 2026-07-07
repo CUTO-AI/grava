@@ -169,6 +169,9 @@ final class SocialService
             // Personenbezogen, strikt opt-in-gated (Konzept §8/E3):
             new BadgeEarnedCollector($this->pdo, $this->copy, $lang, $this->channel),
             new RecordBeatenCollector($this->pdo, $this->copy, $lang, $this->channel),
+            // Community-Aggregate (Phase F):
+            new WeeklyRecapCollector($this->pdo, $this->copy, $lang, $this->channel),
+            new CommunityMilestoneCollector($this->pdo, $this->copy, $lang, $this->channel),
         ];
     }
 

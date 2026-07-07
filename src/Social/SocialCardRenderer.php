@@ -82,6 +82,8 @@ final class SocialCardRenderer
             case 'daily_report':    $this->cardDaily($img, $payload, $c, $accent, $chakra, $rajdhani); break;
             case 'badge_earned':    $this->cardBadge($img, $payload, $c, $accent, $chakra, $rajdhani); break;
             case 'record_beaten':   $this->cardRecord($img, $payload, $c, $accent, $chakra, $rajdhani); break;
+            case 'weekly_recap':    $this->cardWeekly($img, $payload, $c, $accent, $chakra, $rajdhani); break;
+            case 'community_milestone': $this->cardMilestone($img, $payload, $c, $accent, $chakra, $rajdhani); break;
             default:
                 imagedestroy($img);
                 return null;
@@ -216,6 +218,35 @@ final class SocialCardRenderer
         }
         $sub = $handle . ($region !== null ? '   ·   ' . $region : '');
         $this->ttf($img, 34, self::PAD, self::ART_BOTTOM + 80, $c['white'], $rajdhani, $this->fit($rajdhani, 34, $sub, self::W - 2 * self::PAD));
+    }
+
+    /** @param array<string,mixed> $p */
+    private function cardWeekly($img, array $p, array $c, int $accent, string $chakra, string $rajdhani): void
+    {
+        $this->ttf($img, 26, self::PAD, self::ART_TOP - 10, $accent, $chakra, 'WEEK ON THE GRID');
+        $km = (float)($p['distance_km'] ?? 0);
+        $stats = [
+            [(string)(int)($p['rides'] ?? 0),            'RIDES'],
+            [number_format($km, ($km >= 100 ? 0 : 1), '.', ','), 'KM'],
+            [(string)(int)($p['edges_taken_over'] ?? 0), 'EDGES TAKEN'],
+            [(string)(int)($p['counties_changed'] ?? 0), 'COUNTIES'],
+        ];
+        $colW = (self::W - 2 * self::PAD) / 2;
+        foreach ($stats as $i => [$val, $lbl]) {
+            $cx = self::PAD + ($i % 2) * $colW;
+            $cy = self::ART_TOP + 60 + intdiv($i, 2) * 150;
+            $this->ttf($img, 76, (int)$cx, (int)$cy, $accent, $chakra, $val);
+            $this->ttf($img, 26, (int)$cx, (int)$cy + 40, $c['muted'], $rajdhani, $lbl);
+        }
+    }
+
+    /** @param array<string,mixed> $p */
+    private function cardMilestone($img, array $p, array $c, int $accent, string $chakra, string $rajdhani): void
+    {
+        $km = (int)($p['threshold_km'] ?? 0);
+        $this->ttf($img, 26, self::PAD, self::ART_TOP + 30, $accent, $chakra, 'COMMUNITY MILESTONE');
+        $this->ttf($img, 120, self::PAD, self::ART_BOTTOM - 10, $accent, $chakra, number_format($km, 0, '.', ',') . ' km');
+        $this->ttf($img, 34, self::PAD, self::ART_BOTTOM + 70, $c['white'], $rajdhani, 'ridden together on gravel');
     }
 
     // ---- Geometrie --------------------------------------------------------
@@ -354,6 +385,8 @@ final class SocialCardRenderer
             'daily_report'     => 'DAILY',
             'badge_earned'     => 'BADGE',
             'record_beaten'    => 'KOM',
+            'weekly_recap'     => 'WEEKLY',
+            'community_milestone' => 'MILESTONE',
             default            => 'CYBERRIDE',
         };
     }

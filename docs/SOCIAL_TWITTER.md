@@ -4,11 +4,12 @@ Automatisierte X/Twitter-Meldungen aus der Tagesaktivität von CYBERRIDE.
 Fachliches Konzept: `Twitter_Automation_Concept.md` (iOS-Repo). Dieses Dokument
 beschreibt die **Backend-Umsetzung** und den Betrieb.
 
-**Stand:** Phase A–E gebaut (Branch `feature/social-twitter-phase-a`; iOS-Teil im
+**Stand:** Phase A–F gebaut (Branch `feature/social-twitter-phase-a`; iOS-Teil im
 App-Repo), lokal getestet, **noch nicht deployt**, sendet per Default nichts (Dry-Run).
 Meldungstypen: `daily_report` (E1), `region_taken` (A1, Solo-Rider opt-in-gated),
-`rush_result` (B2), `faction_standing` (C2, wöchentlich sonntags),
-`badge_earned` (D3, opt-in), `record_beaten` (D1 KOM, opt-in).
+`rush_result` (B2), `faction_standing` (C2, sonntags),
+`badge_earned` (D3, opt-in), `record_beaten` (D1 KOM, opt-in),
+`weekly_recap` (E2, sonntags), `community_milestone` (E4, km-Schwelle).
 Redaktions-Layer (Phase C): Expiry + Per-Entity-Cooldown + `social:status`.
 Media-Cards (Phase D): gebrandete 1200×675-PNGs je Meldungstyp (Region mit
 gezeichneter Grenze) + X-Media-Upload; best-effort, sonst text-only.
@@ -45,6 +46,8 @@ Alles unter `src/Social/` (Namespace `App\Social`):
 | `FactionStandingCollector` | „Fraktions-Wochenstand" (C2): Anteil je Fraktion, nur SONNTAGS (UTC). |
 | `BadgeEarnedCollector` | „Seltenes Abzeichen" (D3): heute erreichte Platin/Onyx (tier ≥ 3). **Opt-in-gated** (E3). |
 | `RecordBeatenCollector` | „Neuer KOM" (D1): `game_event` record_beaten heute, Region-Name der Kante. **Opt-in-gated** (E3). |
+| `WeeklyRecapCollector` | „Wochenrückblick" (E2): 7-Tage-Aggregat, nur SONNTAGS (UTC). Öffentlich. |
+| `CommunityMilestoneCollector` | „Community-Meilenstein" (E4): kumulierte Gesamt-km überschreitet eine Schwelle; queue-dedupliziert (kein neues Schema). Öffentlich. |
 | `PostCopy` | sprach-keyed Textbausteine (EN Go-Live, DE hinterlegt), begrenzt auf ≤280 Zeichen; je Meldungstyp eine Methode |
 | `EditorialPolicy` | Redaktions-Regeln (Phase C): `pruneStale()` verfallen lassen + `entityOnCooldown()` prüfen |
 | `SocialCardRenderer` | Media-Cards (Phase D): GD, 1200×675, Marken-Palette/Fonts (`resources/fonts`), je Meldungstyp ein Layout; `region_taken` zeichnet die Landkreis-Grenze (aus `game_region.boundary_geojson`). Best-effort → null = text-only. |
@@ -136,12 +139,20 @@ Links zeigen auf `PUBLIC_WEB_URL` (Fallback `APP_URL`).
 - **Idempotenz** über `dedupe_key`; erneutes `collect` desselben Tags = `already_queued`.
 - **Leerer Tag** (keine Fahrten/Kanten/Landkreise/Rush) → kein Kandidat (`no_activity`).
 
-## 7. Ausblick (Phase F+, Konzept §9)
+## 7. Restliche Ausbaustufen (Konzept §9)
 
-Phase A–E sind gebaut (Meldungstypen inkl. opt-in-Highlights + Redaktions-Layer
-+ Media-Cards + Opt-in-Endpoint/iOS-UI). Offen: **D2 Rang-Aufstieg** (braucht eine
-neue Rang-History-Tabelle — Rang ist derzeit rein abgeleitet, kein „heute erreicht"
-erkennbar); Live-Peak/Community-Meilenstein (E3/E4); B1 Rush-Ankündigung; Upgrade
-auf X-Basic + voller Slot-Plan; DE zuschalten; weitere Publisher-Adapter
-(Mastodon/Threads/…); optional per-kind-Tageslimit. Neue Meldungstypen = neuer
-`PostSource` + `PostCopy`-Methode (+ `entity_key`, optional ein `SocialCardRenderer`-Layout).
+Phase A–F sind gebaut (alle Text-Meldungstypen + Redaktions-Layer + Media-Cards
++ Opt-in-Endpoint/iOS-UI + Wochenrückblick + Community-Meilenstein). Bewusst
+noch offen — jeweils mit Grund:
+- **D2 Rang-Aufstieg** — Rang ist rein abgeleitet (`ap_total`); „heute Rang N
+  erreicht" braucht eine neue Rang-History-Tabelle + Ingest-Hook.
+- **E3 Live-Peak** („X fahren gerade") — braucht Persistenz des Tages-Peaks der
+  Presence (aktuell nur Live-Zähler, keine Historie).
+- **B1 Rush-Ankündigung** — Vorab-Post passt nicht zur 1×/Tag-Collect-Kadenz;
+  sinnvoll erst mit X-Basic + häufigerem Collect-Cron.
+- **Upgrade auf X-Basic** + voller Slot-Plan (§5) + optional per-kind-Tageslimit.
+- **DE zuschalten** (reine Config: SOCIAL_LANG) · **Claude-Copy-Veredelung** ·
+  **weitere Publisher-Adapter** (Mastodon/Threads/…).
+
+Neue Meldungstypen = neuer `PostSource` + `PostCopy`-Methode (+ `entity_key`,
+optional ein `SocialCardRenderer`-Layout).

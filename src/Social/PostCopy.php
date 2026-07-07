@@ -151,6 +151,44 @@ final class PostCopy
         return $this->clamp("👑 New KOM {$loc}: {$handle} takes the fastest time{$spd}. #CYBERRIDE {$url}");
     }
 
+    /**
+     * „Wochenrückblick" (E2).
+     * @param array{rides:int,distance_km:float,edges_taken_over:int,counties_changed:int} $r
+     */
+    public function weeklyRecap(array $r, string $lang): string
+    {
+        $lang = $this->normalizeLang($lang);
+        $url  = rtrim($this->publicWebUrl, '/');
+        $km   = (float)($r['distance_km'] ?? 0);
+        $counties = (int)($r['counties_changed'] ?? 0);
+
+        if ($lang === 'de') {
+            $parts = ["{$r['rides']} Fahrten", $this->kmDe($km), "{$r['edges_taken_over']} Kanten übernommen"];
+            if ($counties > 0) {
+                $parts[] = $counties === 1 ? '1 Landkreis gewechselt' : "{$counties} Landkreise gewechselt";
+            }
+            return $this->clamp('🗓️ Woche im Netz — ' . implode(' · ', $parts) . ". {$url}");
+        }
+        $parts = ["{$r['rides']} rides", $this->kmEn($km), "{$r['edges_taken_over']} edges taken over"];
+        if ($counties > 0) {
+            $parts[] = $counties === 1 ? '1 county changed hands' : "{$counties} counties changed hands";
+        }
+        return $this->clamp('🗓️ Week on the grid — ' . implode(' · ', $parts) . ". #CYBERRIDE {$url}");
+    }
+
+    /** „Community-Meilenstein" (E4). $km = erreichte Schwelle in Kilometern. */
+    public function communityMilestone(int $km, string $lang): string
+    {
+        $lang = $this->normalizeLang($lang);
+        $url  = rtrim($this->publicWebUrl, '/');
+        if ($lang === 'de') {
+            $n = number_format($km, 0, ',', '.');
+            return $this->clamp("🚀 Die CYBERRIDE-Community hat zusammen {$n} km Schotter gefahren. Danke an alle. {$url}");
+        }
+        $n = number_format($km, 0, '.', ',');
+        return $this->clamp("🚀 The CYBERRIDE community has now ridden {$n} km of gravel together. Thank you, all of you. #CYBERRIDE {$url}");
+    }
+
     public function badgeFamilyLabel(string $family, string $lang): string
     {
         $en = [
