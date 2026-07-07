@@ -835,6 +835,7 @@ $router->get ('/heatmap',                                fn($r) => $webDiscover-
 $router->get ('/u/{handle}',                             fn($r) => $webDiscover->profile($r));
 $router->get ('/u/{handle}/r/{id}',                      fn($r) => $webDiscover->profileRoute($r),        [$optionalBearer]);
 $router->get ('/u/{handle}/r/{id}/geojson',              fn($r) => $webDiscover->profileRouteGeojson($r), [$optionalBearer]);
+$router->get ('/u/{handle}/r/{id}/og-image.png',         fn($r) => $webDiscover->profileRouteOgImage($r), [$optionalBearer]);
 $router->get ('/feed',                                   fn($r) => $webDiscover->feed($r));
 $router->get ('/notifications',                          fn($r) => $webDiscover->notifications($r));
 

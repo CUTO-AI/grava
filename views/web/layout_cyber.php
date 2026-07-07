@@ -54,6 +54,10 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <meta property="og:title" content="<?= htmlspecialchars($_ogTitle, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:description" content="<?= htmlspecialchars($_ogDescription, ENT_QUOTES, 'UTF-8') ?>">
 <meta property="og:image" content="<?= htmlspecialchars($_ogImage, ENT_QUOTES, 'UTF-8') ?>">
+<?php if (!empty($_ogImageWidth) && !empty($_ogImageHeight)): ?>
+<meta property="og:image:width" content="<?= (int)$_ogImageWidth ?>">
+<meta property="og:image:height" content="<?= (int)$_ogImageHeight ?>">
+<?php endif; ?>
 <meta property="og:locale" content="de_DE">
 <meta property="og:site_name" content="CYBERRIDE">
 <meta name="twitter:card" content="summary_large_image">
