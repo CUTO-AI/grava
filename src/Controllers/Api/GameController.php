@@ -213,7 +213,22 @@ final class GameController
     public function config(Request $req): void
     {
         $this->userId($req); // Bearer erzwungen
-        Response::json(['config' => $this->config->all()]);
+
+        // Gerätespezifische Karten-Kantenlimits (Performance): die App schickt ihre
+        // Hardware-Kennung + abgeleitete Marketing-Generation; der Server wählt das
+        // Limit aus der im Admin pflegbaren Tabelle (kein App-Build nötig).
+        $device      = isset($req->query['device']) ? (string)$req->query['device'] : null;
+        $deviceClass = isset($req->query['device_class']) ? (string)$req->query['device_class'] : null;
+        $caps = $this->config->resolveMapEdgeCaps($deviceClass, $device);
+
+        Response::json([
+            'config' => $this->config->all(),
+            'client' => [
+                'map_max_render_edges'   => $caps['max_render_edges'],
+                'map_edge_request_limit' => $caps['edge_request_limit'],
+                'device_class'           => $deviceClass,
+            ],
+        ]);
     }
 
     /**

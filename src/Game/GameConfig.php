@@ -147,6 +147,15 @@ final class GameConfig
         'region_level_span_breaks'     => '{"2":6.0,"4":1.5,"6":0.4}',
         'region_list_max'              => '300',
         'region_refresh_cron_enabled'  => '1',
+        // Karten-Performance: gerätespezifische Obergrenze der auf der Reviere-Karte
+        // tatsächlich gezeichneten Kanten (Metal-Buffer-Schutz). JSON, gekeyt nach
+        // Marketing-Generation (die App bildet ihre Hardware darauf ab und schickt
+        // `device_class` mit); `default` greift für Unbekanntes. Im Admin nach
+        // Erfahrung justierbar — kein App-Build nötig.
+        'map_edge_render_caps'         => '{"default":2000,"iPhone 11":1400,"iPhone 12":1600,"iPhone 13":2000,"iPhone 14":2400,"iPhone 15":3000,"iPhone 16":3500,"iPhone 17":4000}',
+        // Faktor, um den das vom Server angeforderte Kanten-Limit über der Zeichen-
+        // Grenze liegt (etwas Reserve zum Priorisieren der wertvollsten Kanten).
+        'map_edge_fetch_multiplier'    => '1.25',
     ];
 
     public function __construct(private readonly PDO $pdo) {}
@@ -198,6 +207,45 @@ final class GameConfig
     {
         $v = trim($this->raw($key));
         return $v === '' ? null : (float)$v;
+    }
+
+    /**
+     * Löst die gerätespezifischen Karten-Kantenlimits auf (Performance-Tuning).
+     * `map_edge_render_caps` ist eine JSON-Map Generation→Zeichen-Grenze; gewählt
+     * wird zuerst per `deviceClass` (z. B. "iPhone 15"), dann per roher `device`-
+     * Kennung, sonst `default`. Das Anfrage-Limit liegt per `map_edge_fetch_multiplier`
+     * etwas darüber.
+     *
+     * @return array{max_render_edges:int,edge_request_limit:int}
+     */
+    public function resolveMapEdgeCaps(?string $deviceClass, ?string $device): array
+    {
+        $fallback = 2000;
+        $caps = json_decode($this->raw('map_edge_render_caps'), true);
+        if (!is_array($caps)) {
+            $caps = [];
+        }
+        $pick = static function (?string $key) use ($caps): ?int {
+            if ($key === null || $key === '' || !array_key_exists($key, $caps)) {
+                return null;
+            }
+            $v = (int)$caps[$key];
+            return $v > 0 ? $v : null;
+        };
+        $render = $pick($deviceClass)
+            ?? $pick($device)
+            ?? $pick('default')
+            ?? $fallback;
+        // Sicherheitsgrenzen: nie unter 200, nie über 20000 (Metal-Buffer).
+        $render = max(200, min(20000, $render));
+
+        $mult = (float)$this->raw('map_edge_fetch_multiplier');
+        if ($mult < 1.0) {
+            $mult = 1.0;
+        }
+        $limit = (int)round($render * $mult);
+
+        return ['max_render_edges' => $render, 'edge_request_limit' => $limit];
     }
 
     /** @return array<string,string> Alle effektiven Werte (DB ueber Default). */

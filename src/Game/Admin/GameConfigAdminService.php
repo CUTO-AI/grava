@@ -26,6 +26,9 @@ final class GameConfigAdminService
         // Rush (GAME_RUSH_BACKEND.md §2.4).
         'rush_multiplier','rush_min_crew_size','rush_window_hours','rush_window_hours_max',
         'rush_cooldown_days','rush_colocation_radius_m',
+        // Karten-Performance: Faktor Fetch-Limit / Zeichen-Grenze (>= 1 sinnvoll,
+        // der Resolver klemmt <1 auf 1). Die Kappen-Tabelle selbst ist JSON (s. u.).
+        'map_edge_fetch_multiplier',
     ];
     /** Numerisch, aber leer erlaubt (NULL-Semantik). */
     private const NULLABLE_NUMERIC_KEYS = [
@@ -49,6 +52,8 @@ final class GameConfigAdminService
     private const JSON_KEYS = [
         'progression_ap_weights', 'progression_rank_ap',
         'progression_rank_gate', 'progression_catalog',
+        // Karten-Performance: Generation→Zeichen-Grenze (Kanten). Kein App-Build nötig.
+        'map_edge_render_caps',
     ];
 
     public function __construct(
