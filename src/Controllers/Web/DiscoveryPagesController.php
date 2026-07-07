@@ -33,6 +33,7 @@ use App\Support\StructuredData;
 final class DiscoveryPagesController
 {
     private readonly WebView $view;
+    private readonly string $basePath;
 
     public function __construct(
         private readonly WebSession $webSession,
@@ -56,6 +57,7 @@ final class DiscoveryPagesController
         private readonly ?\App\Game\Admin\AdminGuard $adminGuard = null,
     ) {
         $this->view = new WebView($viewsPath);
+        $this->basePath = dirname($viewsPath);
     }
 
     // -----------------------------------------------------------------
@@ -296,6 +298,9 @@ final class DiscoveryPagesController
         $this->renderPage('profile/route', $authedUser, [
             '_title'   => $route['title'] . ' · @' . $profile['handle'],
             '_metaDescription' => $metaDesc,
+            '_ogImage'       => $routeUrl . '/og-image.png',
+            '_ogImageWidth'  => 1200,
+            '_ogImageHeight' => 630,
             '_jsonLd'  => [
                 StructuredData::breadcrumb([
                     ['CYBERRIDE', SiteUrl::absolute('/')],
@@ -360,6 +365,118 @@ final class DiscoveryPagesController
             }
         }
         GeoJsonResponse::emit($fc);
+    }
+
+    // -----------------------------------------------------------------
+    // GET /u/{handle}/r/{id}/og-image.png
+    // Gebrandetes Vorschaubild (og:image) mit stilisierter Streckenlinie.
+    // Öffentlich/anonym; gleiche Sichtbarkeits- + Privacy-Regeln wie geojson.
+    // -----------------------------------------------------------------
+    public function profileRouteOgImage(Request $req): void
+    {
+        $handle   = (string)($req->routeParams['handle'] ?? '');
+        $routePid = (string)($req->routeParams['id'] ?? '');
+        [$viewerId, $isAdmin] = $this->viewerAndAdmin($req);
+
+        if ($this->routesService === null || $this->geo === null) {
+            Response::error('not_found', 'Nicht gefunden.', 404);
+        }
+        $profile = $this->profile->getProfile($handle, $viewerId);
+        if ($profile === null) {
+            Response::error('not_found', 'Nicht gefunden.', 404);
+        }
+        $listing = $this->profile->getProfileRoutes($handle, $viewerId, ['limit' => 50, 'offset' => 0], $isAdmin);
+        $route = null;
+        foreach (($listing['routes'] ?? []) as $r) {
+            if ((string)$r['id'] === $routePid) { $route = $r; break; }
+        }
+        if ($route === null) {
+            Response::error('not_found', 'Nicht gefunden.', 404);
+        }
+
+        try {
+            $loaded  = $this->routesService->loadPayloadByPublicId($routePid);
+            $version = (int)($loaded['version'] ?? 0);
+        } catch (\Throwable) {
+            Response::error('not_found', 'Nicht gefunden.', 404);
+        }
+
+        // Cache pro (public_id, version); storage/ überlebt Deploys.
+        $etag = '"og-' . $version . '-' . substr(md5($routePid), 0, 12) . '"';
+        if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? '') === $etag) {
+            http_response_code(304);
+            header('ETag: ' . $etag);
+            header('Cache-Control: public, max-age=604800');
+            exit;
+        }
+
+        $cacheDir  = $this->basePath . '/storage/og-images';
+        $cacheFile = $cacheDir . '/' . preg_replace('/[^A-Za-z0-9_-]/', '', $routePid) . '-v' . $version . '.png';
+
+        $png = is_file($cacheFile) ? (string)@file_get_contents($cacheFile) : '';
+        if ($png === '') {
+            try {
+                $fc = $this->geo->toFeatureCollection(
+                    $loaded['payload'],
+                    [],
+                    $this->routesService->hintsForPublicId($routePid),
+                    ['bbox' => null, 'max_points' => 800],
+                );
+            } catch (\Throwable) {
+                Response::error('not_found', 'Nicht gefunden.', 404);
+            }
+            // Privacy: für Fremde (und anonyme Crawler) in der Eigentümer-Zone
+            // trimmen — analog zur GeoJSON-Ausgabe.
+            if (!$isAdmin && $this->privacyZones !== null && $this->trimmer !== null) {
+                $owner = $this->privacyZones->ownerZoneForRoute($routePid);
+                if ($owner !== null && $owner['owner_id'] !== $viewerId) {
+                    $fc = $this->trimmer->trim($fc, $owner['zone']);
+                }
+            }
+            $stats    = $route['stats'] ?? [];
+            $renderer = new \App\Media\RouteOgImage($this->basePath . '/resources/fonts');
+            $png = $renderer->render(
+                $this->longestLineString($fc),
+                (string)($route['title'] ?? 'Route'),
+                isset($stats['distance_m']) ? (float)$stats['distance_m'] : null,
+                isset($stats['elevation_gain_m']) ? (int)$stats['elevation_gain_m'] : null,
+            );
+            if (!is_dir($cacheDir)) { @mkdir($cacheDir, 0755, true); }
+            if (is_dir($cacheDir) && is_writable($cacheDir)) {
+                @file_put_contents($cacheFile, $png);
+            }
+        }
+
+        header('Content-Type: image/png');
+        header('Cache-Control: public, max-age=604800');
+        header('ETag: ' . $etag);
+        header('Content-Length: ' . (string)strlen($png));
+        echo $png;
+        exit;
+    }
+
+    /**
+     * Längste LineString-Koordinatenliste ([lon,lat]) aus einer
+     * FeatureCollection — für das Vorschaubild reicht der Haupt-Track.
+     * @param array<string,mixed> $fc
+     * @return list<array{0:float,1:float}>
+     */
+    private function longestLineString(array $fc): array
+    {
+        $best = [];
+        foreach (($fc['features'] ?? []) as $f) {
+            $g    = $f['geometry'] ?? [];
+            $type = $g['type'] ?? '';
+            if ($type === 'LineString') {
+                $c = $g['coordinates'] ?? [];
+                if (count($c) > count($best)) { $best = $c; }
+            } elseif ($type === 'MultiLineString') {
+                foreach (($g['coordinates'] ?? []) as $seg) {
+                    if (count($seg) > count($best)) { $best = $seg; }
+                }
+            }
+        }
+        return $best;
     }
 
     // -----------------------------------------------------------------
