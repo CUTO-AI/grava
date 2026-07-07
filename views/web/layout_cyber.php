@@ -63,6 +63,7 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <meta name="twitter:image" content="<?= htmlspecialchars($_ogImage, ENT_QUOTES, 'UTF-8') ?>">
 
 <meta name="theme-color" content="#04060B">
+<script src="/assets/js/consent.js"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
 <script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <script src="/assets/js/ga.js"></script>
@@ -160,6 +161,8 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
     </div>
   </div>
 </footer>
+
+<?php require dirname(__DIR__) . '/web/partials/consent-banner.php'; ?>
 
 <script src="<?= $CR_ASSETS ?>/lucide.min.js"></script>
 <script src="<?= $CR_ASSETS ?>/site.js"></script>

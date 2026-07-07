@@ -5,6 +5,18 @@
  * Generiert (App-Schale + View-Bodies). 571 Einträge.
  */
 return [
+    // Consent-Banner (Phase C)
+    'Cookie-Einwilligung' => 'Cookie consent',
+    'Wir nutzen Cookies für anonyme Reichweiten-Messung (Google Analytics), um CYBERRIDE zu verbessern – nur mit deiner Zustimmung.' => 'We use cookies for anonymous audience measurement (Google Analytics) to improve CYBERRIDE — only with your consent.',
+    'Mehr erfahren' => 'Learn more',
+    'Ablehnen' => 'Decline',
+    'Akzeptieren' => 'Accept',
+    // Datenschutz: Web-Analyse & Einwilligung (Phase C)
+    'Web-Analyse:' => 'Web analytics:',
+    'Google Analytics (Google Ireland Ltd.) auf unseren Webseiten – nur nach deiner Einwilligung (siehe Abschnitt 5).' => 'Google Analytics (Google Ireland Ltd.) on our websites — only after your consent (see section 5).',
+    'Web-Analyse & Einwilligung (Cookies)' => 'Web analytics & consent (cookies)',
+    'Auf unseren öffentlichen Webseiten setzen wir Google Analytics (GA4) zur anonymen Reichweiten-Messung ein, um das Angebot zu verbessern. Die Analyse startet erst, nachdem du im Cookie-Banner zugestimmt hast (Consent Mode v2); ohne Zustimmung werden keine Analyse-Cookies gesetzt.' => 'On our public websites we use Google Analytics (GA4) for anonymous audience measurement to improve the service. Analytics only starts after you consent via the cookie banner (Consent Mode v2); without consent no analytics cookies are set.',
+    'Du kannst deine Wahl jederzeit ändern, indem du das Consent-Cookie in deinem Browser löschst – dann erscheint das Banner erneut. Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).' => 'You can change your choice at any time by deleting the consent cookie in your browser — the banner will then appear again. The legal basis is your consent (Art. 6(1)(a) GDPR, Section 25(1) TDDDG).',
     'Reviere-Karte' => 'Territory Map',
     'Wer hält welches Gebiet? Zoom rein — die Karte zeigt je nach Nähe grobe Regionen, dann Landkreise und Gemeinden, ganz nah einzelne Wege nach Besitz.' => 'Who holds which territory? Zoom in — the map shows coarse regions, then counties and municipalities, and finally individual roads by ownership.',
     'Karte wird geladen …' => 'Loading map …',

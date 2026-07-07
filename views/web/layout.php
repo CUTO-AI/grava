@@ -52,6 +52,8 @@ $_analyticsGroup  = $_analyticsGroup  ?? 'other';
 
     <!-- Theme Color -->
     <meta name="theme-color" content="#2f5233">
+    <!-- Consent Mode v2: Default (denied) VOR dem GA-Loader setzen -->
+    <script src="/assets/js/consent.js"></script>
     <!-- Google tag (gtag.js) — Loader extern, Init aus same-origin /assets/js/ga.js (CSP) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
     <script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
@@ -141,6 +143,7 @@ $_analyticsGroup  = $_analyticsGroup  ?? 'other';
             <small>&copy; <?= date('Y') ?> CYBERRIDE. Alle Rechte vorbehalten.</small>
         </div>
     </footer>
+    <?php require dirname(__DIR__) . '/web/partials/consent-banner.php'; ?>
     <?php foreach ($_pageScripts as $_src): ?>
     <script src="<?= htmlspecialchars((string)$_src, ENT_QUOTES, 'UTF-8') ?>"></script>
     <?php endforeach; ?>
