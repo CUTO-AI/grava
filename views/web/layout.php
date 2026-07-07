@@ -19,6 +19,7 @@ $_ogImage         = $_ogImage         ?? '/assets/brand/icon-512.png';
 $_canonical       = $_canonical       ?? ($_ogUrl ?? ($_SERVER['REQUEST_URI'] ?? '/'));
 $_ogUrl           = $_ogUrl           ?? $_canonical;
 $_robots          = $_robots          ?? 'index, follow';
+$_analyticsGroup  = $_analyticsGroup  ?? 'other';
 ?><!doctype html>
 <html lang="de">
 <head>
@@ -53,6 +54,7 @@ $_robots          = $_robots          ?? 'index, follow';
     <meta name="theme-color" content="#2f5233">
     <!-- Google tag (gtag.js) — Loader extern, Init aus same-origin /assets/js/ga.js (CSP) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
+    <script type="application/json" id="ga-data"><?= json_encode(['content_group' => $_analyticsGroup ?? 'other', 'page_title' => $_title ?? 'CYBERRIDE', 'page_location' => $_canonical], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
     <script src="/assets/js/ga.js"></script>
     <link rel="stylesheet" href="/assets/style.css">
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">

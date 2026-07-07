@@ -38,6 +38,7 @@ $CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
 <meta name="theme-color" content="#04060B" />
 <!-- Google tag (gtag.js) — Loader extern, Init aus same-origin /assets/js/ga.js (CSP) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HVRGQSKQNV"></script>
+<script type="application/json" id="ga-data"><?= json_encode(['content_group' => 'landing', 'page_title' => $T['meta']['title'], 'page_location' => $CR_CANONICAL], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 <script src="/assets/js/ga.js"></script>
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/cyberride.css" />
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/site.css" />

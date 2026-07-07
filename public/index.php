@@ -724,10 +724,15 @@ $router->get('/robots.txt', function ($r) {
         'Disallow: /surface-check',
         'Disallow: /share/',
         'Disallow: /auth/',
+        '',
+        'Sitemap: ' . \App\Support\SiteUrl::base() . '/sitemap.xml',
     ];
     echo implode("\n", $lines) . "\n";
     exit;
 });
+// sitemap.xml: nur öffentliche, indexierbare URLs (statische Seiten + öffentliche
+// Profile/Routen). Siehe SitemapController.
+$router->get('/sitemap.xml', fn($r) => (new \App\Controllers\Web\SitemapController())->show());
 $router->get('/login',             fn($r) => $webAuth->showLogin($r));
 $router->post('/login',            fn($r) => $webAuth->doLogin($r),           [$csrf]);
 $router->get('/register',          fn($r) => $webAuth->showRegister($r));
