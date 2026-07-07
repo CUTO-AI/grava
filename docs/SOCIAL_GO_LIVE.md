@@ -41,8 +41,9 @@ SOCIAL_DRY_RUN=true
 
 ## 2b. Instagram-Account + Meta-App (nur wenn `instagram` in SOCIAL_CHANNELS)
 
-Instagram ist aufwändiger als X — v. a. der **Meta-App-Review** ist ein externer
-Zeitfaktor (früh beantragen). Ablauf (einmalig, manuell):
+**Detailliertes Schritt-für-Schritt: `docs/SOCIAL_INSTAGRAM_SETUP.md`** (inkl.
+Token-Beschaffung, long-lived Exchange, App-Review-Text). Kurzfassung — Ablauf
+(einmalig, manuell):
 
 1. Instagram **Business-/Creator-Account** `@cyberride` anlegen und mit einer
    **Facebook-Seite** verknüpfen.
