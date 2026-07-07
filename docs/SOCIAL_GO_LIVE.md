@@ -17,8 +17,10 @@ beide und zeigt je Kanal `configured/ok/account/error`.
 ## 1. X/Twitter-Account + Developer-App (einmalig, manuell)
 
 1. Account **`@cyberride`** anlegen (offizieller Marken-Kanal).
-2. X-Developer-Portal → Projekt + App anlegen. **Free-Tier** genügt für den Start
-   (~1 Post/Tag); für den vollen Slot-Plan später **Basic** (§5 im Feature-Doc).
+2. X-Developer-Portal → Projekt + App anlegen. **Wichtig (verifiziert 2026-07-07):**
+   Der **Free-Tier kann NICHT posten** — `POST /2/tweets` liefert `CreditsDepleted`
+   ("no credits"). Lesen/Auth funktionieren (doctor grün), aber zum **Posten ist
+   mind. Basic (~100 $/Mon) nötig**. Free reicht nur, um die Verbindung zu prüfen.
 3. App-Berechtigung auf **Read and Write** stellen (sonst schlägt das Posten fehl).
 4. **OAuth 1.0a** User-Context-Credentials erzeugen: Consumer Key/Secret
    (API Key/Secret) + Access Token/Secret **des `@cyberride`-Accounts**.

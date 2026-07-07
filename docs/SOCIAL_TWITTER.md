@@ -139,8 +139,9 @@ Links zeigen auf `PUBLIC_WEB_URL` (Fallback `APP_URL`).
    (externer Scheduler, siehe `docs/OPS_DEPLOY.local.md`).
 6. **Scharf schalten:** `SOCIAL_ENABLED=1`, `SOCIAL_DRY_RUN=0`. Erster echter
    Post beim nächsten `social-publish`.
-7. **Free-Tier prüfen:** aktuelles X-Post-Limit verifizieren; `SOCIAL_MAX_POSTS_PER_DAY`
-   passt konservativ auf 1. Bei Upgrade auf Basic Slot-Plan erweitern.
+7. **X-Tier:** Der **Free-Tier kann nicht posten** (verifiziert 2026-07-07:
+   `POST /2/tweets` → `CreditsDepleted`). Auth/Read gehen, Posten braucht
+   **mind. Basic (~100 $/Mon)**. `SOCIAL_MAX_POSTS_PER_DAY` bleibt konservativ.
 
 **Rollback:** `SOCIAL_ENABLED=0` (oder `SOCIAL_DRY_RUN=1`) → sofort wieder still.
 
