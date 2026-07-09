@@ -773,8 +773,12 @@ final class Commands
         $res = $this->regionImport->recorrectMisparented($apply, $log);
 
         echo sprintf(
-            "\nRe-Parent: %d | übersprungen (umstritten/RU): %d | Dedup gelöscht: %d | Dedup übersprungen: %d\n",
+            "\nRe-Parent (L4): %d | übersprungen (umstritten/RU): %d | Dedup gelöscht: %d | Dedup übersprungen: %d\n",
             count($res['reparented']), count($res['skipped']), count($res['dedup']), count($res['dedupSkipped'])
+        );
+        echo sprintf(
+            "Übersprungene Elter (L6/L8) umgehängt: %d | am Land belassen (kein feineres Gebiet): %d\n",
+            count($res['relinkedOrphans'] ?? []), (int)($res['orphansLeft'] ?? 0)
         );
         foreach ($res['skipped'] as $s) {
             echo sprintf("  · umstritten belassen: %s #%d (echtes Land %s)\n", $s['name'], $s['id'], $s['true_cc'] ?? '-');

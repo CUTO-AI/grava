@@ -256,7 +256,8 @@ final class RegionImportService
     {
         $log ??= static function (string $_): void {};
         $skip = array_fill_keys($skipTrueCc, true);
-        $report = ['reparented' => [], 'skipped' => [], 'dedup' => [], 'dedupSkipped' => []];
+        $report = ['reparented' => [], 'skipped' => [], 'dedup' => [], 'dedupSkipped' => [],
+                   'relinkedOrphans' => [], 'orphansLeft' => 0];
 
         // 1) Re-Parent auf Ebene 4 (die gemeldete Fehlerebene).
         foreach ($this->repo->regionsAtLevel(4) as $r) {
@@ -327,6 +328,48 @@ final class RegionImportService
                     $report['dedupSkipped'][] = ['name' => $g['name'], 'ids' => $g['ids'], 'reason' => 'loser_has_data'];
                 }
             }
+        }
+
+        // 3) Übersprungene Elter (L6/L8 direkt am Land / ohne Elter): ans FEINSTE
+        //    tatsächlich enthaltende höhere Gebiet umhängen (strikter PiP). Existiert
+        //    keins bzw. nur das gleiche Land (Staaten ohne Zwischenebene wie MK/CY),
+        //    bleibt es korrekt am Land. So werden US-Countys unter ihren Staat und
+        //    grenzüberschreitend verirrte Gemeinden (US-Riesen-bbox) in ihr echtes
+        //    Land zurückgehängt — inkl. Subtree-path/cc.
+        $levelsPresent = $this->repo->levelsPresent();   // aufsteigend
+        foreach ($this->repo->regionsWithSkippedParent() as $o) {
+            $higher = array_values(array_filter($levelsPresent, static fn(int $l): bool => $l < $o['level']));
+            $best = null;
+            $bestCore = null;
+            foreach (array_reverse($higher) as $plevel) {   // fein → grob, inkl. Land (2)
+                $cand = $this->resolveContaining($plevel, $o['center_lat'], $o['center_lon'], $o['id'], false);
+                if ($cand !== null) {
+                    $best = $cand;
+                    $bestCore = $this->repo->coreById($cand);
+                    break;
+                }
+            }
+            // Nichts enthält es, oder der feinste Treffer ist der bisherige (Land-)Elter
+            // → korrekt am Land belassen.
+            if ($best === null || $bestCore === null || $best === $o['parent_id']) {
+                $report['orphansLeft']++;
+                continue;
+            }
+            // Kein RU-Skip hier: Phase 3 repariert nur klar fehlplatzierte Gebiete
+            // (z. B. russische/spanische Gebiete, die unter der USA hängen) und hängt
+            // sie an ihr FEINSTES enthaltendes Gebiet. Die politisch umstrittenen
+            // Territorien (Krim/Sewastopol/Kaliningrad) sind L4 und werden in Phase 1
+            // bewusst gehalten; deren Untergebiete landen hier an genau diesem L4
+            // (das unverändert unter UA/LT/… bleibt), nicht direkt an RU.
+            $pcc = $bestCore['country_code'];
+            $newPrefix = rtrim($bestCore['path'], '/') . '/' . $o['id'] . '/';
+            if ($apply) {
+                $this->repo->reparentSubtree($o['id'], $best, $o['path'], $newPrefix, $pcc);
+            }
+            $report['relinkedOrphans'][] = [
+                'id' => $o['id'], 'level' => $o['level'],
+                'to' => $best, 'to_level' => (int)$bestCore['level'], 'cc' => $pcc,
+            ];
         }
 
         return $report;

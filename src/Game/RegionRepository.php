@@ -767,11 +767,11 @@ final class RegionRepository
      * gelistet: in vielen Ländern gibt es legitim keine Provinz-Ebene. Für die
      * gezielte Neu-Verknüpfung (regions:relink), Ebene aufsteigend.
      *
-     * @return list<array{id:int,level:int,center_lat:float,center_lon:float,country_code:?string}>
+     * @return list<array{id:int,level:int,parent_id:?int,path:string,center_lat:float,center_lon:float,country_code:?string}>
      */
     public function regionsWithSkippedParent(): array
     {
-        $sql = 'SELECT r.id, r.level, r.center_lat, r.center_lon, r.country_code
+        $sql = 'SELECT r.id, r.level, r.parent_id, r.path, r.center_lat, r.center_lon, r.country_code
                   FROM game_region r
              LEFT JOIN game_region p ON p.id = r.parent_id
                  WHERE r.level IN (6, 8)
@@ -782,6 +782,8 @@ final class RegionRepository
             $out[] = [
                 'id' => (int)$r['id'],
                 'level' => (int)$r['level'],
+                'parent_id' => $r['parent_id'] !== null ? (int)$r['parent_id'] : null,
+                'path' => (string)$r['path'],
                 'center_lat' => (float)$r['center_lat'],
                 'center_lon' => (float)$r['center_lon'],
                 'country_code' => $r['country_code'] !== null ? (string)$r['country_code'] : null,

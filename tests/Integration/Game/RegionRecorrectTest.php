@@ -49,11 +49,12 @@ final class RegionRecorrectTest extends IntegrationTestCase
             $feat(4, 'ProvA',  1.0, 1.0,  4.0,  4.0, null),   // in A
             $feat(4, 'ProvB', 12.0, 1.0, 15.0,  4.0, null),   // in B
             $feat(4, 'ProvC', 22.0, 1.0, 25.0,  4.0, null),   // in C
+            $feat(8, 'TownA',  2.0, 2.0,  2.4,  2.4, null),   // Gemeinde in ProvA (Center ~2.2,2.2)
         ];
         $path = sys_get_temp_dir() . '/region_rc_' . bin2hex(random_bytes(4)) . '.geojsonseq';
         file_put_contents($path, implode("\n", $lines) . "\n");
         try {
-            $this->import->importFromGeojsonSeq($path, [2, 4]);
+            $this->import->importFromGeojsonSeq($path, [2, 4, 8]);
         } finally {
             @unlink($path);
         }
@@ -116,5 +117,28 @@ final class RegionRecorrectTest extends IntegrationTestCase
         $res2 = $this->import->recorrectMisparented(true);
         $this->assertSame([], $res2['reparented'], 'zweiter Lauf: keine Re-Parents');
         $this->assertSame([], $res2['dedup'], 'zweiter Lauf: keine Dedups');
+    }
+
+    public function testSkippedParentOrphanRelinkedToFinestContainer(): void
+    {
+        $aId = $this->idByName('Aland');
+        $provA = $this->idByName('ProvA');
+        $town = $this->idByName('TownA');
+
+        // Bug simulieren: Gemeinde direkt unter dem Land (Provinz-Elter übersprungen).
+        $this->repo->reparentSubtree($town, $aId, $this->repo->pathOf($town), "/$aId/$town/", 'DE');
+        $this->assertSame($aId, (int)$this->row($town)['parent_id']);
+
+        $res = $this->import->recorrectMisparented(true);
+
+        // → zurück an die enthaltende Provinz ProvA (feinstes enthaltendes Gebiet).
+        $rt = $this->row($town);
+        $this->assertSame($provA, (int)$rt['parent_id'], 'TownA muss unter ProvA hängen');
+        $this->assertSame("/$aId/$provA/$town/", $rt['path']);
+        $this->assertContains($town, array_column($res['relinkedOrphans'], 'id'));
+
+        // Idempotenz: zweiter Lauf hängt nichts mehr um.
+        $res2 = $this->import->recorrectMisparented(true);
+        $this->assertSame([], $res2['relinkedOrphans'], 'zweiter Lauf: keine Orphan-Relinks');
     }
 }
