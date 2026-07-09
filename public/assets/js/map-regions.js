@@ -213,9 +213,12 @@
       var kids = d.children.slice().sort(function (a, b) {
         return (b.total_edges || 0) - (a.total_edges || 0) || String(a.name).localeCompare(b.name);
       }).map(function (c) {
-        var dot = c.owner ? ('<span class="dot" style="background:' + (ownerColor(c.owner) || FREE_STROKE) + '"></span>') : '<span class="dot dot--free"></span>';
+        // Führenden zeigen (owner||leader) — sonst stünde bei umkämpften Groß-
+        // Gebieten „free", obwohl sie klar geführt werden (z. B. Bayern).
+        var holder = holderOf(c);
+        var dot = holder ? ('<span class="dot" style="background:' + (ownerColor(holder) || FREE_STROKE) + '"></span>') : '<span class="dot dot--free"></span>';
         return '<li><a href="#" data-region="' + c.id + '">' + dot + '<span class="nm">' + e(displayName(c)) + '</span>'
-          + '<span class="vl">' + e(ownerName(c.owner)) + ' ›</span></a></li>';
+          + '<span class="vl">' + e(ownerName(holder)) + ' ›</span></a></li>';
       }).join('');
       parts.push('<h3 class="region-panel__h3">' + e(t('subareas', 'Unter-Gebiete')) + '</h3>');
       parts.push('<ul class="region-children">' + kids + '</ul>');
