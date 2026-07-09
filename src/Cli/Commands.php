@@ -120,6 +120,9 @@ final class Commands
             case 'social:doctor':
                 return $this->socialDoctor();
 
+            case 'social:ig-setup':
+                return $this->socialIgSetup($argv);
+
             case 'internal:logtail':
             case 'logtail':
                 return $this->logTail($argv);
@@ -1076,6 +1079,65 @@ final class Commands
         return ($res['migrations_ok'] && (!$anyConfigured || $anyOk)) ? 0 : 1;
     }
 
+    /**
+     * social:ig-setup --token=<kurzlebiger Graph-Token> [--app-id=] [--app-secret=] [--graph=v21.0]
+     * Tauscht (falls App-ID/Secret vorhanden) in einen long-lived Token und
+     * ermittelt die IG-User-ID. Gibt einen fertigen .env-Block aus. CLI-only.
+     *
+     * @param list<string> $argv
+     */
+    private function socialIgSetup(array $argv): int
+    {
+        $opts   = $this->parseOptions($argv);
+        $token  = trim((string)($opts['token'] ?? ''));
+        if ($token === '') {
+            echo "Nutzung: social:ig-setup --token=<kurzlebiger Graph-Token> [--app-id=] [--app-secret=]\n";
+            echo "Den kurzlebigen Token bekommst du im Graph API Explorer (Scopes: instagram_basic,\n";
+            echo "instagram_content_publish, pages_show_list, pages_read_engagement, business_management).\n";
+            return 1;
+        }
+        $graph    = trim((string)($opts['graph'] ?? ($this->config->get('IG_GRAPH_VERSION', 'v21.0') ?? 'v21.0')));
+        $appId    = trim((string)($opts['app-id'] ?? ($this->config->get('FB_APP_ID', '') ?? '')));
+        $appSecret= trim((string)($opts['app-secret'] ?? ($this->config->get('FB_APP_SECRET', '') ?? '')));
+
+        $setup = new \App\Social\InstagramSetup($graph);
+
+        // 1) Optional: kurzlebig → long-lived tauschen.
+        $longToken = $token;
+        $expiresIn = null;
+        if ($appId !== '' && $appSecret !== '') {
+            $ex = $setup->exchangeLongLived($appId, $appSecret, $token);
+            if (!$ex['ok']) {
+                echo "Token-Tausch fehlgeschlagen: {$ex['error']}\n";
+                return 1;
+            }
+            $longToken = (string)$ex['token'];
+            $expiresIn = $ex['expires_in'];
+            echo "Long-lived Token erzeugt" . ($expiresIn !== null ? " (gültig ~" . intdiv((int)$expiresIn, 86400) . " Tage)" : "") . ".\n";
+        } else {
+            echo "Hinweis: --app-id/--app-secret fehlen → Token wird NICHT getauscht (nutze ihn als long-lived).\n";
+        }
+
+        // 2) IG-User-ID über verknüpfte Seite ermitteln.
+        $disc = $setup->discoverBusinessAccount($longToken);
+        if (!$disc['ok']) {
+            echo "IG-Account nicht gefunden: {$disc['error']}\n";
+            return 1;
+        }
+
+        echo "\n== Gefunden ==\n";
+        echo "  Facebook-Seite : " . ($disc['page'] ?? '—') . "\n";
+        echo "  IG-Username    : @" . ($disc['username'] ?? '—') . "\n";
+        echo "  IG-User-ID     : " . $disc['ig_user_id'] . "\n";
+        echo "\n== In die .env übernehmen ==\n";
+        echo "SOCIAL_CHANNELS=instagram\n";
+        echo "IG_USER_ID={$disc['ig_user_id']}\n";
+        echo "IG_ACCESS_TOKEN={$longToken}\n";
+        echo "IG_GRAPH_VERSION={$graph}\n";
+        echo "\nDanach: social:doctor → channels.instagram.ok:true erwartet.\n";
+        return 0;
+    }
+
     private function help(): void
     {
         echo "GRAVA Backend CLI\n";
@@ -1099,7 +1161,8 @@ final class Commands
         echo "  social:preview      Trocken-Vorschau ALLER Kandidaten des Tages [--date=YYYY-MM-DD] [--lang=en|de]\n";
         echo "  social:status       Betriebs-Überblick: Queue-Zustand + letzte Sendungen\n";
         echo "  social:card         Media-Card rendern: --kind=<typ> [--date=] [--lang=] [--out=datei.png]\n";
-        echo "  social:doctor       Startklar-Check (Config, Migrationen, X-Verbindung) — postet nichts\n";
+        echo "  social:doctor       Startklar-Check (Config, Migrationen, X/IG-Verbindung) — postet nichts\n";
+        echo "  social:ig-setup     IG-Einrichtung: --token=<kurzlebig> [--app-id=][--app-secret=] → long-lived Token + IG-User-ID\n";
         echo "  help                Zeigt diese Hilfe\n";
     }
 }

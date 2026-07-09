@@ -30,6 +30,12 @@ der Ops-Teil. Feature-/Design-Kontext: `Instagram_Automation_Concept.md`.
 2. In der App: Produkt **„Instagram Graph API"** (bzw. „Instagram") hinzufügen.
 3. App bleibt im **Development-Modus** (reicht für den eigenen Account).
 
+> **Abkürzung ab Schritt 3:** Der CLI-Helfer **`social:ig-setup`** übernimmt den
+> Token-Tausch (§4) und die IG-User-ID-Suche (§3.3) automatisch. Du brauchst nur
+> den **kurzlebigen Token** aus dem Graph API Explorer:
+> `php public/index.php social:ig-setup --token=<KURZ> --app-id=<APP_ID> --app-secret=<APP_SECRET>`
+> → gibt einen fertigen `.env`-Block (IG_USER_ID + long-lived IG_ACCESS_TOKEN) aus.
+
 ## 3. Token + IG-User-ID holen (Graph API Explorer)
 
 1. App-Dashboard → Tools → **Graph API Explorer**.
