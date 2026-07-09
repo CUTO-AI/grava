@@ -130,6 +130,48 @@
 
   function clearLayer() { if (layer) { map.removeLayer(layer); layer = null; } }
 
+  // ---- Overlay: eroberte Fein-Gebiete als Punkte (App-artig) --------------
+  // Beim Rauszoomen (grobe Basis-Ebene) zeigen wir zusätzlich die EROBERTEN
+  // Landkreise als farbige Marker, damit sofort sichtbar ist, WO Revier gehalten
+  // wird — ohne dass große Gebiete flächig „übernommen" wirken.
+  var ownedLayer = null;
+  function clearOwned() { if (ownedLayer) { map.removeLayer(ownedLayer); ownedLayer = null; } }
+
+  // Marker-Ebene = eine feinere, eroberte Ebene über der groben Basis. Bei
+  // Landkreis-/Gemeinde-Zoom (Basis 6/8) genügen die Polygone selbst.
+  function markerLevelFor(baseLevel) { return baseLevel > 0 && baseLevel <= 4 ? 6 : 0; }
+
+  function drawOwnedMarkers(regions) {
+    var grp = L.layerGroup();
+    regions.forEach(function (rg) {
+      if (!rg.owner || !rg.center) { return; }   // NUR eroberte (Schwelle erreicht)
+      var col = ownerColor(rg.owner) || FREE_STROKE;
+      var m = L.circleMarker([rg.center.lat, rg.center.lon], {
+        radius: 5 + 6 * Math.min(1, rg.held_fraction || 0),
+        color: col, weight: 1.5, fillColor: col, fillOpacity: 0.75
+      });
+      m.bindTooltip('<b>' + GE.map.escapeHtml(displayName(rg)) + '</b><br>'
+        + GE.map.escapeHtml(ownerName(rg.owner)) + ' · ' + pct(rg.held_fraction), { sticky: true });
+      m.on('click', function () { openDetail(rg.id, true); });
+      grp.addLayer(m);
+    });
+    return grp;
+  }
+
+  function loadOwnedOverlay(bb, baseLevel) {
+    clearOwned();
+    var mlvl = markerLevelFor(baseLevel);
+    if (!mlvl) { return; }
+    fetchJson(apiBase + '/game/regions?geometry=0&level=' + mlvl + '&bbox=' + encodeURIComponent(bb))
+      .then(function (md) {
+        var owned = ((md && md.regions) || []).filter(function (r) { return r.owner; });
+        if (!owned.length) { return; }
+        ownedLayer = drawOwnedMarkers(owned);
+        ownedLayer.addTo(map);
+        if (highlight) { highlight.bringToFront(); }
+      }).catch(noop);
+  }
+
   function reload() {
     var bb = bboxParam();
     if (bb === lastKey) { return; }
@@ -138,10 +180,12 @@
     fetchJson(apiBase + '/game/regions?geometry=1&bbox=' + encodeURIComponent(bb))
       .then(function (d) {
         clearLayer();
+        var lvl = (d && d.level) || 0;
         layer = drawRegions((d && d.regions) || []);
         layer.addTo(map);
         if (highlight) { highlight.bringToFront(); }   // Auswahl über Basis-Layer halten
-        setMode(levelLabel((d && d.level) || 0));
+        setMode(levelLabel(lvl));
+        loadOwnedOverlay(bb, lvl);   // eroberte Fein-Gebiete als Punkte darüber
       }).catch(noop);
   }
 
