@@ -132,6 +132,7 @@
         clearLayer();
         layer = drawRegions((d && d.regions) || []);
         layer.addTo(map);
+        if (highlight) { highlight.bringToFront(); }   // Auswahl über Basis-Layer halten
         setMode(levelLabel((d && d.level) || 0));
       }).catch(noop);
   }
@@ -239,19 +240,48 @@
     });
   }
 
-  function hidePanel() { if (panel) { panel.classList.remove('is-open'); panel.innerHTML = ''; } }
+  function hidePanel() {
+    if (panel) { panel.classList.remove('is-open'); panel.innerHTML = ''; }
+    clearHighlight();
+  }
 
-  var detailFocus = null;
+  // Hervorhebung des ausgewählten Gebiets (heller Umriss über dem Basis-Layer).
+  var highlight = null;
+  function clearHighlight() { if (highlight) { map.removeLayer(highlight); highlight = null; } }
+  function showHighlight(d) {
+    clearHighlight();
+    if (!d || !d.boundary_geojson) { return null; }
+    var col = ownerColor(holderOf(d)) || '#00E5FF';
+    highlight = L.geoJSON(d.boundary_geojson, {
+      interactive: false,
+      style: { color: col, weight: 3, opacity: 1, fillColor: col, fillOpacity: 0.35, dashArray: '5 3' }
+    });
+    highlight.addTo(map);
+    highlight.bringToFront();
+    return highlight;
+  }
+
+  // maxZoom je Ebene, damit fitBounds nicht zu tief springt.
+  function maxZoomForLevel(level) {
+    return level >= 8 ? 13 : level >= 6 ? 11 : level >= 4 ? 8 : 5;
+  }
+
   function openDetail(id, recenter) {
     if (!id) { return; }
     fetchJson(apiBase + '/game/regions/' + id)
       .then(function (d) {
         if (!d) { return; }
         renderPanel(d);
-        // Auf das gewählte Gebiet zentrieren (Klick aus Panel/Unter-Gebiet).
-        if (recenter && d.center && typeof d.center.lat === 'number') {
-          var z = d.level >= 8 ? 11 : d.level >= 6 ? 9 : d.level >= 4 ? 7 : 5;
-          map.setView([d.center.lat, d.center.lon], z);
+        var hl = showHighlight(d);
+        if (!recenter) { return; }
+        // Karte auf das gewählte Gebiet zoomen (fitBounds bevorzugt).
+        if (hl && hl.getBounds && hl.getBounds().isValid()) {
+          map.fitBounds(hl.getBounds(), { padding: [30, 30], maxZoom: maxZoomForLevel(d.level) });
+        } else if (d.bbox) {
+          map.fitBounds([[d.bbox.minLat, d.bbox.minLon], [d.bbox.maxLat, d.bbox.maxLon]],
+            { padding: [30, 30], maxZoom: maxZoomForLevel(d.level) });
+        } else if (d.center && typeof d.center.lat === 'number') {
+          map.setView([d.center.lat, d.center.lon], maxZoomForLevel(d.level));
         }
       }).catch(noop);
   }

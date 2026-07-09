@@ -553,7 +553,7 @@ final class RegionRepository
     {
         $stmt = $this->pdo->prepare(
             'SELECT r.id, r.level, r.kind, r.name, r.country_code, r.parent_id, r.path, r.center_lat, r.center_lon,
-                    r.min_lat, r.min_lon, r.max_lat, r.max_lon,
+                    r.min_lat, r.min_lon, r.max_lat, r.max_lon, r.boundary_geojson,
                     o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested,
                     o.total_game_length_m, o.total_edges, o.owner_since
                FROM game_region r

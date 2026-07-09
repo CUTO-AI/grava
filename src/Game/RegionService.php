@@ -127,6 +127,12 @@ final class RegionService
             'name' => (string)$r['name'],
             'country_code' => isset($r['country_code']) && $r['country_code'] !== null ? (string)$r['country_code'] : null,
             'center' => ['lat' => (float)$r['center_lat'], 'lon' => (float)$r['center_lon']],
+            'bbox' => [
+                'minLat' => (float)$r['min_lat'], 'minLon' => (float)$r['min_lon'],
+                'maxLat' => (float)$r['max_lat'], 'maxLon' => (float)$r['max_lon'],
+            ],
+            'boundary_geojson' => isset($r['boundary_geojson']) && $r['boundary_geojson'] !== null
+                ? json_decode((string)$r['boundary_geojson'], true) : null,
             'owner' => $this->claimant($this->intOrNull($r['owner_claimant_id'])),
             'leader' => $this->claimant($this->intOrNull($r['leader_claimant_id'])),
             'contested' => (int)($r['contested'] ?? 1) === 1,
