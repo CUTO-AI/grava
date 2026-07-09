@@ -7,6 +7,10 @@
  */
 $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $pct = static fn($f): string => number_format(((float)$f) * 100, 1) . ' %';
+// Absteigend nach Kanten (aktivste Gebiete zuerst); Name als stabiler Tie-Break.
+usort($regions, static fn(array $a, array $b): int =>
+    ((int)($b['total_edges'] ?? 0) <=> (int)($a['total_edges'] ?? 0))
+    ?: strcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? '')));
 ?>
 
 <header class="page-header">

@@ -26,6 +26,13 @@ $claimantName = static function (?array $c) use ($e): string {
 $owner    = $region['owner']    ?? null;
 $contested = !empty($region['contested']);
 $totalLen = (float)($region['total_game_length_m'] ?? 0.0);
+
+// Unter-Gebiete absteigend nach Kanten (aktivste zuerst); Name als Tie-Break.
+if (!empty($region['children'])) {
+    usort($region['children'], static fn(array $a, array $b): int =>
+        ((int)($b['total_edges'] ?? 0) <=> (int)($a['total_edges'] ?? 0))
+        ?: strcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? '')));
+}
 ?>
 
 <nav class="region-breadcrumb" aria-label="<?= te('Gebiets-Pfad') ?>">
