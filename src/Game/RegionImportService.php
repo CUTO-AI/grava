@@ -153,9 +153,15 @@ final class RegionImportService
                 }
                 $parentId = null;
                 $parentCore = null;
-                // Nächsthöhere Ebene zuerst (6 vor 4 vor 2), mit Insel-bbox-Fallback.
+                // Nächsthöhere Ebene zuerst (6 vor 4 vor 2). Auf Länderebene (2)
+                // NICHT grenzüberschreitend raten: strikter Punkt-in-Polygon, und
+                // bbox-Fallback nur bei EINDEUTIGkeit (genau ein Land) — sonst würde
+                // eine Grenz-/Küstenlücke das Nachbarland (oder eine Riesen-bbox aus
+                // Übersee) greifen. Feinere Ebenen behalten den Insel-bbox-Fallback.
                 foreach (array_reverse($higher) as $plevel) {
-                    $parentId = $this->resolveContaining($plevel, $self['center_lat'], $self['center_lon'], $id, true);
+                    $parentId = $plevel === 2
+                        ? $this->resolveCountryParent($self['center_lat'], $self['center_lon'], $id)
+                        : $this->resolveContaining($plevel, $self['center_lat'], $self['center_lon'], $id, true);
                     if ($parentId !== null) {
                         $parentCore = $this->repo->coreById($parentId);
                         break;
@@ -163,7 +169,12 @@ final class RegionImportService
                 }
                 if ($parentId !== null && $parentCore !== null) {
                     $path = rtrim($parentCore['path'], '/') . '/' . $id . '/';
-                    $cc = $self['country_code'] ?? $parentCore['country_code'];
+                    // Länder-Elter: dessen country_code ist autoritativ (verhindert die
+                    // grenzüberschreitende cc-Vererbung, die den relinkOrphans-Guard
+                    // vergiftete). Feinere Elter: eigene cc bevorzugt.
+                    $cc = (int)$parentCore['level'] === 2
+                        ? ($parentCore['country_code'] ?? $self['country_code'])
+                        : ($self['country_code'] ?? $parentCore['country_code']);
                     $this->repo->setParent($id, $parentId, $path, $cc);
                 } else {
                     // Wurzel (höchste Ebene / kein Treffer).
@@ -334,6 +345,25 @@ final class RegionImportService
             }
         }
         return null;
+    }
+
+    /**
+     * Länder-Elter (Ebene 2) einer Region — grenzsicher. Strikter Punkt-in-Polygon
+     * zuerst (die verlässliche Länderzuordnung). Schlägt der fehl, wird NUR dann
+     * per bbox zugeordnet, wenn genau EIN Land dessen bbox den Punkt enthält (echte
+     * Insel/Küstenlücke). Enthalten mehrere Länder-bboxes den Punkt (Grenz-
+     * überlappung — oder eine fehlerhafte Übersee-Riesen-bbox), wird NICHT geraten
+     * (→ null), statt das Gebiet ins falsche Land zu hängen. Das schließt die
+     * Ursache der grenzüberschreitenden Fehlzuordnung (siehe regions:recorrect).
+     */
+    private function resolveCountryParent(float $lat, float $lon, int $selfId): ?int
+    {
+        $strict = $this->resolveContaining(2, $lat, $lon, $selfId, false);
+        if ($strict !== null) {
+            return $strict;
+        }
+        $cands = $this->repo->bboxCandidates(2, $lat, $lon, $selfId);
+        return count($cands) === 1 ? $cands[0]['id'] : null;
     }
 
     /**
