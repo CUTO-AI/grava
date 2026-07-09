@@ -130,43 +130,46 @@
 
   function clearLayer() { if (layer) { map.removeLayer(layer); layer = null; } }
 
-  // ---- Overlay: eroberte Fein-Gebiete als Punkte (App-artig) --------------
-  // Beim Rauszoomen (grobe Basis-Ebene) zeigen wir zusätzlich die EROBERTEN
-  // Landkreise als farbige Marker, damit sofort sichtbar ist, WO Revier gehalten
-  // wird — ohne dass große Gebiete flächig „übernommen" wirken.
+  // ---- Overlay: eroberte Fein-Gebiete als gefüllte Flächen ----------------
+  // Beim Rauszoomen (grobe Basis-Ebene) zeichnen wir die EROBERTEN Landkreise
+  // als echte, gefüllte Polygone über der groben Ebene — man sieht die tatsächlich
+  // gehaltenen Flächen, ohne dass das ganze Land flächig „übernommen" wirkt.
+  // Nur eroberte Gebiete werden geladen (owned=1) → schlanke Payload.
   var ownedLayer = null;
   function clearOwned() { if (ownedLayer) { map.removeLayer(ownedLayer); ownedLayer = null; } }
 
-  // Marker-Ebene = eine feinere, eroberte Ebene über der groben Basis. Bei
-  // Landkreis-/Gemeinde-Zoom (Basis 6/8) genügen die Polygone selbst.
-  function markerLevelFor(baseLevel) { return baseLevel > 0 && baseLevel <= 4 ? 6 : 0; }
+  // Overlay-Ebene = eine feinere Ebene über der groben Basis. Bei Landkreis-/
+  // Gemeinde-Zoom (Basis 6/8) genügen die Basis-Polygone selbst.
+  function overlayLevelFor(baseLevel) { return baseLevel > 0 && baseLevel <= 4 ? 6 : 0; }
 
-  function drawOwnedMarkers(regions) {
+  function drawOwnedPolygons(regions) {
     var grp = L.layerGroup();
     regions.forEach(function (rg) {
-      if (!rg.owner || !rg.center) { return; }   // NUR eroberte (Schwelle erreicht)
+      if (!rg.owner || !rg.boundary_geojson) { return; }
       var col = ownerColor(rg.owner) || FREE_STROKE;
-      var m = L.circleMarker([rg.center.lat, rg.center.lon], {
-        radius: 5 + 6 * Math.min(1, rg.held_fraction || 0),
-        color: col, weight: 1.5, fillColor: col, fillOpacity: 0.75
+      var poly = L.geoJSON(rg.boundary_geojson, {
+        style: {
+          color: col, weight: 1.6, opacity: 0.95,
+          fillColor: col, fillOpacity: 0.30 + 0.45 * Math.min(1, rg.held_fraction || 0)
+        }
       });
-      m.bindTooltip('<b>' + GE.map.escapeHtml(displayName(rg)) + '</b><br>'
+      poly.bindTooltip('<b>' + GE.map.escapeHtml(displayName(rg)) + '</b><br>'
         + GE.map.escapeHtml(ownerName(rg.owner)) + ' · ' + pct(rg.held_fraction), { sticky: true });
-      m.on('click', function () { openDetail(rg.id, true); });
-      grp.addLayer(m);
+      poly.on('click', function () { openDetail(rg.id, true); });
+      grp.addLayer(poly);
     });
     return grp;
   }
 
   function loadOwnedOverlay(bb, baseLevel) {
     clearOwned();
-    var mlvl = markerLevelFor(baseLevel);
-    if (!mlvl) { return; }
-    fetchJson(apiBase + '/game/regions?geometry=0&level=' + mlvl + '&bbox=' + encodeURIComponent(bb))
+    var olvl = overlayLevelFor(baseLevel);
+    if (!olvl) { return; }
+    fetchJson(apiBase + '/game/regions?geometry=1&owned=1&level=' + olvl + '&bbox=' + encodeURIComponent(bb))
       .then(function (md) {
-        var owned = ((md && md.regions) || []).filter(function (r) { return r.owner; });
+        var owned = (md && md.regions) || [];
         if (!owned.length) { return; }
-        ownedLayer = drawOwnedMarkers(owned);
+        ownedLayer = drawOwnedPolygons(owned);
         ownedLayer.addTo(map);
         if (highlight) { highlight.bringToFront(); }
       }).catch(noop);

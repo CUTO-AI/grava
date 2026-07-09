@@ -34,9 +34,10 @@ final class RegionController
         [$minLon, $minLat, $maxLon, $maxLat] = $parsed;
         $level = $this->parseLevel($req->query['level'] ?? null);
         $geometry = in_array((string)($req->query['geometry'] ?? '0'), ['1', 'true', 'yes'], true);
+        $ownedOnly = in_array((string)($req->query['owned'] ?? '0'), ['1', 'true', 'yes'], true);
 
         Response::json($this->service->regionsInBbox(
-            $minLon, $minLat, $maxLon, $maxLat, $level, $geometry, $this->viewerClaimant($req),
+            $minLon, $minLat, $maxLon, $maxLat, $level, $geometry, $this->viewerClaimant($req), $ownedOnly,
         ));
     }
 

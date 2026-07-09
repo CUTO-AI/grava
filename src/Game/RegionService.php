@@ -46,7 +46,8 @@ final class RegionService
         float $maxLat,
         ?int $level,
         bool $withGeometry,
-        ?int $viewerClaimant
+        ?int $viewerClaimant,
+        bool $ownedOnly = false
     ): array {
         $this->ensureOwnership();
         if ($level === null) {
@@ -54,7 +55,7 @@ final class RegionService
             $level = $this->levelForSpan($span);
         }
         $limit = max(1, $this->config->int('region_list_max'));
-        $rows = $this->repo->regionsInBbox($level, $minLon, $minLat, $maxLon, $maxLat, $limit, $withGeometry);
+        $rows = $this->repo->regionsInBbox($level, $minLon, $minLat, $maxLon, $maxLat, $limit, $withGeometry, $ownedOnly);
 
         $regions = [];
         foreach ($rows as $r) {

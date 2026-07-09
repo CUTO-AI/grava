@@ -495,9 +495,13 @@ final class RegionRepository
         float $maxLon,
         float $maxLat,
         int $limit,
-        bool $withGeometry
+        bool $withGeometry,
+        bool $ownedOnly = false
     ): array {
         $geoCol = $withGeometry ? ', r.boundary_geojson' : '';
+        // ownedOnly: nur eroberte Gebiete (Schwelle erreicht) — für das leichte
+        // Polygon-Overlay eroberter Fein-Gebiete beim Rauszoomen.
+        $ownedFilter = $ownedOnly ? ' AND o.owner_claimant_id IS NOT NULL AND o.contested = 0' : '';
         $sql = "SELECT r.id, r.level, r.kind, r.name, r.parent_id, r.center_lat, r.center_lon,
                        r.min_lat, r.min_lon, r.max_lat, r.max_lon,
                        o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested, o.total_edges
@@ -507,6 +511,7 @@ final class RegionRepository
                  WHERE r.level = :level
                    AND r.min_lat <= :maxLat AND r.max_lat >= :minLat
                    AND r.min_lon <= :maxLon AND r.max_lon >= :minLon
+                   {$ownedFilter}
               ORDER BY r.area_km2 DESC
                  LIMIT :lim";
         $stmt = $this->pdo->prepare($sql);
