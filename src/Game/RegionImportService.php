@@ -376,6 +376,65 @@ final class RegionImportService
     }
 
     /**
+     * Fügt EIN einzelnes Gebiet hinzu (z. B. ein nachzuladender OSM-Bundesstaat wie
+     * Alaska, der beim Massen-Import fehlte) und verknüpft NUR dieses an sein Land
+     * (per country_code, deterministisch) — OHNE die globale linkHierarchy erneut
+     * laufen zu lassen (die würde u. a. die bewusst gehaltenen umstrittenen
+     * Territorien neu verteilen). Untergebiete zieht anschließend
+     * {@see recorrectMisparented()} per striktem Punkt-in-Polygon nach.
+     *
+     * @param array<string,mixed> $geometry  GeoJSON-Geometrie (Polygon/MultiPolygon)
+     * @return array{id:int,parent_id:?int}
+     */
+    public function addSingleRegion(
+        array $geometry,
+        int $level,
+        string $name,
+        string $countryCode,
+        ?int $osmRelationId = null,
+        ?float $centerLat = null,
+        ?float $centerLon = null
+    ): array {
+        $bbox = GeoPolygon::bbox($geometry);
+        if ($bbox === null) {
+            throw new \RuntimeException('Geometrie ohne verwertbare bbox.');
+        }
+        $center = ($centerLat !== null && $centerLon !== null)
+            ? ['lat' => $centerLat, 'lon' => $centerLon]
+            : (GeoPolygon::representativePoint($geometry) ?? [
+                'lat' => ($bbox['minLat'] + $bbox['maxLat']) / 2,
+                'lon' => ($bbox['minLon'] + $bbox['maxLon']) / 2,
+            ]);
+        $simplified = GeoPolygon::simplify($geometry, self::SIMPLIFY_TOL[$level] ?? 0.001);
+
+        $id = $this->repo->insertRegion([
+            'osm_relation_id'  => $osmRelationId,
+            'level'            => $level,
+            'kind'             => self::KIND[$level] ?? ('level' . $level),
+            'name'             => mb_substr($name, 0, 120),
+            'country_code'     => $countryCode,
+            'center_lat'       => $center['lat'],
+            'center_lon'       => $center['lon'],
+            'min_lat'          => $bbox['minLat'],
+            'min_lon'          => $bbox['minLon'],
+            'max_lat'          => $bbox['maxLat'],
+            'max_lon'          => $bbox['maxLon'],
+            'area_km2'         => $this->approxAreaKm2($bbox),
+            'boundary_geojson' => json_encode($simplified, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $parentId = $this->repo->countryIdByCode($countryCode);
+        if ($parentId === null) {
+            $this->repo->setParent($id, null, '/' . $id . '/', $countryCode);
+            return ['id' => $id, 'parent_id' => null];
+        }
+        $pc = $this->repo->coreById($parentId);
+        $path = rtrim((string)($pc['path'] ?? '/' . $parentId), '/') . '/' . $id . '/';
+        $this->repo->setParent($id, $parentId, $path, $countryCode);
+        return ['id' => $id, 'parent_id' => $parentId];
+    }
+
+    /**
      * feinstes Gebiet, das den Punkt enthält — Ebenen von fein nach grob
      * (8→6→4→2). Kleinste Fläche gewinnt bei Overlaps. Für Ingest & Backfill.
      */

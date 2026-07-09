@@ -92,6 +92,9 @@ final class Commands
             case 'regions:recorrect':
                 return $this->regionsRecorrect($argv);
 
+            case 'regions:add-osm':
+                return $this->regionsAddOsm($argv);
+
             case 'cron:region-ownership':
             case 'regions:ownership-refresh':
                 return $this->regionsOwnershipRefresh();
@@ -793,6 +796,135 @@ final class Commands
             echo "fertig.\n";
         }
         return 0;
+    }
+
+    /**
+     * regions:add-osm --relation=<id> --level=<n> --name=<Name> --cc=<ISO2>
+     *                 [--center=lat,lon]
+     *
+     * Lädt EINE OSM-Verwaltungsgrenze (polygons.openstreetmap.fr) nach und fügt sie
+     * als einzelne Region hinzu — für Gebiete, die beim Massen-Import fehlten (z. B.
+     * Bundesstaat Alaska, dessen Antimeridian-Geometrie durchrutschte). Ringe in der
+     * Osthalbkugel (lon > 0) werden verworfen (transpazifischer Aleuten-Zipfel), damit
+     * die bbox nicht den halben Globus umspannt. Danach `regions:recorrect --apply`
+     * ausführen, um Untergebiete (Boroughs) einzunisten.
+     */
+    private function regionsAddOsm(array $argv): int
+    {
+        if ($this->regionImport === null) {
+            echo "regions:add-osm nicht verfügbar (Service nicht verdrahtet).\n";
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $relation = (int)($opts['relation'] ?? 0);
+        $level    = (int)($opts['level'] ?? 0);
+        $name     = trim((string)($opts['name'] ?? ''));
+        $cc       = strtoupper(trim((string)($opts['cc'] ?? '')));
+        if ($relation <= 0 || $level <= 0 || $name === '' || $cc === '') {
+            echo "Nutzung: regions:add-osm --relation=<id> --level=<2|4|6|8> --name=<Name> --cc=<ISO2> [--center=lat,lon]\n";
+            return 1;
+        }
+        $centerLat = $centerLon = null;
+        if (isset($opts['center']) && str_contains((string)$opts['center'], ',')) {
+            [$centerLat, $centerLon] = array_map('floatval', explode(',', (string)$opts['center'], 2));
+        }
+
+        $url = "https://polygons.openstreetmap.fr/get_geojson.py?id={$relation}&params=0";
+        echo "Lade OSM-Relation {$relation} …\n";
+        $raw = @file_get_contents($url, false, stream_context_create([
+            'http' => ['timeout' => 60, 'header' => "User-Agent: GravelExplorer/1.0 (region add)\r\n"],
+        ]));
+        if ($raw === false || $raw === '') {
+            echo "Fehler: Download fehlgeschlagen ({$url}).\n";
+            return 1;
+        }
+        $decoded = json_decode($raw, true);
+        $geometry = $this->extractGeometry($decoded);
+        if ($geometry === null) {
+            echo "Fehler: keine Polygon/MultiPolygon-Geometrie in der Antwort.\n";
+            return 1;
+        }
+        $geometry = $this->clipEasternHemisphere($geometry);
+
+        ini_set('memory_limit', '2G');
+        try {
+            $res = $this->regionImport->addSingleRegion($geometry, $level, $name, $cc, $relation, $centerLat, $centerLon);
+        } catch (\Throwable $e) {
+            echo "Fehler: {$e->getMessage()}\n";
+            return 1;
+        }
+        echo sprintf("Region '%s' angelegt: #%d (Land-Elter #%s).\n",
+            $name, $res['id'], $res['parent_id'] !== null ? (string)$res['parent_id'] : 'NULL');
+        echo "Nächster Schritt: php public/index.php regions:recorrect --apply  (nistet Untergebiete ein)\n";
+        return 0;
+    }
+
+    /**
+     * Holt eine Polygon/MultiPolygon-Geometrie aus verschiedenen GeoJSON-Hüllen
+     * (bare Geometry, Feature, FeatureCollection, GeometryCollection).
+     *
+     * @param mixed $d
+     * @return array<string,mixed>|null
+     */
+    private function extractGeometry(mixed $d): ?array
+    {
+        if (!is_array($d)) {
+            return null;
+        }
+        $type = $d['type'] ?? null;
+        if ($type === 'Polygon' || $type === 'MultiPolygon') {
+            return $d;
+        }
+        if ($type === 'Feature' && isset($d['geometry']) && is_array($d['geometry'])) {
+            return $this->extractGeometry($d['geometry']);
+        }
+        if ($type === 'FeatureCollection' && isset($d['features'][0]['geometry'])) {
+            return $this->extractGeometry($d['features'][0]['geometry']);
+        }
+        if ($type === 'GeometryCollection' && isset($d['geometries']) && is_array($d['geometries'])) {
+            foreach ($d['geometries'] as $g) {
+                $hit = $this->extractGeometry($g);
+                if ($hit !== null) {
+                    return $hit;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Verwirft (bei MultiPolygon) Teil-Polygone, die in der Osthalbkugel liegen
+     * (irgendein lon > 0) — der transpazifische Antimeridian-Zipfel (z. B. äußere
+     * Aleuten). So bleibt die bbox auf die Westhalbkugel beschränkt. Ein reiner
+     * Polygon (kein MultiPolygon) bleibt unverändert.
+     *
+     * @param array<string,mixed> $geometry
+     * @return array<string,mixed>
+     */
+    private function clipEasternHemisphere(array $geometry): array
+    {
+        if (($geometry['type'] ?? null) !== 'MultiPolygon' || !is_array($geometry['coordinates'] ?? null)) {
+            return $geometry;
+        }
+        $kept = [];
+        foreach ($geometry['coordinates'] as $polygon) {
+            $hasEast = false;
+            foreach ((array)$polygon as $ring) {
+                foreach ((array)$ring as $pt) {
+                    if (is_array($pt) && isset($pt[0]) && (float)$pt[0] > 0.0) {
+                        $hasEast = true;
+                        break 2;
+                    }
+                }
+            }
+            if (!$hasEast) {
+                $kept[] = $polygon;
+            }
+        }
+        if ($kept !== [] && count($kept) < count($geometry['coordinates'])) {
+            $geometry['coordinates'] = $kept;
+        }
+        return $geometry;
     }
 
     /**

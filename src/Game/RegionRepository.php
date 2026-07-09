@@ -801,6 +801,17 @@ final class RegionRepository
         return $v === false ? null : (string)$v;
     }
 
+    /** Land-Gebiet (L2) zu einem ISO-country_code, kleinste id zuerst. */
+    public function countryIdByCode(string $countryCode): ?int
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id FROM game_region WHERE level = 2 AND country_code = ? ORDER BY id LIMIT 1'
+        );
+        $stmt->execute([$countryCode]);
+        $v = $stmt->fetchColumn();
+        return $v === false ? null : (int)$v;
+    }
+
     // ---- Korrektur falsch verknüpfter Gebiete (regions:recorrect) -----------
 
     /**

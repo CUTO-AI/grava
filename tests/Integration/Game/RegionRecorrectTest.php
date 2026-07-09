@@ -119,6 +119,22 @@ final class RegionRecorrectTest extends IntegrationTestCase
         $this->assertSame([], $res2['dedup'], 'zweiter Lauf: keine Dedups');
     }
 
+    public function testAddSingleRegionAttachesToCountryByCode(): void
+    {
+        $aId = $this->idByName('Aland');
+        // Polygon vollständig innerhalb von Aland (0..10).
+        $geom = ['type' => 'Polygon', 'coordinates' => [[[5, 5], [7, 5], [7, 7], [5, 7], [5, 5]]]];
+
+        $res = $this->import->addSingleRegion($geom, 4, 'NeuStaat', 'DE', 999001);
+
+        $this->assertGreaterThan(0, $res['id']);
+        $this->assertSame($aId, $res['parent_id'], 'Elter per country_code = Aland');
+        $r = $this->row($res['id']);
+        $this->assertSame($aId, (int)$r['parent_id']);
+        $this->assertSame('DE', $r['country_code']);
+        $this->assertSame("/$aId/{$res['id']}/", $r['path']);
+    }
+
     public function testSkippedParentOrphanRelinkedToFinestContainer(): void
     {
         $aId = $this->idByName('Aland');
