@@ -252,12 +252,12 @@ final class RegionImportService
      * @param list<string> $skipTrueCc
      * @return array{reparented:list<array<string,mixed>>,skipped:list<array<string,mixed>>,dedup:list<array<string,mixed>>,dedupSkipped:list<array<string,mixed>>}
      */
-    public function recorrectMisparented(bool $apply, ?callable $log = null, array $skipTrueCc = ['RU']): array
+    public function recorrectMisparented(bool $apply, ?callable $log = null, array $skipTrueCc = ['RU'], bool $purgeHomeless = false): array
     {
         $log ??= static function (string $_): void {};
         $skip = array_fill_keys($skipTrueCc, true);
         $report = ['reparented' => [], 'skipped' => [], 'dedup' => [], 'dedupSkipped' => [],
-                   'relinkedOrphans' => [], 'orphansLeft' => 0];
+                   'relinkedOrphans' => [], 'orphansLeft' => 0, 'deletedHomeless' => []];
 
         // 1) Re-Parent auf Ebene 4 (die gemeldete Fehlerebene).
         foreach ($this->repo->regionsAtLevel(4) as $r) {
@@ -370,6 +370,29 @@ final class RegionImportService
                 'id' => $o['id'], 'level' => $o['level'],
                 'to' => $best, 'to_level' => (int)$bestCore['level'], 'cc' => $pcc,
             ];
+        }
+
+        // 4) Heimatlose Fremd-Fragmente entfernen (nur mit $purgeHomeless): L6/L8
+        //    direkt an einem Land, 0 Kanten, 0 Nachfahren, und KEIN Land enthält
+        //    ihren Center (strikter PiP leer). Das sind über die frühere US-Riesen-
+        //    bbox eingesammelte Grenz-Gemeinden NICHT abgedeckter Nachbarländer
+        //    (CA/MX/AZ/IR). Der PiP-leer-Test schützt reparierbare Fälle (die hätte
+        //    Phase 3 an ihr echtes Land gehängt).
+        if ($purgeHomeless) {
+            foreach ($this->repo->regionsWithSkippedParent() as $o) {
+                if ($this->repo->treeEdgeCount($o['path']) > 0
+                    || $this->repo->descendantCount($o['path'], $o['id']) > 0) {
+                    continue;
+                }
+                if ($this->resolveContaining(2, $o['center_lat'], $o['center_lon'], $o['id'], false) !== null) {
+                    continue;   // ein Land enthält es → gehört dorthin, nicht löschen
+                }
+                if ($apply) {
+                    $this->repo->deleteRegion($o['id']);
+                }
+                $report['deletedHomeless'][] = ['id' => $o['id'], 'level' => $o['level'], 'name' => $o['name']];
+                $log(sprintf('delete homeless %s #%d (L%d)', $o['name'], $o['id'], $o['level']));
+            }
         }
 
         return $report;

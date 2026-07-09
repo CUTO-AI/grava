@@ -771,7 +771,7 @@ final class RegionRepository
      */
     public function regionsWithSkippedParent(): array
     {
-        $sql = 'SELECT r.id, r.level, r.parent_id, r.path, r.center_lat, r.center_lon, r.country_code
+        $sql = 'SELECT r.id, r.level, r.name, r.parent_id, r.path, r.center_lat, r.center_lon, r.country_code
                   FROM game_region r
              LEFT JOIN game_region p ON p.id = r.parent_id
                  WHERE r.level IN (6, 8)
@@ -782,6 +782,7 @@ final class RegionRepository
             $out[] = [
                 'id' => (int)$r['id'],
                 'level' => (int)$r['level'],
+                'name' => (string)$r['name'],
                 'parent_id' => $r['parent_id'] !== null ? (int)$r['parent_id'] : null,
                 'path' => (string)$r['path'],
                 'center_lat' => (float)$r['center_lat'],

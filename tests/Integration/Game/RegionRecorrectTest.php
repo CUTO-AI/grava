@@ -157,4 +157,28 @@ final class RegionRecorrectTest extends IntegrationTestCase
         $res2 = $this->import->recorrectMisparented(true);
         $this->assertSame([], $res2['relinkedOrphans'], 'zweiter Lauf: keine Orphan-Relinks');
     }
+
+    public function testPurgeHomelessRemovesForeignFragmentWithoutContainingCountry(): void
+    {
+        $aId = $this->idByName('Aland');
+        // Heimatloses Fragment: L6 direkt unter Aland, Center bei (50,50) — außerhalb
+        // ALLER Länder (A/B/C liegen bei lon 0..30), 0 Kanten, 0 Nachfahren.
+        $geo = json_encode(['type' => 'Polygon', 'coordinates' => [[[49, 49], [51, 49], [51, 51], [49, 51], [49, 49]]]]);
+        $this->pdo->prepare(
+            "INSERT INTO game_region (level, kind, name, country_code, parent_id, path, center_lat, center_lon, min_lat, min_lon, max_lat, max_lon, boundary_geojson, bbox_geom)
+             VALUES (6,'boundary','Ghost','DE',?, '/', 50,50,49,49,51,51, ?, ST_SRID(ST_GeomFromText('POLYGON((49 49,51 49,51 51,49 51,49 49))'),0))"
+        )->execute([$aId, $geo]);
+        $ghost = (int)$this->pdo->lastInsertId();
+        $this->pdo->prepare('UPDATE game_region SET path = ? WHERE id = ?')->execute(["/$aId/$ghost/", $ghost]);
+
+        // Ohne --purge: bleibt erhalten (nur am Land belassen).
+        $res = $this->import->recorrectMisparented(true);
+        $this->assertNotSame([], $this->row($ghost), 'ohne purge nicht gelöscht');
+        $this->assertSame([], $res['deletedHomeless']);
+
+        // Mit purge: gelöscht (kein Land enthält (50,50), 0 Kanten).
+        $res2 = $this->import->recorrectMisparented(true, null, ['RU'], true);
+        $this->assertContains($ghost, array_column($res2['deletedHomeless'], 'id'));
+        $this->assertSame([], $this->row($ghost), 'mit purge gelöscht');
+    }
 }

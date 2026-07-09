@@ -769,20 +769,27 @@ final class Commands
             return 1;
         }
         $apply = in_array('--apply', $argv, true);
+        $purgeHomeless = in_array('--purge-homeless', $argv, true);
         ini_set('memory_limit', '2G');
         $log = static function (string $m): void { echo '  ' . $m . "\n"; };
 
         echo ($apply ? "== ANWENDEN ==\n" : "== DRY-RUN (Vorschau; --apply zum Anwenden) ==\n");
-        $res = $this->regionImport->recorrectMisparented($apply, $log);
+        if ($purgeHomeless) {
+            echo "   (--purge-homeless: heimatlose Fremd-Fragmente werden entfernt)\n";
+        }
+        $res = $this->regionImport->recorrectMisparented($apply, $log, ['RU'], $purgeHomeless);
 
         echo sprintf(
             "\nRe-Parent (L4): %d | übersprungen (umstritten/RU): %d | Dedup gelöscht: %d | Dedup übersprungen: %d\n",
             count($res['reparented']), count($res['skipped']), count($res['dedup']), count($res['dedupSkipped'])
         );
         echo sprintf(
-            "Übersprungene Elter (L6/L8) umgehängt: %d | am Land belassen (kein feineres Gebiet): %d\n",
-            count($res['relinkedOrphans'] ?? []), (int)($res['orphansLeft'] ?? 0)
+            "Übersprungene Elter (L6/L8) umgehängt: %d | am Land belassen: %d | heimatlos gelöscht: %d\n",
+            count($res['relinkedOrphans'] ?? []), (int)($res['orphansLeft'] ?? 0), count($res['deletedHomeless'] ?? [])
         );
+        foreach ($res['deletedHomeless'] as $d) {
+            echo sprintf("  · heimatlos gelöscht: %s #%d (L%d)\n", $d['name'], $d['id'], $d['level']);
+        }
         foreach ($res['skipped'] as $s) {
             echo sprintf("  · umstritten belassen: %s #%d (echtes Land %s)\n", $s['name'], $s['id'], $s['true_cc'] ?? '-');
         }
