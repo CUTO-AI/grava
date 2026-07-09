@@ -442,6 +442,8 @@ $apiPrivacyZone = new \App\Controllers\Api\PrivacyZoneController($privacyZoneSvc
 // $gameCrewRepo, $gameFactionRepo, $gameCrewSvc wurden bereits oben (vor dem
 // CLI-Dispatch) verdrahtet.
 $apiCrew = new \App\Controllers\Api\CrewController($gameCrewSvc);
+$crewBoardSvc = new \App\Game\CrewLeaderboardService($gameCrewRepo);
+$apiCrewBoard = new \App\Controllers\Api\CrewLeaderboardController($crewBoardSvc);
 $apiCrewLogo = new \App\Controllers\Api\CrewLogoController(
     new \App\Game\Crew\CrewLogoService($gameCrewRepo, $config),
 );
@@ -462,6 +464,14 @@ $webAuth    = new AuthPagesController($auth, $cookieAuth, $webSession, $rate, $b
 $webHome    = new DashboardController($webSession, $auth, $basePath . '/views');
 $webFeatures = new \App\Controllers\Web\FeaturesPagesController($webSession, $auth, $basePath . '/views');
 $webPulse   = new \App\Controllers\Web\PulsePagesController($webSession, $auth, $basePath . '/views');
+$webRankings = new \App\Controllers\Web\RankingsPagesController(
+    $webSession, $auth, $gameRepo, $crewBoardSvc, $gameFactionSvc, $basePath . '/views',
+);
+$webRegions = new \App\Controllers\Web\RegionsPagesController(
+    $webSession, $auth,
+    new \App\Game\RegionService($regionRepo, $gameRepo, $gameConfig, $regionOwnershipSvc),
+    $gameRepo, $basePath . '/views',
+);
 $webRefresh = new WebRefreshController($cookieAuth, $webSession);
 $webRoutes  = new RoutePagesController($webSession, $auth, $routeService, $shareTokens, $config, $routeGeoJson, $basePath . '/views', $routeInsights);
 $webShare   = new PublicSharePageController($shareTokens, $basePath . '/views', $routeService, $routeGeoJson, $routeInsights, $privacyZoneRepo, $privacyTrimmer);
@@ -655,6 +665,9 @@ $router->get("{$apiBase}/game/me/regions",         fn($r) => $apiRegion->mine($r
 $router->get("{$apiBase}/game/regions/{id}",       fn($r) => $apiRegion->detail($r), [$optionalBearer]);
 // Solo-/Spieler-Rangliste (S7): world anonym, friends/me brauchen Bearer.
 $router->get("{$apiBase}/game/leaderboard",        fn($r) => $apiPlayerBoard->index($r), [$optionalBearer]);
+// Globale Crew-Rangliste (all-time, gehaltene Strecke). Statische Route VOR
+// /game/crews/{slug}, damit „leaderboard" nicht als Slug gematcht wird.
+$router->get("{$apiBase}/game/crews/leaderboard",  fn($r) => $apiCrewBoard->index($r),   [$optionalBearer]);
 // Segment-Speed / Tempo-Wertung: Leaderboard je Kante (OptionalBearer; friends/me
 // brauchen Bearer), eigene Bestzeiten (Bearer).
 $router->get("{$apiBase}/game/segments/{id}/leaderboard", fn($r) => $apiSegment->leaderboard($r), [$optionalBearer]);
@@ -749,6 +762,11 @@ $router->get('/imprint',           fn($r) => $webLegal->imprint($r));
 $router->get('/dashboard',         fn($r) => $webHome->show($r));
 $router->get('/features',          fn($r) => $webFeatures->show($r));
 $router->get('/pulse',             fn($r) => $webPulse->show($r));
+// Öffentliche Auswertungen (WebAnalytics_Concept.md): Ranglisten + Gebiete (SSR).
+$router->get('/rangliste',            fn($r) => $webRankings->show($r, 'solo'));
+$router->get('/rangliste/{tab}',      fn($r) => $webRankings->show($r, (string)($r->routeParams['tab'] ?? 'solo')));
+$router->get('/gebiete',              fn($r) => $webRegions->index($r));
+$router->get('/gebiete/{id}',         fn($r) => $webRegions->detail($r, (int)($r->routeParams['id'] ?? 0)));
 $router->post('/logout',           fn($r) => $webAuth->doLogout($r),          [$csrf]);
 // H5: Einziger Punkt, an dem ein Refresh-Token-Cookie konsumiert wird.
 // Pfad-Scoped Cookie sorgt dafür, dass es nur hier eintrifft.

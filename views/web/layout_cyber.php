@@ -103,6 +103,8 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
       <a href="/discover"><?= te('Entdecken') ?></a>
       <a href="/heatmap"><?= te('Heatmap') ?></a>
       <a href="/pulse"><?= te('Heute im Spiel') ?></a>
+      <a href="/rangliste"><?= te('Ranglisten') ?></a>
+      <a href="/gebiete"><?= te('Gebiete') ?></a>
       <?php if ($_surfaceCheck): ?><a href="/surface-check"><?= te('Belag prüfen') ?></a><?php endif; ?>
       <a href="/feed"><?= te('Feed') ?></a>
       <a href="/notifications"><?= te('Mitteilungen') ?><?php if ((int)$_notifUnread > 0): ?> <span class="notif-badge"><?= (int)$_notifUnread ?></span><?php endif; ?></a>
@@ -114,6 +116,8 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
       <a href="/discover"><?= te('Entdecken') ?></a>
       <a href="/heatmap"><?= te('Heatmap') ?></a>
       <a href="/pulse"><?= te('Heute im Spiel') ?></a>
+      <a href="/rangliste"><?= te('Ranglisten') ?></a>
+      <a href="/gebiete"><?= te('Gebiete') ?></a>
     <?php endif; ?>
     </div>
     <span class="lang-switch">

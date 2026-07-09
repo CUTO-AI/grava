@@ -27,7 +27,8 @@ final class SitemapController
 
     /** @var list<string> Öffentliche, indexierbare statische Pfade. */
     private const STATIC_PATHS = [
-        '/', '/features', '/pulse', '/discover', '/discover/users',
+        '/', '/features', '/pulse', '/rangliste', '/gebiete',
+        '/discover', '/discover/users',
         '/heatmap', '/privacy', '/terms', '/imprint',
     ];
 

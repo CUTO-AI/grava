@@ -64,6 +64,21 @@ final class RegionService
     }
 
     /**
+     * Wurzel-Gebiete (Länder) für den Einstieg in die Web-Gebietsliste.
+     *
+     * @return array{regions:list<array<string,mixed>>}
+     */
+    public function rootRegions(?int $viewerClaimant): array
+    {
+        $this->ensureOwnership();
+        $regions = [];
+        foreach ($this->repo->rootRegions() as $r) {
+            $regions[] = $this->serializeRegion($r, $viewerClaimant, false);
+        }
+        return ['regions' => $regions];
+    }
+
+    /**
      * GET /game/regions/{id} — Detail mit Breadcrumb (hoch), Kindern (runter) und
      * In-Gebiet-Bestenliste.
      *

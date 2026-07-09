@@ -1,0 +1,94 @@
+/*
+ * analytics.css — Ranglisten- und Gebiets-Auswertungen (WebAnalytics_Concept.md).
+ * Ergänzt die globalen .data-table/.card/.page-header-Stile um Tab-Leiste,
+ * Crew-/Fraktions-Zellen und Breadcrumb. Fällt ohne Theme-Variablen auf
+ * neutrale Werte zurück.
+ */
+
+/* Tab-Leiste (Ranglisten-Kategorien) */
+.rank-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 20px;
+}
+.rank-tab {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs, .8rem);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: 8px 16px;
+    border: 1px solid var(--line-soft, #ccc);
+    border-radius: var(--radius-pill, 999px);
+    color: var(--text-muted, #666);
+    text-decoration: none;
+    transition: color .15s, border-color .15s, background .15s;
+}
+.rank-tab:hover {
+    color: var(--primary, #06b6d4);
+    border-color: var(--border-strong, var(--primary, #06b6d4));
+    text-decoration: none;
+}
+.rank-tab.is-active {
+    color: var(--bg, #fff);
+    background: var(--primary, #06b6d4);
+    border-color: var(--primary, #06b6d4);
+}
+
+/* Crew-/Fraktions-Zelle mit Logo bzw. Farbpunkt */
+.crew-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.crew-logo {
+    border-radius: var(--radius-sm, 4px);
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+.faction-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+/* Gebiets-Breadcrumb */
+.region-breadcrumb {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs, .8rem);
+    color: var(--text-muted, #666);
+    margin: 0 0 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    align-items: center;
+}
+.region-breadcrumb .sep { opacity: .5; }
+
+/* Kennzahl-Kacheln auf der Gebiets-Detailseite */
+.region-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 0 0 8px;
+}
+.region-stat {
+    border: 1px solid var(--line-soft, #ccc);
+    border-radius: var(--radius, 10px);
+    padding: 14px 16px;
+}
+.region-stat .val {
+    font-size: var(--text-xl, 1.4rem);
+    font-variant-numeric: tabular-nums;
+    color: var(--text, inherit);
+}
+.region-stat .lbl {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs, .75rem);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted, #666);
+    margin-top: 4px;
+}

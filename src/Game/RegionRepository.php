@@ -520,6 +520,30 @@ final class RegionRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    /**
+     * Wurzel-Gebiete (Länder, L2 / ohne Elter) inkl. Besitz-Cache — Einstieg für
+     * die Web-Gebietsliste. Wie {@see regionsInBbox()}, aber ohne bbox-Filter,
+     * alphabetisch.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function rootRegions(int $limit = 400): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT r.id, r.level, r.kind, r.name, r.parent_id, r.center_lat, r.center_lon,
+                    r.min_lat, r.min_lon, r.max_lat, r.max_lon,
+                    o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested, o.total_edges
+               FROM game_region r
+          LEFT JOIN game_region_ownership o ON o.region_id = r.id
+              WHERE r.parent_id IS NULL
+           ORDER BY r.name ASC
+              LIMIT :lim'
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
     /** Volles Gebiet inkl. Besitz-Cache. @return array<string,mixed>|null */
     public function regionFull(int $id): ?array
     {

@@ -140,6 +140,32 @@ final class RegionServiceTest extends IntegrationTestCase
         $this->assertSame(1, $detail['me']['rank']);
     }
 
+    public function testRootRegionsReturnsCountriesOnly(): void
+    {
+        $muni = $this->regionId(8);
+        $a = $this->claimant('dave');
+        for ($i = 0; $i < 4; $i++) {
+            $this->ownedEdge($muni, $a, 100.0);
+        }
+        $this->own->recomputeAll('2026-07-03 12:00:00.000');
+
+        $roots = $this->svc->rootRegions($a);
+        $names = array_column($roots['regions'], 'name');
+        // Nur die Wurzel (Land), keine Unter-Gebiete.
+        $this->assertContains('Testland', $names);
+        $this->assertNotContains('Teststadt', $names);
+
+        $land = null;
+        foreach ($roots['regions'] as $r) {
+            if ($r['name'] === 'Testland') {
+                $land = $r;
+            }
+        }
+        $this->assertNotNull($land);
+        $this->assertSame(2, $land['level']);
+        $this->assertNull($land['parent_id']);
+    }
+
     public function testSelfHealComputesOwnershipOnRead(): void
     {
         $muni = $this->regionId(8);

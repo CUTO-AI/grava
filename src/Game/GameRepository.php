@@ -1084,6 +1084,43 @@ final class GameRepository
         ];
     }
 
+    /**
+     * Globale Solo-Rangliste (all-time) nach gehaltener Revierlänge: Σ length_m
+     * der eigenen (rider-)Kanten, absteigend, Tie stabil per claimant_id. Für die
+     * öffentliche Web-Auswertung (WebAnalytics_Concept.md). Nur echte Fahrer
+     * (game_claimant.type='rider'); herrenlose/Crew-Kanten zählen nicht.
+     *
+     * @return list<array{claimant_id:int,handle:?string,name:?string,held_length_m:float,held_edges:int}>
+     */
+    public function topRidersByHeldLength(int $limit): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT e.owner_claimant_id AS cid,
+                    u.public_handle AS handle, u.display_name AS name,
+                    SUM(e.length_m) AS len, COUNT(*) AS edges
+               FROM game_edge e
+               JOIN game_claimant c ON c.id = e.owner_claimant_id AND c.type = 'rider'
+               JOIN users u         ON u.id = c.user_id
+              WHERE e.owner_claimant_id IS NOT NULL
+           GROUP BY e.owner_claimant_id
+           ORDER BY len DESC, e.owner_claimant_id ASC
+              LIMIT :lim"
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = [
+                'claimant_id'   => (int)$r['cid'],
+                'handle'        => $r['handle'] !== null ? (string)$r['handle'] : null,
+                'name'          => $r['name'] !== null ? (string)$r['name'] : null,
+                'held_length_m' => (float)$r['len'],
+                'held_edges'    => (int)$r['edges'],
+            ];
+        }
+        return $out;
+    }
+
     // ----------------------------------------------------------------
     // Revier-Verlauf (GameHistory_Backend_Spec.md) — tägliche Snapshots
     // ----------------------------------------------------------------

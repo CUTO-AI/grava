@@ -308,6 +308,52 @@ final class CrewRepository
         return (int)$stmt->fetchColumn();
     }
 
+    /**
+     * Globale Crew-Rangliste nach gehaltener Revierlänge (all-time). Dieselbe
+     * Aggregat-Formel und derselbe Tie-Break (crew_id ASC) wie
+     * {@see crewWorldRank()}, damit Rang und Liste deckungsgleich sind. Nur Crews
+     * mit gehaltenem Revier (len > 0). Faction/Mitgliederzahl per Join für die
+     * Anzeige.
+     *
+     * @return list<array{crew_id:int,claimant_id:int,slug:string,name:string,logo_updated_at:?string,faction_key:?string,faction_color:?string,member_count:int,held_length_m:float,held_edges:int}>
+     */
+    public function topByHeldLength(int $limit): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT cr.id AS crew_id, cr.claimant_id, cr.slug, cr.name, cr.logo_updated_at,
+                    ANY_VALUE(f.key_slug)  AS faction_key,
+                    ANY_VALUE(f.color_hex) AS faction_color,
+                    (SELECT COUNT(*) FROM game_crew_member m WHERE m.crew_id = cr.id) AS member_count,
+                    COALESCE(SUM(e.length_m), 0) AS held_length_m,
+                    COUNT(e.id) AS held_edges
+               FROM game_crew cr
+          LEFT JOIN game_edge e     ON e.owner_claimant_id = cr.claimant_id
+          LEFT JOIN game_faction f  ON f.id = cr.faction_id
+           GROUP BY cr.id
+             HAVING held_length_m > 0
+           ORDER BY held_length_m DESC, cr.id ASC
+              LIMIT :lim'
+        );
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = [
+                'crew_id'         => (int)$r['crew_id'],
+                'claimant_id'     => (int)$r['claimant_id'],
+                'slug'            => (string)$r['slug'],
+                'name'            => (string)$r['name'],
+                'logo_updated_at' => $r['logo_updated_at'] !== null ? (string)$r['logo_updated_at'] : null,
+                'faction_key'     => $r['faction_key'] !== null ? (string)$r['faction_key'] : null,
+                'faction_color'   => $r['faction_color'] !== null ? (string)$r['faction_color'] : null,
+                'member_count'    => (int)$r['member_count'],
+                'held_length_m'   => (float)$r['held_length_m'],
+                'held_edges'      => (int)$r['held_edges'],
+            ];
+        }
+        return $out;
+    }
+
     // ----------------------------------------------------------------
     // Rangliste (Leaderboard) — reine Lese-Aggregationen
     // ----------------------------------------------------------------
