@@ -83,16 +83,24 @@
       .map(function (n) { return n.toFixed(5); }).join(',');
   }
 
+  // „Halter" = alleiniger Besitzer ODER (bei umkämpftem Gebiet) der Führende.
+  // Große Gebiete (Land/Bundesland/Landkreis) sind fast immer umkämpft
+  // (owner=null), haben aber einen leader + held_fraction — sonst blieben sie
+  // beim Rauszoomen unsichtbar, obwohl stark gehalten (z. B. Bayern frac=1).
+  function holderOf(rg) { return (rg && (rg.owner || rg.leader)) || null; }
+
   function styleFor(rg) {
-    var owner = rg.owner || null;
-    var col = ownerColor(owner);
+    var holder = holderOf(rg);
+    var col = ownerColor(holder);
     var frac = rg.held_fraction || 0;
+    var held = holder && frac > 0;
     return {
       color: col || FREE_STROKE,
-      weight: owner ? 1.3 : 0.8,
-      opacity: owner ? 0.9 : 0.4,
+      weight: held ? 1.3 : 0.8,
+      opacity: held ? 0.9 : 0.4,
       fillColor: col || '#000000',
-      fillOpacity: owner ? (0.12 + 0.45 * frac) : 0.02
+      // Sichtbare Untergrenze, damit auch schwach gehaltene große Gebiete tönen.
+      fillOpacity: held ? (0.15 + 0.5 * Math.min(1, frac)) : 0.02
     };
   }
 
@@ -100,10 +108,10 @@
     var grp = L.layerGroup();
     regions.forEach(function (rg) {
       if (!rg.boundary_geojson) { return; }
-      var owner = rg.owner || null;
+      var holder = holderOf(rg);
       var tip = '<b>' + GE.map.escapeHtml(displayName(rg)) + '</b><br>'
-        + GE.map.escapeHtml(ownerName(owner))
-        + (owner ? ' · ' + pct(rg.held_fraction) : '');
+        + GE.map.escapeHtml(ownerName(holder))
+        + (holder ? ' · ' + pct(rg.held_fraction) : '');
       var poly = L.geoJSON(rg.boundary_geojson, { style: styleFor(rg) });
       poly.bindTooltip(tip, { sticky: true });
       poly.on('click', function () { openDetail(rg.id); });
