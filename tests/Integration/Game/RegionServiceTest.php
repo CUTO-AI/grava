@@ -133,6 +133,15 @@ final class RegionServiceTest extends IntegrationTestCase
         $this->assertSame(['Testland', 'Teststaat'], array_column($detail['breadcrumb'], 'name'));
         // Kinder runter: die Gemeinde.
         $this->assertContains('Teststadt', array_column($detail['children'], 'name'));
+        // Kinder tragen total_edges (Regression: childrenOf ohne o.total_edges → 0).
+        $child = null;
+        foreach ($detail['children'] as $c) {
+            if ($c['name'] === 'Teststadt') {
+                $child = $c;
+            }
+        }
+        $this->assertNotNull($child);
+        $this->assertSame(4, $child['total_edges']);
         // Bestenliste (Rollup): A führt mit 4 Kanten / 400 m.
         $this->assertSame($a, $detail['leaderboard'][0]['claimant_id']);
         $this->assertSame(4, $detail['leaderboard'][0]['held_edges']);

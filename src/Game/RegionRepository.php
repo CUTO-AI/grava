@@ -566,7 +566,7 @@ final class RegionRepository
     {
         $stmt = $this->pdo->prepare(
             'SELECT r.id, r.level, r.kind, r.name, r.center_lat, r.center_lon,
-                    o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested
+                    o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested, o.total_edges
                FROM game_region r
           LEFT JOIN game_region_ownership o ON o.region_id = r.id
               WHERE r.parent_id = :pid
