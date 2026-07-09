@@ -83,25 +83,33 @@
       .map(function (n) { return n.toFixed(5); }).join(',');
   }
 
-  // „Halter" = alleiniger Besitzer ODER (bei umkämpftem Gebiet) der Führende.
-  // Große Gebiete (Land/Bundesland/Landkreis) sind fast immer umkämpft
-  // (owner=null), haben aber einen leader + held_fraction — sonst blieben sie
-  // beim Rauszoomen unsichtbar, obwohl stark gehalten (z. B. Bayern frac=1).
+  // „Halter" für Beschriftung/Panel = Besitzer ODER (bei umkämpftem Gebiet) der
+  // Führende. Für die FÄRBUNG (styleFor) gilt aber die Erober-Schwelle, s. u.
   function holderOf(rg) { return (rg && (rg.owner || rg.leader)) || null; }
 
+  // Färbung respektiert die Erober-Schwelle des Servers (Anteil UND Kantenzahl je
+  // Ebene, region_control_min_*): NUR wenn `owner` gesetzt ist (Schwelle erreicht),
+  // wird voll in Besitzerfarbe gefüllt. „Umkämpft" (leader, aber unter Schwelle)
+  // nur dezent angedeutet — so färbt eine einzelne Kante NICHT das ganze Land.
   function styleFor(rg) {
-    var holder = holderOf(rg);
-    var col = ownerColor(holder);
+    var owner = rg.owner || null;
+    var leader = rg.leader || null;
     var frac = rg.held_fraction || 0;
-    var held = holder && frac > 0;
-    return {
-      color: col || FREE_STROKE,
-      weight: held ? 1.3 : 0.8,
-      opacity: held ? 0.9 : 0.4,
-      fillColor: col || '#000000',
-      // Sichtbare Untergrenze, damit auch schwach gehaltene große Gebiete tönen.
-      fillOpacity: held ? (0.15 + 0.5 * Math.min(1, frac)) : 0.02
-    };
+    if (owner) {
+      var oc = ownerColor(owner) || FREE_STROKE;
+      return {
+        color: oc, weight: 1.6, opacity: 0.95,
+        fillColor: oc, fillOpacity: 0.30 + 0.45 * Math.min(1, frac)
+      };
+    }
+    if (leader && frac > 0) {
+      var lc = ownerColor(leader) || FREE_STROKE;
+      return {
+        color: lc, weight: 1.0, opacity: 0.6,
+        fillColor: lc, fillOpacity: 0.07, dashArray: '3 4'
+      };
+    }
+    return { color: FREE_STROKE, weight: 0.8, opacity: 0.4, fillColor: '#000000', fillOpacity: 0.02 };
   }
 
   function drawRegions(regions) {
