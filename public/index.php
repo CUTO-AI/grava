@@ -766,6 +766,8 @@ $router->get('/pulse',             fn($r) => $webPulse->show($r));
 $router->get('/rangliste',            fn($r) => $webRankings->show($r, 'solo'));
 $router->get('/rangliste/{tab}',      fn($r) => $webRankings->show($r, (string)($r->routeParams['tab'] ?? 'solo')));
 $router->get('/gebiete',              fn($r) => $webRegions->index($r));
+// Statische Route VOR /gebiete/{id}, sonst würde „karte" als ID gematcht.
+$router->get('/gebiete/karte',        fn($r) => $webRegions->map($r));
 $router->get('/gebiete/{id}',         fn($r) => $webRegions->detail($r, (int)($r->routeParams['id'] ?? 0)));
 $router->post('/logout',           fn($r) => $webAuth->doLogout($r),          [$csrf]);
 // H5: Einziger Punkt, an dem ein Refresh-Token-Cookie konsumiert wird.

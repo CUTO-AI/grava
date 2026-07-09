@@ -45,6 +45,22 @@ final class RegionsPagesController
         ]);
     }
 
+    public function map(Request $req): void
+    {
+        [$user] = $this->resolveViewer();
+        $this->view->render('regions/map', [
+            '_title'       => t('Gebiets-Karte') . ' · CYBERRIDE',
+            '_authedUser'  => $user,
+            '_pageStyles'  => ['/assets/vendor/leaflet/leaflet.css', '/assets/css/regions-map.css'],
+            '_pageScripts' => [
+                '/assets/vendor/leaflet/leaflet.js',
+                '/assets/js/map-core.js',
+                '/assets/js/map-regions.js',
+            ],
+            '_layoutWide'  => true,
+        ]);
+    }
+
     public function detail(Request $req, int $id): void
     {
         [$user, $viewerClaimant] = $this->resolveViewer();

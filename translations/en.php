@@ -5,6 +5,18 @@
  * Generiert (App-Schale + View-Bodies). 571 Einträge.
  */
 return [
+    // Gebiets-Karte (WebAnalytics_Concept.md — Map-Integration)
+    'Revierkampf · Karte' => 'Territory war · map',
+    'Gebiets-Karte' => 'Area map',
+    'Zur Listenansicht' => 'To list view',
+    'Zur Kartenansicht' => 'To map view',
+    'frei' => 'free',
+    'aktuell führend' => 'currently leading',
+    'Reviere gesamt' => 'Territory total',
+    'Schwelle' => 'Threshold',
+    'Schließen' => 'Close',
+    'Deckung eines Gebiets = gehaltener Anteil; freie Gebiete nur als feiner Umriss.' => 'A region\'s fill = held share; free regions show only a faint outline.',
+    'Wer hält welches Gebiet? Zoom rein — die Karte zeigt Länder, Bundesländer, Landkreise und Gemeinden nach Besitz eingefärbt. Tippe ein Gebiet an für Details.' => 'Who holds which area? Zoom in — the map shows countries, states, districts and municipalities coloured by ownership. Tap an area for details.',
     // Consent-Banner (Phase C)
     'Cookie-Einwilligung' => 'Cookie consent',
     'Wir nutzen Cookies für anonyme Reichweiten-Messung (Google Analytics), um CYBERRIDE zu verbessern – nur mit deiner Zustimmung.' => 'We use cookies for anonymous audience measurement (Google Analytics) to improve CYBERRIDE — only with your consent.',

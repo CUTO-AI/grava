@@ -1,0 +1,116 @@
+/*
+ * regions-map.css — interaktive Gebiets-Karte (/gebiete/karte).
+ * Karte + überlagerndes Detail-Panel (App-Optik, dunkel/cyber). Ergänzt die
+ * Leaflet-Basis; Fallback-Werte, falls Theme-Variablen fehlen.
+ */
+
+.region-map-wrap {
+    position: relative;
+    width: 100%;
+    height: min(72vh, 760px);
+    border: 1px solid var(--line-soft, #2a2f3a);
+    border-radius: var(--radius-lg, 12px);
+    overflow: hidden;
+    background: var(--surface, #0d1017);
+}
+.region-map { position: absolute; inset: 0; }
+
+/* Dunkle „App"-Basiskarte: OSM-Raster invertiert/entsättigt. Betrifft nur die
+   Tiles, nicht die farbigen Gebiets-Overlays (eigener SVG-Pane). */
+.region-map .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(0.9) saturate(0.7);
+}
+
+/* Detail-Panel — überlagert die Karte rechts, schiebt sich ein. */
+.region-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: min(380px, 92%);
+    height: 100%;
+    overflow-y: auto;
+    padding: 18px 20px 28px;
+    background: color-mix(in srgb, var(--surface-alt, #11151d) 92%, transparent);
+    backdrop-filter: blur(6px);
+    border-left: 1px solid var(--line-cyan, #1c6b74);
+    transform: translateX(105%);
+    transition: transform .22s ease;
+    z-index: 500;
+    color: var(--text-body, #dfe7ef);
+}
+.region-panel.is-open { transform: translateX(0); }
+
+.region-panel__close {
+    position: absolute; top: 10px; right: 12px;
+    background: none; border: 0; cursor: pointer;
+    font-size: 26px; line-height: 1; color: var(--text-muted, #8a97a6);
+}
+.region-panel__close:hover { color: var(--primary, #06b6d4); }
+
+.region-panel__crumbs {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs, .72rem);
+    color: var(--text-muted, #8a97a6);
+    margin: 0 28px 12px 0;
+}
+.region-panel__crumbs a { color: var(--text-muted, #8a97a6); text-decoration: none; }
+.region-panel__crumbs a:hover { color: var(--primary, #06b6d4); }
+.region-panel__crumbs .sep { opacity: .5; }
+
+.region-panel__kicker {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs, .72rem);
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-muted, #8a97a6);
+    margin: 0 0 2px;
+}
+.region-panel__title {
+    font-size: 1.5rem; margin: 0 0 14px;
+    color: var(--primary, #35d0e0);
+}
+.region-panel__h3 {
+    font-family: var(--font-mono, monospace);
+    font-size: var(--text-xs, .72rem);
+    letter-spacing: .06em; text-transform: uppercase;
+    color: var(--text-muted, #8a97a6);
+    margin: 20px 0 8px;
+}
+
+.region-owner {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 14px; margin-bottom: 16px;
+    border: 1px solid var(--line-soft, #2a2f3a); border-radius: var(--radius, 10px);
+}
+.region-owner__name { font-weight: 600; }
+.region-badge {
+    font-family: var(--font-mono, monospace); font-size: .66rem;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+}
+.region-badge--owned { background: var(--fill-lime, #1e3a1e); color: var(--accent, #b6ff2e); }
+.region-badge--contested { background: var(--fill-magenta, #3a1e2a); color: var(--error-text, #ff5a93); }
+
+.region-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.region-stat { border: 1px solid var(--line-soft, #2a2f3a); border-radius: var(--radius-sm, 8px); padding: 10px 8px; text-align: center; }
+.region-stat .val { font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--primary, #35d0e0); }
+.region-stat .lbl { font-family: var(--font-mono, monospace); font-size: .62rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted, #8a97a6); margin-top: 3px; }
+
+.region-board { list-style: none; margin: 0; padding: 0; }
+.region-board li { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line-soft, #20242e); font-size: .9rem; }
+.region-board .rk { color: var(--text-muted, #8a97a6); font-family: var(--font-mono, monospace); font-size: .8rem; }
+.region-board .nm { flex: 1; }
+.region-board .vl { color: var(--text-muted, #a7b2bf); font-variant-numeric: tabular-nums; font-size: .82rem; white-space: nowrap; }
+
+.region-children { list-style: none; margin: 0; padding: 0; }
+.region-children li { border-bottom: 1px solid var(--line-soft, #20242e); }
+.region-children a { display: flex; align-items: center; gap: 8px; padding: 8px 0; text-decoration: none; color: var(--text-body, #dfe7ef); }
+.region-children a:hover { color: var(--primary, #06b6d4); }
+.region-children .nm { flex: 1; }
+.region-children .vl { color: var(--text-muted, #8a97a6); font-size: .78rem; white-space: nowrap; }
+.region-children .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+.region-children .dot--free { background: rgba(150,180,210,.35); }
+
+@media (max-width: 620px) {
+    .region-map-wrap { height: 78vh; }
+    .region-panel { width: 100%; border-left: 0; }
+}

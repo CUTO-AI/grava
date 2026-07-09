@@ -22,6 +22,7 @@ usort($regions, static fn(array $a, array $b): int =>
     <h1><?= t('Gebiete') ?></h1>
     <p class="muted">
         <?= t('Vom Land bis zur Gemeinde: wähle ein Gebiet, um Reviere, Kanten und die Bestenliste vor Ort zu sehen.') ?>
+        <a href="/gebiete/karte"><?= t('Zur Kartenansicht') ?></a>
     </p>
 </header>
 
