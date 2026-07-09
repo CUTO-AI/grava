@@ -229,6 +229,99 @@ final class RegionImportService
     }
 
     /**
+     * Korrigiert L4-Gebiete, deren Center per STRIKTEM Punkt-in-Polygon in einem
+     * anderen Land liegt als der zugewiesene Elter — die grenzüberschreitende
+     * Fehlverknüpfung, die der bbox-Fallback in {@see linkHierarchy()} erzeugt
+     * (Nachbarland-bbox greift den Grenz-/Küstenpunkt, cc wird vom falschen Elter
+     * geerbt). Verschiebt den ganzen Teilbaum ans echte Land (path/cc-Rewrite) und
+     * dedupliziert Namensdubletten (gleicher Name+Elter). Politisch umstrittene
+     * Fälle (echtes Land in $skipTrueCc, Default RU) bleiben unangetastet.
+     * Idempotent: ein zweiter Lauf findet nichts mehr.
+     *
+     * @param list<string> $skipTrueCc
+     * @return array{reparented:list<array<string,mixed>>,skipped:list<array<string,mixed>>,dedup:list<array<string,mixed>>,dedupSkipped:list<array<string,mixed>>}
+     */
+    public function recorrectMisparented(bool $apply, ?callable $log = null, array $skipTrueCc = ['RU']): array
+    {
+        $log ??= static function (string $_): void {};
+        $skip = array_fill_keys($skipTrueCc, true);
+        $report = ['reparented' => [], 'skipped' => [], 'dedup' => [], 'dedupSkipped' => []];
+
+        // 1) Re-Parent auf Ebene 4 (die gemeldete Fehlerebene).
+        foreach ($this->repo->regionsAtLevel(4) as $r) {
+            $trueId = $this->resolveContaining(2, $r['center_lat'], $r['center_lon'], $r['id'], false);
+            if ($trueId === null || $trueId === $r['parent_id']) {
+                continue;
+            }
+            $trueCore = $this->repo->coreById($trueId);
+            if ($trueCore === null) {
+                continue;
+            }
+            $trueCc = $trueCore['country_code'];
+            $entry = [
+                'id' => $r['id'], 'name' => $r['name'], 'from' => $r['parent_id'],
+                'to' => $trueId, 'true_cc' => $trueCc,
+                'descendants' => $this->repo->descendantCount($r['path'], $r['id']),
+            ];
+            if ($trueCc !== null && isset($skip[$trueCc])) {
+                $report['skipped'][] = $entry;
+                continue;
+            }
+            $newPrefix = rtrim($trueCore['path'], '/') . '/' . $r['id'] . '/';
+            if ($apply) {
+                $this->repo->reparentSubtree($r['id'], $trueId, $r['path'], $newPrefix, $trueCc);
+            }
+            $report['reparented'][] = $entry;
+            $log(sprintf('re-parent %s #%d: %s → %s (%s), %d Nachfahren',
+                $r['name'], $r['id'], $r['parent_id'] ?? 'NULL', (string)$trueId, $trueCc ?? '-', $entry['descendants']));
+        }
+
+        // 2) Dedup Namensdubletten auf Ebene 4.
+        foreach ($this->repo->duplicateSiblingsAtLevel(4) as $g) {
+            $disputed = false;
+            $stats = [];
+            foreach ($g['ids'] as $id) {
+                $core = $this->repo->coreById($id);
+                if ($core === null) {
+                    continue;
+                }
+                $trueId = $this->resolveContaining(2, $core['center_lat'], $core['center_lon'], $id, false);
+                $trueCore = $trueId !== null ? $this->repo->coreById($trueId) : null;
+                if ($trueCore !== null && $trueCore['country_code'] !== null && isset($skip[$trueCore['country_code']])) {
+                    $disputed = true;
+                }
+                $stats[$id] = [
+                    'edges' => $this->repo->treeEdgeCount($core['path']),
+                    'desc'  => $this->repo->descendantCount($core['path'], $id),
+                ];
+            }
+            if ($disputed) {
+                $report['dedupSkipped'][] = ['name' => $g['name'], 'ids' => $g['ids'], 'reason' => 'disputed'];
+                continue;
+            }
+            // Keeper = meiste Kanten (Tie → kleinste id). Verlierer nur löschen,
+            // wenn leer (0 Kanten & 0 Nachfahren) — sonst manuell prüfen.
+            $ids = $g['ids'];
+            usort($ids, static fn(int $a, int $b): int =>
+                (($stats[$b]['edges'] ?? 0) <=> ($stats[$a]['edges'] ?? 0)) ?: ($a <=> $b));
+            $keeper = $ids[0];
+            foreach (array_slice($ids, 1) as $loser) {
+                if (($stats[$loser]['edges'] ?? 0) === 0 && ($stats[$loser]['desc'] ?? 0) === 0) {
+                    if ($apply) {
+                        $this->repo->deleteRegion($loser);
+                    }
+                    $report['dedup'][] = ['name' => $g['name'], 'keeper' => $keeper, 'deleted' => $loser];
+                    $log(sprintf('dedup %s: behalte #%d, lösche #%d', $g['name'], $keeper, $loser));
+                } else {
+                    $report['dedupSkipped'][] = ['name' => $g['name'], 'ids' => $g['ids'], 'reason' => 'loser_has_data'];
+                }
+            }
+        }
+
+        return $report;
+    }
+
+    /**
      * feinstes Gebiet, das den Punkt enthält — Ebenen von fein nach grob
      * (8→6→4→2). Kleinste Fläche gewinnt bei Overlaps. Für Ingest & Backfill.
      */

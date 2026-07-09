@@ -789,4 +789,125 @@ final class RegionRepository
         $v = $stmt->fetchColumn();
         return $v === false ? null : (string)$v;
     }
+
+    // ---- Korrektur falsch verknüpfter Gebiete (regions:recorrect) -----------
+
+    /**
+     * Alle Gebiete einer Ebene mit Center + zugewiesenem Elter (für den
+     * PiP-Abgleich in {@see RegionImportService::recorrectMisparented()}).
+     *
+     * @return list<array{id:int,name:string,parent_id:?int,center_lat:float,center_lon:float,path:string,country_code:?string}>
+     */
+    public function regionsAtLevel(int $level): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, name, parent_id, center_lat, center_lon, path, country_code
+               FROM game_region WHERE level = ? ORDER BY id'
+        );
+        $stmt->execute([$level]);
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = [
+                'id' => (int)$r['id'],
+                'name' => (string)$r['name'],
+                'parent_id' => $r['parent_id'] !== null ? (int)$r['parent_id'] : null,
+                'center_lat' => (float)$r['center_lat'],
+                'center_lon' => (float)$r['center_lon'],
+                'path' => (string)$r['path'],
+                'country_code' => $r['country_code'] !== null ? (string)$r['country_code'] : null,
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Verschiebt einen Teilbaum an einen neuen Elter: setzt parent_id des Wurzel-
+     * Gebiets und schreibt für die Wurzel UND alle Nachfahren das path-Präfix um
+     * (oldPrefix → newPrefix) sowie den country_code. In einer Transaktion.
+     * Idempotent: ist oldPrefix == newPrefix, passiert nichts.
+     */
+    public function reparentSubtree(int $id, int $newParentId, string $oldPrefix, string $newPrefix, ?string $countryCode): void
+    {
+        if ($oldPrefix === $newPrefix) {
+            return;
+        }
+        $this->pdo->beginTransaction();
+        try {
+            // Wurzel + Nachfahren: path-Präfix ersetzen, cc auf das echte Land setzen.
+            $stmt = $this->pdo->prepare(
+                'UPDATE game_region
+                    SET path = CONCAT(:new, SUBSTRING(path, :oldlen + 1)),
+                        country_code = :cc
+                  WHERE path LIKE :like'
+            );
+            $stmt->bindValue(':new', $newPrefix);
+            $stmt->bindValue(':oldlen', strlen($oldPrefix), PDO::PARAM_INT);
+            $stmt->bindValue(':cc', $countryCode);
+            $stmt->bindValue(':like', $oldPrefix . '%');
+            $stmt->execute();
+            // Nur die Wurzel bekommt den neuen Elter.
+            $this->pdo->prepare('UPDATE game_region SET parent_id = ? WHERE id = ?')
+                ->execute([$newParentId, $id]);
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Duplikate einer Ebene: gleicher Name unter gleichem Elter.
+     *
+     * @return list<array{name:string,parent_id:int,ids:list<int>}>
+     */
+    public function duplicateSiblingsAtLevel(int $level): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT name, parent_id, GROUP_CONCAT(id) ids
+               FROM game_region
+              WHERE level = ? AND parent_id IS NOT NULL
+           GROUP BY name, parent_id
+             HAVING COUNT(*) > 1'
+        );
+        $stmt->execute([$level]);
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = [
+                'name' => (string)$r['name'],
+                'parent_id' => (int)$r['parent_id'],
+                'ids' => array_map('intval', explode(',', (string)$r['ids'])),
+            ];
+        }
+        return $out;
+    }
+
+    /** Zahl der Nachfahren (ohne das Gebiet selbst) über das path-Präfix. */
+    public function descendantCount(string $path, int $selfId): int
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM game_region WHERE path LIKE ? AND id <> ?'
+        );
+        $stmt->execute([$path . '%', $selfId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /** Zahl der Spielkanten im Teilbaum eines Gebiets (über das path-Präfix). */
+    public function treeEdgeCount(string $path): int
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*)
+               FROM game_edge e
+               JOIN game_region r ON r.id = e.region_id
+              WHERE r.path LIKE ?'
+        );
+        $stmt->execute([$path . '%']);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /** Löscht ein einzelnes Gebiet + seine Besitz-Cache-Zeile (nur für leere Duplikate). */
+    public function deleteRegion(int $id): void
+    {
+        $this->pdo->prepare('DELETE FROM game_region_ownership WHERE region_id = ?')->execute([$id]);
+        $this->pdo->prepare('DELETE FROM game_region WHERE id = ?')->execute([$id]);
+    }
 }

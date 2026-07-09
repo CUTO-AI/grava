@@ -89,6 +89,9 @@ final class Commands
             case 'regions:relink':
                 return $this->regionsRelink();
 
+            case 'regions:recorrect':
+                return $this->regionsRecorrect($argv);
+
             case 'cron:region-ownership':
             case 'regions:ownership-refresh':
                 return $this->regionsOwnershipRefresh();
@@ -746,6 +749,45 @@ final class Commands
         $log = static function (string $m): void { echo $m . "\n"; };
         $res = $this->regionImport->relinkOrphans($log);
         echo sprintf("Relink: %d geprüft, %d neu verknüpft.\n", $res['checked'], $res['relinked']);
+        return 0;
+    }
+
+    /**
+     * regions:recorrect [--apply] — korrigiert grenzüberschreitend falsch
+     * verknüpfte L4-Gebiete (Center-PiP != Elternland) und dedupliziert
+     * Namensdubletten. Ohne --apply nur Vorschau (Dry-Run). Politisch umstrittene
+     * Fälle (echtes Land = RU) werden übersprungen. Nach --apply wird der
+     * Besitz-Rollup neu gerechnet.
+     */
+    private function regionsRecorrect(array $argv): int
+    {
+        if ($this->regionImport === null) {
+            echo "regions:recorrect nicht verfügbar (Service nicht verdrahtet).\n";
+            return 1;
+        }
+        $apply = in_array('--apply', $argv, true);
+        ini_set('memory_limit', '2G');
+        $log = static function (string $m): void { echo '  ' . $m . "\n"; };
+
+        echo ($apply ? "== ANWENDEN ==\n" : "== DRY-RUN (Vorschau; --apply zum Anwenden) ==\n");
+        $res = $this->regionImport->recorrectMisparented($apply, $log);
+
+        echo sprintf(
+            "\nRe-Parent: %d | übersprungen (umstritten/RU): %d | Dedup gelöscht: %d | Dedup übersprungen: %d\n",
+            count($res['reparented']), count($res['skipped']), count($res['dedup']), count($res['dedupSkipped'])
+        );
+        foreach ($res['skipped'] as $s) {
+            echo sprintf("  · umstritten belassen: %s #%d (echtes Land %s)\n", $s['name'], $s['id'], $s['true_cc'] ?? '-');
+        }
+        foreach ($res['dedupSkipped'] as $s) {
+            echo sprintf("  · Dedup übersprungen: %s [%s] (%s)\n", $s['name'], implode(',', $s['ids']), $s['reason']);
+        }
+
+        if ($apply && $this->regionOwnership !== null) {
+            echo "Besitz-Rollup neu rechnen …\n";
+            $this->regionOwnership->recomputeAll();
+            echo "fertig.\n";
+        }
         return 0;
     }
 
