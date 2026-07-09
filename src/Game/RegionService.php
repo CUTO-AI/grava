@@ -125,6 +125,7 @@ final class RegionService
             'level' => $level,
             'kind' => (string)$r['kind'],
             'name' => (string)$r['name'],
+            'country_code' => isset($r['country_code']) && $r['country_code'] !== null ? (string)$r['country_code'] : null,
             'center' => ['lat' => (float)$r['center_lat'], 'lon' => (float)$r['center_lon']],
             'owner' => $this->claimant($this->intOrNull($r['owner_claimant_id'])),
             'leader' => $this->claimant($this->intOrNull($r['leader_claimant_id'])),
@@ -196,6 +197,8 @@ final class RegionService
             'contested' => (int)($r['contested'] ?? 1) === 1,
             'mine' => $viewerClaimant !== null && $owner === $viewerClaimant,
             'total_edges' => (int)($r['total_edges'] ?? 0),
+            'total_game_length_m' => (float)($r['total_game_length_m'] ?? 0.0),
+            'country_code' => isset($r['country_code']) && $r['country_code'] !== null ? (string)$r['country_code'] : null,
         ];
         if (isset($r['min_lat'])) {
             $out['bbox'] = [

@@ -36,11 +36,17 @@ final class RegionServiceTest extends IntegrationTestCase
 
     private function seed(): void
     {
-        $feat = static fn(int $lvl, string $name, float $a, float $b, float $c, float $d): string => json_encode([
-            'type' => 'Feature',
-            'properties' => ['boundary' => 'administrative', 'admin_level' => (string)$lvl, 'name' => $name],
-            'geometry' => ['type' => 'Polygon', 'coordinates' => [[[$a, $b], [$c, $b], [$c, $d], [$a, $d], [$a, $b]]]],
-        ], JSON_THROW_ON_ERROR);
+        $feat = static function (int $lvl, string $name, float $a, float $b, float $c, float $d): string {
+            $props = ['boundary' => 'administrative', 'admin_level' => (string)$lvl, 'name' => $name];
+            if ($lvl === 2) {
+                $props['ISO3166-1:alpha2'] = 'DE';   // Land braucht cc (rootRegions filtert darauf)
+            }
+            return json_encode([
+                'type' => 'Feature',
+                'properties' => $props,
+                'geometry' => ['type' => 'Polygon', 'coordinates' => [[[$a, $b], [$c, $b], [$c, $d], [$a, $d], [$a, $b]]]],
+            ], JSON_THROW_ON_ERROR);
+        };
         $lines = [
             $feat(2, 'Testland',  10.0, 47.0, 13.0, 49.0),
             $feat(4, 'Teststaat', 11.0, 47.5, 12.5, 48.5),

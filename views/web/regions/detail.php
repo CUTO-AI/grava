@@ -12,6 +12,12 @@ $levelLabel = static fn(int $lvl): string => match ($lvl) {
     2 => t('Land'), 4 => t('Bundesland'), 6 => t('Landkreis'), 8 => t('Gemeinde'),
     default => t('Gebiet'),
 };
+// Anzeigename eines Gebiets: Länder (Ebene 2) in der Web-Sprache (de/en) statt
+// nativem Eigennamen (bessere Lesbarkeit); Untereinheiten behalten ihren Namen.
+$displayName = static fn(array $r): string =>
+    (int)($r['level'] ?? 0) === 2
+        ? \App\Support\CountryName::localized($r['country_code'] ?? null, (string)($r['name'] ?? ''))
+        : (string)($r['name'] ?? '');
 // Anzeigename eines Claimants (Fahrer @handle bzw. Crew-Name); '—' wenn frei.
 $claimantName = static function (?array $c) use ($e): string {
     if ($c === null || !isset($c['type'])) {
@@ -39,15 +45,15 @@ if (!empty($region['children'])) {
     <a href="/gebiete"><?= t('Gebiete') ?></a>
     <?php foreach (($region['breadcrumb'] ?? []) as $b): ?>
         <span class="sep">›</span>
-        <a href="/gebiete/<?= (int)$b['id'] ?>"><?= $e($b['name']) ?></a>
+        <a href="/gebiete/<?= (int)$b['id'] ?>"><?= $e($displayName($b)) ?></a>
     <?php endforeach; ?>
     <span class="sep">›</span>
-    <span><?= $e($region['name']) ?></span>
+    <span><?= $e($displayName($region)) ?></span>
 </nav>
 
 <header class="page-header">
     <p class="cr-kicker"><?= $e($levelLabel((int)$region['level'])) ?></p>
-    <h1><?= $e($region['name']) ?></h1>
+    <h1><?= $e($displayName($region)) ?></h1>
     <p class="muted">
         <?php if ($contested || $owner === null): ?>
             <?= t('Umkämpft') ?> — <?= t('aktuell führend:') ?> <?= $claimantName($region['leader'] ?? null) ?>
@@ -120,15 +126,17 @@ if (!empty($region['children'])) {
                 <th><?= t('Gebiet') ?></th>
                 <th><?= t('Ebene') ?></th>
                 <th class="num"><?= t('Kanten') ?></th>
+                <th class="num"><?= t('Revier (km)') ?></th>
                 <th class="num"><?= t('Erobert') ?></th>
             </tr>
         </thead>
         <tbody>
         <?php foreach ($region['children'] as $c): ?>
             <tr>
-                <td><a href="/gebiete/<?= (int)$c['id'] ?>"><?= $e($c['name']) ?></a></td>
+                <td><a href="/gebiete/<?= (int)$c['id'] ?>"><?= $e($displayName($c)) ?></a></td>
                 <td><?= $e($levelLabel((int)$c['level'])) ?></td>
                 <td class="num"><?= (int)($c['total_edges'] ?? 0) ?></td>
+                <td class="num"><?= $km((float)($c['total_game_length_m'] ?? 0)) ?></td>
                 <td class="num"><?= $pct($c['held_fraction'] ?? 0) ?></td>
             </tr>
         <?php endforeach; ?>

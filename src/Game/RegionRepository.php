@@ -529,13 +529,17 @@ final class RegionRepository
      */
     public function rootRegions(int $limit = 400): array
     {
+        // Nur echte Länder: Wurzeln ohne country_code sind maritime Pseudo-Länder
+        // („territorial waters"), Grenzstreifen-Relationen und Exklaven (allesamt
+        // ohne Spielkanten) — die gehören nicht in die Länderliste.
         $stmt = $this->pdo->prepare(
-            'SELECT r.id, r.level, r.kind, r.name, r.parent_id, r.center_lat, r.center_lon,
+            'SELECT r.id, r.level, r.kind, r.name, r.country_code, r.parent_id, r.center_lat, r.center_lon,
                     r.min_lat, r.min_lon, r.max_lat, r.max_lon,
-                    o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested, o.total_edges
+                    o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested,
+                    o.total_edges, o.total_game_length_m
                FROM game_region r
           LEFT JOIN game_region_ownership o ON o.region_id = r.id
-              WHERE r.parent_id IS NULL
+              WHERE r.parent_id IS NULL AND r.country_code IS NOT NULL
            ORDER BY r.name ASC
               LIMIT :lim'
         );
@@ -548,7 +552,7 @@ final class RegionRepository
     public function regionFull(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT r.id, r.level, r.kind, r.name, r.parent_id, r.path, r.center_lat, r.center_lon,
+            'SELECT r.id, r.level, r.kind, r.name, r.country_code, r.parent_id, r.path, r.center_lat, r.center_lon,
                     r.min_lat, r.min_lon, r.max_lat, r.max_lon,
                     o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested,
                     o.total_game_length_m, o.total_edges, o.owner_since
@@ -565,8 +569,9 @@ final class RegionRepository
     public function childrenOf(int $parentId, int $limit = 400): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT r.id, r.level, r.kind, r.name, r.center_lat, r.center_lon,
-                    o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested, o.total_edges
+            'SELECT r.id, r.level, r.kind, r.name, r.country_code, r.center_lat, r.center_lon,
+                    o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested,
+                    o.total_edges, o.total_game_length_m
                FROM game_region r
           LEFT JOIN game_region_ownership o ON o.region_id = r.id
               WHERE r.parent_id = :pid
@@ -583,7 +588,7 @@ final class RegionRepository
      * Ahnenkette (Breadcrumb) aus dem materialisierten path, ohne das Gebiet
      * selbst, aufsteigend nach Ebene.
      *
-     * @return list<array{id:int,level:int,kind:string,name:string}>
+     * @return list<array{id:int,level:int,kind:string,name:string,country_code:?string}>
      */
     public function ancestors(string $path, int $selfId): array
     {
@@ -594,12 +599,16 @@ final class RegionRepository
         }
         $in = implode(',', array_fill(0, count($ids), '?'));
         $stmt = $this->pdo->prepare(
-            "SELECT id, level, kind, name FROM game_region WHERE id IN ($in) ORDER BY level ASC"
+            "SELECT id, level, kind, name, country_code FROM game_region WHERE id IN ($in) ORDER BY level ASC"
         );
         $stmt->execute($ids);
         $out = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $out[] = ['id' => (int)$r['id'], 'level' => (int)$r['level'], 'kind' => (string)$r['kind'], 'name' => (string)$r['name']];
+            $out[] = [
+                'id' => (int)$r['id'], 'level' => (int)$r['level'], 'kind' => (string)$r['kind'],
+                'name' => (string)$r['name'],
+                'country_code' => $r['country_code'] !== null ? (string)$r['country_code'] : null,
+            ];
         }
         return $out;
     }
