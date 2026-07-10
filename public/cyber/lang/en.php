@@ -28,6 +28,13 @@ return [
         'regions' => 'regions taken',
         'records' => 'new records',
     ],
+    'map' => [
+        'kicker'   => '// THE LIVING MAP',
+        'h2'       => 'Every conquered road, live on the grid',
+        'lead'     => 'Territories change hands every day. Explore the map — zoomed to your part of the world — and see who owns the roads near you.',
+        'aria'     => 'Interactive map of conquered territories',
+        'noscript' => 'Enable JavaScript to explore the live territory map.',
+    ],
     'lang' => ['en' => 'EN', 'de' => 'DE'],
     'hero' => [
         'badge'     => 'Launch Phase // Season 03',
