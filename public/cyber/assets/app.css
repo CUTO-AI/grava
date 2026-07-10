@@ -164,6 +164,13 @@ button.btn-secondary, .btn-secondary {
 .btn-danger { background: transparent; color: var(--magenta-400); border-color: var(--magenta-500); }
 .btn-danger:hover { background: var(--fill-magenta); }
 
+/* Anker-Buttons: die generische Link-Farbe (.cyber-main a, höhere Spezifität)
+   darf die Button-Textfarbe nicht überschreiben — sonst Cyan-Text auf
+   Cyan-Button (unlesbar). Pro Variante die vorgesehene Textfarbe erzwingen. */
+.cyber-main a.btn-primary { color: var(--void-900); }
+.cyber-main a.btn-accent  { color: var(--void-900); }
+.cyber-main a.btn-danger  { color: var(--magenta-400); }
+
 .btn-link {
     background: transparent; color: var(--cyan-500); border: 0; padding: 0;
     font-size: var(--text-sm); cursor: pointer; font-weight: 500;
