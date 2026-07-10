@@ -541,6 +541,29 @@ final class AuthService
     }
 
     /**
+     * Web-Löschpfad (DSGVO Art. 17): Konto per E-Mail + Passwort löschen, ohne
+     * eine Session anzulegen (anders als login()). Für die öffentliche
+     * Lösch-Seite, damit auch App-only-Nutzer ihr Konto im Browser entfernen
+     * können. Generische Fehler (kein Nutzer vs. falsches Passwort → identische
+     * Meldung) verhindern Nutzer-Enumeration.
+     *
+     * @throws AuthException
+     */
+    public function deleteAccountByEmail(string $email, string $password): void
+    {
+        $pdo = Db::pdo();
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND status = "active" LIMIT 1');
+        $stmt->execute([$email]);
+        $id = $stmt->fetchColumn();
+        if ($id === false) {
+            throw new AuthException('invalid_credentials', 'Ungültige Anmeldedaten.', 401);
+        }
+        // deleteAccount verifiziert das Passwort und wirft bei Fehlschlag ebenfalls
+        // invalid_credentials — die Meldung bleibt also identisch.
+        $this->deleteAccount((int)$id, $password);
+    }
+
+    /**
      * L2: wirft, statt ein leeres Array zu liefern. Aufrufer können sich
      * darauf verlassen, dass der Rückgabewert die public-User-Form hat.
      *

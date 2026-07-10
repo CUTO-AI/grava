@@ -754,6 +754,9 @@ $router->get('/forgot-password',   fn($r) => $webAuth->showForgot($r));
 $router->post('/forgot-password',  fn($r) => $webAuth->doForgot($r),          [$csrf]);
 $router->get('/reset-password',    fn($r) => $webAuth->showReset($r));
 $router->post('/reset-password',   fn($r) => $webAuth->doReset($r),           [$csrf]);
+// DSGVO Art. 17: öffentliche Konto-Löschung (E-Mail + Passwort + Bestätigung).
+$router->get('/delete-account',    fn($r) => $webAuth->showDeleteAccount($r));
+$router->post('/delete-account',   fn($r) => $webAuth->doDeleteAccount($r),   [$csrf]);
 $router->get('/verify-email',      fn($r) => $webAuth->showVerify($r));
 // Öffentliche Rechtsseiten (M5): anonym, kein Login, kein Redirect.
 $router->get('/privacy',           fn($r) => $webLegal->privacy($r));

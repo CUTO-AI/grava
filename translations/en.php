@@ -5,6 +5,24 @@
  * Generiert (App-Schale + View-Bodies). 571 Einträge.
  */
 return [
+    // Konto-Löschung (DSGVO Art. 17 — öffentliche Web-Seite /delete-account)
+    'Konto löschen' => 'Delete account',
+    'Konto gelöscht' => 'Account deleted',
+    'Dein Konto wurde gelöscht.' => 'Your account has been deleted.',
+    'Alle personenbezogenen Daten wurden entfernt bzw. anonymisiert; verbleibende Kopien werden innerhalb von 30 Tagen endgültig gelöscht. Danke, dass du CYBERRIDE genutzt hast.' => 'All personal data has been removed or anonymised; any remaining copies are permanently deleted within 30 days. Thanks for using CYBERRIDE.',
+    'Hier kannst du dein CYBERRIDE-Konto und alle zugehörigen personenbezogenen Daten dauerhaft löschen. Bitte bestätige mit deinen Anmeldedaten.' => 'Here you can permanently delete your CYBERRIDE account and all associated personal data. Please confirm with your credentials.',
+    'Achtung: Diese Aktion ist unwiderruflich.' => 'Warning: this action is irreversible.',
+    'Dein Profil, Handle, deine E-Mail-Adresse und dein Anzeigename werden gelöscht.' => 'Your profile, handle, email address and display name will be deleted.',
+    'Deine Routen, Aktivitäten, Kommentare, Likes und Follower-Beziehungen werden entfernt.' => 'Your routes, activities, comments, likes and follower relationships will be removed.',
+    'Deine Crew-Mitgliedschaft und dein Spiel-/Revier-Fortschritt werden aufgelöst.' => 'Your crew membership and game/territory progress will be dissolved.',
+    'Verbleibende Kopien werden innerhalb von 30 Tagen endgültig gelöscht (aggregierte, anonyme Kennzahlen ohne Personenbezug ausgenommen).' => 'Remaining copies are permanently deleted within 30 days (aggregated, anonymous metrics without personal reference excepted).',
+    'Ich möchte mein Konto und alle zugehörigen Daten unwiderruflich löschen.' => 'I want to irreversibly delete my account and all associated data.',
+    'Konto endgültig löschen' => 'Delete account permanently',
+    'Erst zurücksetzen' => 'reset it first',
+    'Alternativ kannst du dein Konto auch direkt in der App löschen (Profil → Konto löschen).' => 'Alternatively, you can delete your account directly in the app (Profile → Delete account).',
+    'Bitte bestätige, dass du dein Konto endgültig löschen möchtest.' => 'Please confirm that you want to permanently delete your account.',
+    'Konto und alle Daten hier löschen' => 'Delete your account and all data here',
+    'Zur Startseite' => 'To home page',
     // Gebiets-Karte (WebAnalytics_Concept.md — Map-Integration)
     'Revierkampf · Karte' => 'Territory war · map',
     'Gebiets-Karte' => 'Area map',

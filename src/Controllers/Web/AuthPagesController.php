@@ -242,6 +242,69 @@ final class AuthPagesController
         Response::redirect('/login');
     }
 
+    /**
+     * DSGVO Art. 17: öffentliche Konto-Löschseite. Nutzer bestätigt mit
+     * E-Mail + Passwort + explizitem Häkchen — kein Web-Login nötig, damit auch
+     * App-only-Nutzer ihr Konto im Browser löschen können. noindex.
+     */
+    public function showDeleteAccount(Request $req): void
+    {
+        Csrf::ensureStarted();
+        $this->render('delete_account', [
+            '_title' => t('Konto löschen') . ' · CYBERRIDE',
+            '_robots' => 'noindex, nofollow',
+            'error' => null, 'done' => false, 'email' => '',
+        ]);
+    }
+
+    public function doDeleteAccount(Request $req): void
+    {
+        Csrf::ensureStarted();
+        $email   = (string)($req->post['email'] ?? '');
+        $pw      = (string)($req->post['password'] ?? '');
+        $confirm = ($req->post['confirm'] ?? '') !== '';
+
+        $max = Config::instance()->int('RATE_LOGIN_MAX', 10);
+        $this->limit('delete-account', $req->ip, $max);
+        if ($email !== '') {
+            $this->limit('delete-account', strtolower(trim($email)), $max);
+        }
+
+        $rerender = function (string $error, int $status) use ($email): never {
+            $this->render('delete_account', [
+                '_title' => t('Konto löschen') . ' · CYBERRIDE',
+                '_robots' => 'noindex, nofollow',
+                'error' => $error, 'done' => false, 'email' => $email,
+            ], $status);
+        };
+
+        $v = new Validator();
+        $cleanEmail = $v->email('email', $email);
+        if (!$confirm) {
+            $rerender(t('Bitte bestätige, dass du dein Konto endgültig löschen möchtest.'), 422);
+        }
+        if ($cleanEmail === null || $pw === '') {
+            $rerender(t('Ungültige Anmeldedaten.'), 401);
+        }
+
+        try {
+            $this->auth->deleteAccountByEmail($cleanEmail, $pw);
+        } catch (AuthException $e) {
+            $rerender($e->getMessage(), $e->httpStatus);
+        }
+
+        // Falls im selben Browser eine Web-Session lief: aufräumen.
+        $this->webSession->destroy();
+        $this->cookieAuth->clear();
+        Csrf::rotateForAuthState();
+
+        $this->render('delete_account', [
+            '_title' => t('Konto gelöscht') . ' · CYBERRIDE',
+            '_robots' => 'noindex, nofollow',
+            'error' => null, 'done' => true, 'email' => '',
+        ]);
+    }
+
     private function limit(string $action, string $identifier, int $max): void
     {
         if ($this->rate->hit($action, $identifier, $max)) {

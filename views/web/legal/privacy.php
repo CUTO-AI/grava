@@ -20,7 +20,8 @@
 
         <h2>2. <?= t('Welche Daten wir verarbeiten') ?></h2>
         <ul>
-            <li><strong><?= t('Kontodaten:') ?></strong> <?= t('E-Mail-Adresse, Name, Handle (Benutzername).') ?></li>
+            <li><strong><?= t('Kontodaten:') ?></strong> <?= t('E-Mail-Adresse, Name, Handle (Benutzername).') ?>
+                <a href="/delete-account"><?= t('Konto und alle Daten hier löschen') ?></a>.</li>
             <li><strong><?= t('Standort- und Routendaten:') ?></strong> <?= t('hochgeladene bzw. aufgezeichnete Strecken und Wegpunkte.') ?></li>
             <li><strong><?= t('Fahrt-Metriken:') ?></strong> <?= t('Distanz, Dauer, Belag- und Aktivitätskennzahlen.') ?></li>
             <li><strong><?= t('Fitnessdaten (optional):') ?></strong> <?= t('Leistung, Trittfrequenz und Pedal-Balance aus einem von dir gekoppelten Bluetooth-Powermeter – nur, wenn ein Sensor verbunden ist und die Fahrt hochgeladen wird.') ?></li>
