@@ -27,6 +27,13 @@ return [
         'regions' => 'Eroberte Gebiete',
         'records' => 'Neue Rekorde',
     ],
+    'map' => [
+        'kicker'   => '// DIE LEBENDE KARTE',
+        'h2'       => 'Jede eroberte Straße, live im Revier',
+        'lead'     => 'Gebiete wechseln täglich den Besitzer. Erkunde die Karte — passend zu deiner Weltregion gezoomt — und sieh, wem die Straßen in deiner Nähe gehören.',
+        'aria'     => 'Interaktive Karte der eroberten Gebiete',
+        'noscript' => 'Aktiviere JavaScript, um die Live-Revierkarte zu erkunden.',
+    ],
     'hero' => [
         'badge'     => 'Launch-Phase // Season 03',
         'title1'    => 'Fahr echte Wege.',
