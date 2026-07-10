@@ -70,7 +70,8 @@ $_ogLocaleAlt     = $_pageLanguage === 'de' ? 'en_US' : 'de_DE';
     <script src="/assets/js/ga.js"></script>
     <script src="/assets/js/events.js"></script>
     <link rel="stylesheet" href="/assets/style.css">
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png">
     <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
     <?= \App\Support\StructuredData::render($_jsonLd ?? []) ?>
     <?php foreach ($_pageStyles as $_href): ?>

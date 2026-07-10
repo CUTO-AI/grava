@@ -55,7 +55,8 @@ $CR_OG_LOCALE_ALT = $CR_LANG === 'de' ? 'en_US' : 'de_DE';
 <!-- Leaflet + Reviere-Karte (nur Startseite): dunkle Besitz-Karte der Live-Section -->
 <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" />
 <link rel="stylesheet" href="/assets/css/regions-map.css" />
-<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png" />
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
 <?= \App\Support\StructuredData::render() ?>
 </head>

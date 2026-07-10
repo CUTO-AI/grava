@@ -81,7 +81,8 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/cyberride.css">
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/site.css">
 <link rel="stylesheet" href="<?= $CR_ASSETS ?>/app.css">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/brand/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/assets/brand/favicon-16.png">
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
 <?= \App\Support\StructuredData::render($_jsonLd ?? []) ?>
 <?php foreach ($_pageStyles as $_href): ?>
