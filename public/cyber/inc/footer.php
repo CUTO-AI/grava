@@ -55,5 +55,8 @@
 <script src="<?= $e($CR_ASSETS) ?>/lucide.min.js"></script>
 <script src="<?= $e($CR_ASSETS) ?>/site.js"></script>
 <script src="<?= $e($CR_ASSETS) ?>/pulse-teaser.js"></script>
+<!-- Leaflet + Live-Karten-Section (Startseite) -->
+<script src="/assets/vendor/leaflet/leaflet.js"></script>
+<script src="/assets/js/landing-map.js"></script>
 </body>
 </html>
