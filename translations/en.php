@@ -543,7 +543,7 @@ return [
     'Von' => 'From',
     'Vorherige' => 'Previous',
     'Was CYBERRIDE heute alles kann — und was als Nächstes kommt.' => 'Everything CYBERRIDE can do today — and what\'s coming next.',
-    'Was grava alles kann und was als Nächstes kommt.' => 'What grava can do and what\'s coming next.',
+    'Was CYBERRIDE alles kann und was als Nächstes kommt.' => 'What CYBERRIDE can do and what\'s coming next.',
     'Was kommt als Nächstes' => 'What\'s coming next',
     'Wegqualität-Score (1–5) aus Vibration und Geschwindigkeit' => 'Surface quality score (1–5) from vibration and speed',
     'Weiter' => 'Next',

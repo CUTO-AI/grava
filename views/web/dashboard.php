@@ -83,6 +83,6 @@ if ($createdAt !== '') {
 
 <section class="card">
     <h2><?= t('Funktionen &amp; Neuigkeiten') ?></h2>
-    <p class="muted"><?= t('Was grava alles kann und was als Nächstes kommt.') ?></p>
+    <p class="muted"><?= t('Was CYBERRIDE alles kann und was als Nächstes kommt.') ?></p>
     <p><a class="btn-primary" href="/features"><?= t('Funktionen &amp; Neuigkeiten ansehen') ?></a></p>
 </section>
