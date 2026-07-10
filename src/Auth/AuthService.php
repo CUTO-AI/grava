@@ -393,12 +393,17 @@ final class AuthService
     public function deleteAccount(int $userId, string $password): void
     {
         $pdo = Db::pdo();
-        $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id = ? AND status = "active" LIMIT 1');
+        $stmt = $pdo->prepare('SELECT password_hash, email, display_name FROM users WHERE id = ? AND status = "active" LIMIT 1');
         $stmt->execute([$userId]);
         $row = $stmt->fetch();
         if (!$row || !$this->passwords->verify($password, $row['password_hash'])) {
             throw new AuthException('invalid_credentials', 'Ungültiges Passwort.', 401);
         }
+
+        // Echte Adresse merken, BEVOR sie unten im Transaktions-Update
+        // anonymisiert wird — für die Löschbestätigungs-Mail.
+        $origEmail = (string)($row['email'] ?? '');
+        $origName  = $row['display_name'] !== null ? (string)$row['display_name'] : null;
 
         $now = Clock::nowUtcString();
         $scrubbedEmail = "deleted+{$userId}@invalid";
@@ -538,6 +543,26 @@ final class AuthService
         }
 
         $this->tokens->revokeAllForUser($userId);
+
+        // Löschung bestätigen (DSGVO-Transparenz + „warst du das nicht?"-Hinweis).
+        // Best effort: eine fehlgeschlagene Mail darf die bereits vollzogene
+        // Löschung nicht rückwirkend als Fehler erscheinen lassen.
+        if ($origEmail !== '') {
+            $this->sendAccountDeletedMail($origEmail, $origName);
+        }
+    }
+
+    private function sendAccountDeletedMail(string $email, ?string $displayName): void
+    {
+        $support = (string)$this->config->get('SUPPORT_EMAIL', 'grava@benx.de');
+        $ok = $this->mailer->send($email, $displayName, 'account_deleted', [
+            'display_name'  => $displayName,
+            'app_name'      => 'CYBERRIDE',
+            'support_email' => $support !== '' ? $support : 'grava@benx.de',
+        ]);
+        if (!$ok) {
+            error_log("AuthService: Lösch-Bestätigungsmail an {$email} konnte nicht versendet werden.");
+        }
     }
 
     /**

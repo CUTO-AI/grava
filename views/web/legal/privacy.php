@@ -55,7 +55,9 @@
 
         <h2>7. <?= t('Deine Rechte') ?></h2>
         <p>
-            <?= t('Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch. Dein Konto kannst du jederzeit in der App löschen („Account löschen") – dabei werden die zugehörigen personenbezogenen Daten entfernt.') ?> <?= t('Zuständige Aufsichtsbehörde ist das Bayerische Landesamt für Datenschutzaufsicht (BayLDA), Ansbach.') ?>
+            <?= t('Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit und Widerspruch. Dein Konto kannst du jederzeit in der App löschen („Account löschen") – dabei werden die zugehörigen personenbezogenen Daten entfernt.') ?>
+            <?= t('Alternativ kannst du dein Konto auch über unsere Website löschen:') ?> <a href="/delete-account" style="color: var(--primary);">cyberride.world/delete-account</a>.
+            <?= t('Zuständige Aufsichtsbehörde ist das Bayerische Landesamt für Datenschutzaufsicht (BayLDA), Ansbach.') ?>
         </p>
 
         <h2>8. <?= t('Kontakt') ?></h2>
