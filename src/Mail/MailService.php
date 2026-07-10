@@ -78,9 +78,10 @@ final class MailService
     private function subjectFor(string $template): string
     {
         return match ($template) {
-            'verify_email'   => 'Bestätige deine E-Mail-Adresse',
-            'reset_password' => 'Passwort zurücksetzen',
-            default          => 'CYBERRIDE',
+            'verify_email'    => 'Bestätige deine E-Mail-Adresse',
+            'reset_password'  => 'Passwort zurücksetzen',
+            'account_deleted' => 'Dein CYBERRIDE-Konto wurde gelöscht',
+            default           => 'CYBERRIDE',
         };
     }
 

@@ -167,6 +167,8 @@ return [
     'Distanz aufsteigend' => 'Distance ascending',
     'Du hast noch keine Routen angelegt.' => 'You haven\'t created any routes yet.',
     'Du kannst dein Konto jederzeit in der App löschen.' => 'You can delete your account at any time in the app.',
+    'Alternativ kannst du dein Konto auch über unsere Website löschen:' => 'Alternatively, you can also delete your account on our website:',
+    'Konto löschen' => 'Delete account',
     'Du wurdest zu CYBERRIDE eingeladen' => 'You\'ve been invited to CYBERRIDE',
     'E-Mail' => 'Email',
     'E-Mail noch nicht bestätigt.' => 'Email not yet confirmed.',

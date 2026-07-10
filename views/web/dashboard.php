@@ -75,6 +75,10 @@ if ($createdAt !== '') {
         <input type="hidden" name="_csrf" value="<?= htmlspecialchars($_csrf, ENT_QUOTES, 'UTF-8') ?>">
         <button type="submit" class="btn-secondary"><?= t('Abmelden') ?></button>
     </form>
+
+    <p class="muted" style="margin-top:16px;font-size:13px;">
+        <a href="/delete-account"><?= t('Konto löschen') ?></a>
+    </p>
 </section>
 
 <section class="card">
