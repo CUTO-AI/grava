@@ -26,7 +26,17 @@
 
   function t(key, fallback) { return (I18N && I18N[key]) || fallback || key; }
 
-  var map = GE.map.createBaseMap(el, { center: [30, 0], zoom: 2 });
+  // Optionaler Start-View aus data-Attributen (Startseite: EU/NA-Vorzoom via
+  // RequestRegion). Ohne die Attribute (z. B. /gebiete/karte) bleibt der
+  // bisherige Welt-Default erhalten — rückwärtskompatibel.
+  var initLat = parseFloat(el.getAttribute('data-init-lat'));
+  var initLon = parseFloat(el.getAttribute('data-init-lon'));
+  var initZoom = parseInt(el.getAttribute('data-init-zoom'), 10);
+  var initView = (isFinite(initLat) && isFinite(initLon) && isFinite(initZoom))
+    ? { center: [initLat, initLon], zoom: initZoom }
+    : { center: [30, 0], zoom: 2 };
+
+  var map = GE.map.createBaseMap(el, initView);
 
   // Ländername in Seitensprache (kyrillisch/asiatisch lesbar machen).
   var regionNames = null;

@@ -52,8 +52,9 @@ $CR_OG_LOCALE_ALT = $CR_LANG === 'de' ? 'en_US' : 'de_DE';
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/cyberride.css" />
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/site.css" />
 <link rel="stylesheet" href="<?= $e($CR_ASSETS) ?>/app.css" />
-<!-- Leaflet (nur Startseite): Basiskarte der Live-Section -->
+<!-- Leaflet + Reviere-Karte (nur Startseite): dunkle Besitz-Karte der Live-Section -->
 <link rel="stylesheet" href="/assets/vendor/leaflet/leaflet.css" />
+<link rel="stylesheet" href="/assets/css/regions-map.css" />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png" />
 <?= \App\Support\StructuredData::render() ?>

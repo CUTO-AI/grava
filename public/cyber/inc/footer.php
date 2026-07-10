@@ -55,8 +55,9 @@
 <script src="<?= $e($CR_ASSETS) ?>/lucide.min.js"></script>
 <script src="<?= $e($CR_ASSETS) ?>/site.js"></script>
 <script src="<?= $e($CR_ASSETS) ?>/pulse-teaser.js"></script>
-<!-- Leaflet + Live-Karten-Section (Startseite) -->
+<!-- Leaflet + Reviere-Karte (Startseite): identischer Stack wie /gebiete/karte -->
 <script src="/assets/vendor/leaflet/leaflet.js"></script>
-<script src="/assets/js/landing-map.js"></script>
+<script src="/assets/js/map-core.js"></script>
+<script src="/assets/js/map-regions.js"></script>
 </body>
 </html>
