@@ -140,6 +140,9 @@ final class Commands
             case 'user:verify':
                 return $this->verifyUser($argv);
 
+            case 'game:edge-inspect':
+                return $this->inspectEdge($argv);
+
             case 'help':
             default:
                 $this->help();
@@ -647,6 +650,103 @@ final class Commands
             'user'  => $user,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
         return $user !== null ? 0 : 1;
+    }
+
+    /**
+     * Read-only Diagnose einer Spielkante: aktueller Besitzer (Claimant + Handle),
+     * Regionszuordnung (`region_id`) und der aggregierte Gebiets-Besitz. Klärt den
+     * typischen App-vs-Web-Widerspruch: App zeigt Einzelkanten-Besitz, die Web-Karte
+     * zeigt Gebiete erst ab Schwelle — und eine Kante mit `region_id = NULL` zählt
+     * gar nicht zum Gebiet. Ändert NICHTS. Nutzung: game:edge-inspect --edge=<id>
+     */
+    private function inspectEdge(array $argv): int
+    {
+        $opts   = $this->parseOptions($argv);
+        $edgeId = (int)($opts['edge'] ?? 0);
+        if ($edgeId <= 0) {
+            echo "Nutzung: game:edge-inspect --edge=<id>\n";
+            return 1;
+        }
+        $pdo = \App\Database\Db::pdo();
+
+        $sel = $pdo->prepare(
+            'SELECT id, owner_claimant_id, owner_since, region_id, length_m FROM game_edge WHERE id = ? LIMIT 1'
+        );
+        $sel->execute([$edgeId]);
+        $edge = $sel->fetch(\PDO::FETCH_ASSOC) ?: null;
+        if ($edge === null) {
+            echo json_encode(['ok' => false, 'edge_id' => $edgeId, 'error' => 'edge_not_found'],
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+            return 1;
+        }
+
+        // Besitzer (Claimant → ggf. User-Handle) auflösen.
+        $owner = null;
+        if ($edge['owner_claimant_id'] !== null) {
+            $oc = $pdo->prepare(
+                'SELECT c.id AS claimant_id, c.type, c.user_id, u.public_handle, u.display_name
+                   FROM game_claimant c
+              LEFT JOIN users u ON u.id = c.user_id
+                  WHERE c.id = ? LIMIT 1'
+            );
+            $oc->execute([(int)$edge['owner_claimant_id']]);
+            $owner = $oc->fetch(\PDO::FETCH_ASSOC) ?: null;
+        }
+
+        // Region + aggregierter Gebiets-Besitz (nur wenn die Kante zugeordnet ist).
+        $region = null;
+        $regionOwnership = null;
+        $ownerProgress = null;
+        if ($edge['region_id'] !== null) {
+            $rid = (int)$edge['region_id'];
+            $rg = $pdo->prepare('SELECT id, level, name FROM game_region WHERE id = ? LIMIT 1');
+            $rg->execute([$rid]);
+            $region = $rg->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+            $ro = $pdo->prepare(
+                'SELECT owner_claimant_id, leader_claimant_id, owner_held_length_m, owner_held_edges,
+                        total_game_length_m, total_edges, held_fraction, contested, owner_since
+                   FROM game_region_ownership WHERE region_id = ? LIMIT 1'
+            );
+            $ro->execute([$rid]);
+            $regionOwnership = $ro->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+            // Wie viel hält der Kanten-Besitzer LIVE in diesem Gebiet (unabhängig vom Cache)?
+            if ($edge['owner_claimant_id'] !== null) {
+                $op = $pdo->prepare(
+                    'SELECT COUNT(*) AS owned_edges, COALESCE(SUM(length_m),0) AS owned_length_m
+                       FROM game_edge WHERE region_id = ? AND owner_claimant_id = ?'
+                );
+                $op->execute([$rid, (int)$edge['owner_claimant_id']]);
+                $ownerProgress = $op->fetch(\PDO::FETCH_ASSOC) ?: null;
+            }
+            $tot = $pdo->prepare(
+                'SELECT COUNT(*) AS total_edges, COALESCE(SUM(length_m),0) AS total_length_m
+                   FROM game_edge WHERE region_id = ?'
+            );
+            $tot->execute([$rid]);
+            $regionTotals = $tot->fetch(\PDO::FETCH_ASSOC) ?: null;
+            if ($ownerProgress !== null && $regionTotals !== null) {
+                $ownerProgress['total_edges'] = (int)$regionTotals['total_edges'];
+                $ownerProgress['total_length_m'] = (float)$regionTotals['total_length_m'];
+            }
+        }
+
+        $note = $edge['region_id'] === null
+            ? 'edge has NO region_id → it counts ZERO toward any region ownership (backfill gap or outside imported region coverage).'
+            : 'edge is assigned to a region → region only flips to owned above the level threshold (L8: >=25% length AND >=3 edges; L6: >=30% AND >=15).';
+
+        echo json_encode([
+            'ok'               => true,
+            'edge_id'          => $edgeId,
+            'edge'             => $edge,
+            'owner'            => $owner,
+            'region'           => $region,
+            'region_ownership' => $regionOwnership,
+            'owner_progress_in_region' => $ownerProgress,
+            'note'             => $note,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n";
+        return 0;
     }
 
     private function resolveUserId(\PDO $pdo, string $handle, int $id): int
