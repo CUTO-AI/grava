@@ -200,7 +200,13 @@ final class StravaService
                         $rateLimited = true;
                         break 2; // Limit erreicht — kontrolliert stoppen
                     }
-                    throw $e;
+                    // Ein einzelner fehlgeschlagener Stream (Timeout, 5xx …) darf
+                    // NICHT den ganzen Import kippen — sonst blockiert eine kaputte
+                    // Aktivität dauerhaft alle folgenden. Überspringen und weiter.
+                    error_log('StravaService::import: Streams für Activity ' . $activityId
+                        . ' fehlgeschlagen, übersprungen: ' . $e->getMessage());
+                    $skipped++;
+                    continue;
                 }
                 $latlng = $streams['latlng'] ?? [];
                 if (count($latlng) < 2) {

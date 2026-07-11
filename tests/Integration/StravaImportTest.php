@@ -176,6 +176,63 @@ final class StravaImportTest extends IntegrationTestCase
         $this->assertSame(1, $count);
     }
 
+    /**
+     * Ein einzelner fehlschlagender Stream (z. B. Timeout bei einer sehr großen
+     * Fahrt → Nicht-429-Fehler) darf NICHT den ganzen Import kippen: die
+     * betroffene Aktivität wird übersprungen, alle übrigen kommen durch.
+     */
+    public function testImportSkipsFailingStreamAndContinues(): void
+    {
+        $userId = $this->createUser();
+        $this->connect($userId); // Verbindung in DB anlegen (Fake-Client).
+
+        // Client, dessen Stream-Abruf für Activity 1 hart fehlschlägt (502, kein
+        // 429), Activity 3 aber eine gültige Spur liefert.
+        $flaky = new class implements \App\Integrations\Strava\StravaClient {
+            private FakeStravaClient $inner;
+            public function __construct() { $this->inner = new FakeStravaClient(); }
+            public function exchangeCode(string $code): array { return $this->inner->exchangeCode($code); }
+            public function refreshToken(string $r): array { return $this->inner->refreshToken($r); }
+            public function listActivities(string $t, int $perPage = 30, int $page = 1): array
+            {
+                if ($page > 1) { return []; }
+                return [
+                    ['id' => '7000000001', 'name' => 'Große Tour (Stream failt)', 'type' => 'Ride', 'start_date' => '2026-05-01T07:30:00Z'],
+                    ['id' => '7000000003', 'name' => 'Kleine Runde',              'type' => 'Ride', 'start_date' => '2026-05-03T07:30:00Z'],
+                ];
+            }
+            public function getActivityStreams(string $t, string $activityId): array
+            {
+                if ($activityId === '7000000001') {
+                    throw new \App\Integrations\Strava\StravaException('strava_api_error', 'HTTP 502 / Timeout', 502);
+                }
+                return ['latlng' => [[49.10, 8.70], [49.101, 8.702], [49.1025, 8.7035]], 'altitude' => [180.0, 192.0, 205.0]];
+            }
+            public function uploadActivity(string $t, string $f, string $d, string $n, string $desc, string $e): array { return $this->inner->uploadActivity($t, $f, $d, $n, $desc, $e); }
+            public function getUploadStatus(string $t, string $u): array { return $this->inner->getUploadStatus($t, $u); }
+            public function updateActivity(string $t, string $a, ?string $d, ?string $v): void { $this->inner->updateActivity($t, $a, $d, $v); }
+        };
+
+        $gpxExport = new RouteGpxExportService(
+            $this->routes,
+            new RouteGeoJson(new GeometryParser()),
+            new RoutePrivacyTrimmer(),
+            new PrivacyZoneRepository($this->pdo),
+        );
+        $service = new StravaService(
+            $flaky, $this->crypto, $this->routes,
+            'fake-client-id', 'http://localhost/auth/strava/callback', true, 'http://localhost',
+            $gpxExport, new RouteRepository(), new \App\Game\GameRepository($this->pdo),
+        );
+
+        // Kein Wurf trotz fehlgeschlagenem Stream — die kaputte Aktivität wird
+        // übersprungen, die intakte importiert.
+        $res = $service->import($userId);
+        $this->assertSame(1, $res['imported'], 'Die intakte Fahrt muss importiert werden.');
+        $this->assertSame(1, $res['skipped'], 'Die fehlschlagende Fahrt wird übersprungen, nicht der ganze Import.');
+        $this->assertFalse($res['rate_limited'], 'Ein 502 ist kein Rate-Limit.');
+    }
+
     public function testImportPersistsActivityStartAsDeterministicAnchor(): void
     {
         // Der Strava-Activity-Startzeitpunkt (start_date) muss als stabiler

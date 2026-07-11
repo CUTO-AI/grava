@@ -81,7 +81,10 @@ final class RealStravaClient implements StravaClient
     {
         $url = self::API_BASE . '/activities/' . rawurlencode($activityId)
             . '/streams?keys=latlng,altitude&key_by_type=true';
-        $res = $this->get($url, $accessToken);
+        // Große Fahrten (200/300 km) liefern zehntausende Punkte (mehrere MB);
+        // Strava braucht dafür serverseitig länger — deshalb ein großzügiger
+        // Timeout, sonst brechen genau die langen Touren beim Download ab.
+        $res = $this->get($url, $accessToken, 60);
         $latlng = [];
         foreach ((array)($res['latlng']['data'] ?? []) as $pair) {
             if (is_array($pair) && count($pair) >= 2) {
@@ -224,13 +227,13 @@ final class RealStravaClient implements StravaClient
     }
 
     /** @return array<string,mixed> */
-    private function get(string $url, string $accessToken): array
+    private function get(string $url, string $accessToken, int $timeout = 15): array
     {
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $accessToken],
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_TIMEOUT        => $timeout,
         ]);
         return $this->exec($ch);
     }
