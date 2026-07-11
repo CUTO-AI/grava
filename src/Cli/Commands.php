@@ -29,6 +29,7 @@ final class Commands
         private readonly ?\App\Game\GameHistoryService $gameHistory = null,
         private readonly ?\App\Game\RegionImportService $regionImport = null,
         private readonly ?\App\Game\RegionOwnershipService $regionOwnership = null,
+        private readonly ?\App\Social\SocialService $social = null,
     ) {}
 
     public function run(array $argv): int
@@ -104,6 +105,29 @@ final class Commands
 
             case 'game:test-push':
                 return $this->gameTestPush($argv);
+
+            case 'cron:social-collect':
+            case 'social:collect':
+                return $this->socialCollect($argv);
+
+            case 'cron:social-publish':
+            case 'social:publish':
+                return $this->socialPublish();
+
+            case 'social:preview':
+                return $this->socialPreview($argv);
+
+            case 'social:status':
+                return $this->socialStatus();
+
+            case 'social:card':
+                return $this->socialCard($argv);
+
+            case 'social:doctor':
+                return $this->socialDoctor();
+
+            case 'social:ig-setup':
+                return $this->socialIgSetup($argv);
 
             case 'internal:logtail':
             case 'logtail':
@@ -1093,6 +1117,212 @@ final class Commands
         return $res['errors'] > 0 ? 1 : 0;
     }
 
+    /**
+     * social:collect [--date=YYYY-MM-DD] — baut den Tagesbericht aus der
+     * Aktivität und legt ihn (falls nicht leer) als pending-Kandidat in die
+     * Redaktions-Queue (Twitter_Automation_Concept.md §5.1, E1). Idempotent.
+     * Für Cron gedacht (z. B. täglich ~19:55 UTC, vor dem Sende-Slot).
+     *
+     * @param list<string> $argv
+     */
+    private function socialCollect(array $argv): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:collect nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $date = trim((string)($opts['date'] ?? '')) ?: $this->social->today();
+        $res  = $this->social->collectDaily($date);
+        $kinds = [];
+        foreach (($res['by_kind'] ?? []) as $k => $n) {
+            $kinds[] = "{$k}={$n}";
+        }
+        echo sprintf(
+            "Social-Collect %s: %d Kandidat(en), neu=%d, schon vorhanden=%d%s\n",
+            $res['date'], $res['candidates'], $res['enqueued'], $res['already'],
+            $kinds === [] ? '' : ' [' . implode(', ', $kinds) . ']',
+        );
+        return 0;
+    }
+
+    /**
+     * social:publish — sendet fällige pending-Kandidaten des Kanals unter dem
+     * Tages-Limit (E8). Solange SOCIAL_ENABLED=0 oder SOCIAL_DRY_RUN=1, wird
+     * nichts gesendet (Dry-Run), nur protokolliert. Für Cron (z. B. 20:00).
+     */
+    private function socialPublish(): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:publish nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $res = $this->social->publishPending();
+        $dry = $res['dry_run'] ? ' DRY-RUN' : '';
+        echo sprintf("Social-Publish%s: verfallen=%d\n", $dry, (int)$res['expired']);
+        $anyFailed = false;
+        foreach (($res['channels'] ?? []) as $channel => $r) {
+            echo sprintf(
+                "  [%s] gesendet=%d, übersprungen=%d, cooldown=%d, fehlgeschlagen=%d, Rest-Kontingent=%d\n",
+                $channel, $r['published'], $r['skipped'], $r['cooldown'], $r['failed'], $r['remaining_quota'],
+            );
+            $anyFailed = $anyFailed || ($r['failed'] > 0);
+        }
+        return $anyFailed ? 1 : 0;
+    }
+
+    /**
+     * social:preview [--date=YYYY-MM-DD] [--lang=en|de] — Trocken-Vorschau des
+     * Tagesbericht-Textes samt Rohdaten. Speichert nichts, sendet nichts.
+     *
+     * @param list<string> $argv
+     */
+    private function socialPreview(array $argv): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:preview nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $date = trim((string)($opts['date'] ?? '')) ?: $this->social->today();
+        $lang = trim((string)($opts['lang'] ?? ''));
+        $res  = $this->social->preview($date, $lang !== '' ? $lang : null);
+        echo json_encode($res, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        return 0;
+    }
+
+    /** social:status — Betriebs-Überblick über Queue + letzte Sendungen. */
+    private function socialStatus(): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:status nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        echo json_encode($this->social->status(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        return 0;
+    }
+
+    /**
+     * social:card --kind=<typ> [--date=YYYY-MM-DD] [--lang=en|de] [--out=datei.png]
+     * Rendert die Media-Card des ersten Kandidaten dieses Typs in eine PNG-Datei
+     * (Standard: storage/social-cards/<kind>-<date>.png). Speichert/sendet nichts
+     * in die Queue.
+     *
+     * @param list<string> $argv
+     */
+    private function socialCard(array $argv): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:card nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $kind = trim((string)($opts['kind'] ?? 'daily_report'));
+        $date = trim((string)($opts['date'] ?? '')) ?: $this->social->today();
+        $lang = trim((string)($opts['lang'] ?? ''));
+        $res  = $this->social->previewCard($date, $kind, $lang !== '' ? $lang : null);
+
+        if (!$res['found']) {
+            echo "Kein Kandidat vom Typ '{$kind}' für {$date}.\n";
+            return 0;
+        }
+        if ($res['png'] === null) {
+            echo "Karte nicht renderbar (GD/Schrift fehlt oder Media aus). Text:\n{$res['text']}\n";
+            return 0;
+        }
+        $out = trim((string)($opts['out'] ?? ''));
+        if ($out === '') {
+            $dir = $this->basePath . '/storage/social-cards';
+            if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+            $out = $dir . '/' . preg_replace('/[^a-z_]/', '', $kind) . '-' . $date . '.png';
+        }
+        if (@file_put_contents($out, $res['png']) === false) {
+            echo "Konnte nicht schreiben: {$out}\n";
+            return 1;
+        }
+        echo "Karte gerendert (" . strlen((string)$res['png']) . " Bytes) → {$out}\nText: {$res['text']}\n";
+        return 0;
+    }
+
+    /** social:doctor — Startklar-Check (Config, Migrationen, X-Verbindung, Cards). Postet nichts. */
+    private function socialDoctor(): int
+    {
+        if ($this->social === null) {
+            fwrite(STDERR, "social:doctor nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        $res = $this->social->doctor();
+        echo json_encode($res, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+        // Exit 0, wenn Migrationen ok und mindestens ein konfigurierter Kanal
+        // verbunden ist (oder noch kein Kanal konfiguriert wurde).
+        $anyConfigured = false;
+        $anyOk = false;
+        foreach (($res['channels'] ?? []) as $c) {
+            $anyConfigured = $anyConfigured || ($c['configured'] ?? false);
+            $anyOk = $anyOk || ($c['ok'] ?? false);
+        }
+        return ($res['migrations_ok'] && (!$anyConfigured || $anyOk)) ? 0 : 1;
+    }
+
+    /**
+     * social:ig-setup --token=<kurzlebiger Graph-Token> [--app-id=] [--app-secret=] [--graph=v21.0]
+     * Tauscht (falls App-ID/Secret vorhanden) in einen long-lived Token und
+     * ermittelt die IG-User-ID. Gibt einen fertigen .env-Block aus. CLI-only.
+     *
+     * @param list<string> $argv
+     */
+    private function socialIgSetup(array $argv): int
+    {
+        $opts   = $this->parseOptions($argv);
+        $token  = trim((string)($opts['token'] ?? ''));
+        if ($token === '') {
+            echo "Nutzung: social:ig-setup --token=<kurzlebiger Graph-Token> [--app-id=] [--app-secret=]\n";
+            echo "Den kurzlebigen Token bekommst du im Graph API Explorer (Scopes: instagram_basic,\n";
+            echo "instagram_content_publish, pages_show_list, pages_read_engagement, business_management).\n";
+            return 1;
+        }
+        $graph    = trim((string)($opts['graph'] ?? ($this->config->get('IG_GRAPH_VERSION', 'v21.0') ?? 'v21.0')));
+        $appId    = trim((string)($opts['app-id'] ?? ($this->config->get('FB_APP_ID', '') ?? '')));
+        $appSecret= trim((string)($opts['app-secret'] ?? ($this->config->get('FB_APP_SECRET', '') ?? '')));
+
+        $setup = new \App\Social\InstagramSetup($graph);
+
+        // 1) Optional: kurzlebig → long-lived tauschen.
+        $longToken = $token;
+        $expiresIn = null;
+        if ($appId !== '' && $appSecret !== '') {
+            $ex = $setup->exchangeLongLived($appId, $appSecret, $token);
+            if (!$ex['ok']) {
+                echo "Token-Tausch fehlgeschlagen: {$ex['error']}\n";
+                return 1;
+            }
+            $longToken = (string)$ex['token'];
+            $expiresIn = $ex['expires_in'];
+            echo "Long-lived Token erzeugt" . ($expiresIn !== null ? " (gültig ~" . intdiv((int)$expiresIn, 86400) . " Tage)" : "") . ".\n";
+        } else {
+            echo "Hinweis: --app-id/--app-secret fehlen → Token wird NICHT getauscht (nutze ihn als long-lived).\n";
+        }
+
+        // 2) IG-User-ID über verknüpfte Seite ermitteln.
+        $disc = $setup->discoverBusinessAccount($longToken);
+        if (!$disc['ok']) {
+            echo "IG-Account nicht gefunden: {$disc['error']}\n";
+            return 1;
+        }
+
+        echo "\n== Gefunden ==\n";
+        echo "  Facebook-Seite : " . ($disc['page'] ?? '—') . "\n";
+        echo "  IG-Username    : @" . ($disc['username'] ?? '—') . "\n";
+        echo "  IG-User-ID     : " . $disc['ig_user_id'] . "\n";
+        echo "\n== In die .env übernehmen ==\n";
+        echo "SOCIAL_CHANNELS=instagram\n";
+        echo "IG_USER_ID={$disc['ig_user_id']}\n";
+        echo "IG_ACCESS_TOKEN={$longToken}\n";
+        echo "IG_GRAPH_VERSION={$graph}\n";
+        echo "\nDanach: social:doctor → channels.instagram.ok:true erwartet.\n";
+        return 0;
+    }
+
     private function help(): void
     {
         echo "GRAVA Backend CLI\n";
@@ -1111,6 +1341,13 @@ final class Commands
         echo "  game:backfill-speed Rekord-Daten auf Bestands-Pässe [--limit=100] [--sleep-ms=500] [--after-route-id=0]\n";
         echo "  game:notify-dispatch Stellt den Spiel-Ereignis-Strom als Inbox+APNs zu (Digest-Fenster)\n";
         echo "  game:test-push      (Feldtest) edge_taken-Mitteilung erzeugen: --handle=<@h>|--user=<id> [--actor=<@h>] [--edge=<id>]\n";
+        echo "  social:collect      Tagesbericht bauen + in die Post-Queue legen [--date=YYYY-MM-DD]\n";
+        echo "  social:publish      Fällige Post-Kandidaten senden (Dry-Run, solange SOCIAL_ENABLED=0/SOCIAL_DRY_RUN=1)\n";
+        echo "  social:preview      Trocken-Vorschau ALLER Kandidaten des Tages [--date=YYYY-MM-DD] [--lang=en|de]\n";
+        echo "  social:status       Betriebs-Überblick: Queue-Zustand + letzte Sendungen\n";
+        echo "  social:card         Media-Card rendern: --kind=<typ> [--date=] [--lang=] [--out=datei.png]\n";
+        echo "  social:doctor       Startklar-Check (Config, Migrationen, X/IG-Verbindung) — postet nichts\n";
+        echo "  social:ig-setup     IG-Einrichtung: --token=<kurzlebig> [--app-id=][--app-secret=] → long-lived Token + IG-User-ID\n";
         echo "  help                Zeigt diese Hilfe\n";
     }
 }

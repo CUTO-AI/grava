@@ -68,4 +68,23 @@ final class UserController
         }
         Response::json(['user' => $user]);
     }
+
+    /**
+     * PUT /api/v1/users/me/social-optin — Opt-in für automatische
+     * personenbezogene Social-Posts (X/Twitter), Konzept §8. Default aus;
+     * ohne Opt-in werden persönliche Highlights (KOM, Abzeichen) nicht gepostet.
+     */
+    public function setSocialOptIn(Request $req): void
+    {
+        $raw = $req->input('social_optin');
+        if ($raw === null) {
+            Response::error('validation_error', 'Bitte überprüfe deine Eingaben.', 422, ['social_optin' => ['Required.']]);
+        }
+        $enabled = filter_var($raw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($enabled === null) {
+            Response::error('validation_error', 'social_optin muss ein Boolean sein.', 422, ['social_optin' => ['Boolean required.']]);
+        }
+        $user = $this->auth->setSocialOptIn((int)($req->user->internal_id ?? 0), $enabled);
+        Response::json(['user' => $user]);
+    }
 }

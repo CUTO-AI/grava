@@ -598,7 +598,7 @@ final class AuthService
     {
         $pdo = Db::pdo();
         $stmt = $pdo->prepare(
-            'SELECT public_id, email, display_name, public_handle, email_verified_at, created_at
+            'SELECT public_id, email, display_name, public_handle, email_verified_at, created_at, social_optin
              FROM users WHERE id = ? LIMIT 1'
         );
         $stmt->execute([$userId]);
@@ -613,7 +613,17 @@ final class AuthService
             'public_handle'  => $row['public_handle'],
             'email_verified' => $row['email_verified_at'] !== null,
             'created_at'     => Clock::toIso8601($row['created_at']),
+            'social_optin'   => (bool)$row['social_optin'],
         ];
+    }
+
+    /** Setzt das Opt-in für automatische personenbezogene Social-Posts (Konzept §8). */
+    public function setSocialOptIn(int $userId, bool $enabled): array
+    {
+        $pdo = Db::pdo();
+        $stmt = $pdo->prepare('UPDATE users SET social_optin = ?, updated_at = UTC_TIMESTAMP() WHERE id = ?');
+        $stmt->execute([$enabled ? 1 : 0, $userId]);
+        return $this->loadUserPublic($userId);
     }
 
     /**

@@ -324,7 +324,7 @@ $routeSurface = new RouteSurfaceService(
 // ---------------------------------------------------------------------------
 if (PHP_SAPI === 'cli') {
     $cliRegionRepo = new \App\Game\RegionRepository(Db::pdo());
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig));
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config));
     exit($cli->run($_SERVER['argv'] ?? []));
 }
 
@@ -527,6 +527,8 @@ $router->delete("{$apiBase}/users/me",                    fn($r) => $apiUsers->d
 // statt PATCH /users/me, weil die Operation nicht idempotent ist
 // (One-Time-Lock) und einen klaren Konflikt-Code (409) braucht.
 $router->patch("{$apiBase}/users/me/handle",              fn($r) => $apiUsers->setHandle($r), [$requireBearer, $requireVerified]);
+// Opt-in für automatische personenbezogene Social-Posts (Twitter_Automation_Concept.md §8).
+$router->put("{$apiBase}/users/me/social-optin",          fn($r) => $apiUsers->setSocialOptIn($r), [$requireBearer]);
 
 // S8 Privatzonen / Heimat-Schutz (§17). Reine Account-Operation (Bearer).
 $router->get("{$apiBase}/me/privacy-zone",                fn($r) => $apiPrivacyZone->show($r),   [$requireBearer]);
@@ -859,6 +861,30 @@ $router->get ('/u/{handle}',                             fn($r) => $webDiscover-
 $router->get ('/u/{handle}/r/{id}',                      fn($r) => $webDiscover->profileRoute($r),        [$optionalBearer]);
 $router->get ('/u/{handle}/r/{id}/geojson',              fn($r) => $webDiscover->profileRouteGeojson($r), [$optionalBearer]);
 $router->get ('/u/{handle}/r/{id}/og-image.png',         fn($r) => $webDiscover->profileRouteOgImage($r), [$optionalBearer]);
+// Öffentliche Media-Card einer Social-Queue-Zeile (Instagram lädt sie per URL,
+// Instagram_Automation_Concept.md §4/M4). Gecacht nach storage/social-cards/.
+$router->get ('/social/card/{id}.png', function (Request $r) use ($config, $basePath): void {
+    $id = (int)($r->routeParams['id'] ?? 0);
+    if ($id <= 0) {
+        Response::error('not_found', 'Nicht gefunden.', 404);
+    }
+    $cacheFile = $basePath . '/storage/social-cards/' . $id . '.png';
+    $png = is_file($cacheFile) ? (string)@file_get_contents($cacheFile) : '';
+    if ($png === '') {
+        $png = (string)(new \App\Social\SocialService($config))->renderCardForQueueId($id);
+        if ($png === '') {
+            Response::error('not_found', 'Keine Karte für diese ID.', 404);
+        }
+        $dir = dirname($cacheFile);
+        if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+        if (is_dir($dir) && is_writable($dir)) { @file_put_contents($cacheFile, $png); }
+    }
+    header('Content-Type: image/png');
+    header('Cache-Control: public, max-age=604800');
+    header('Content-Length: ' . (string)strlen($png));
+    echo $png;
+    exit;
+});
 $router->get ('/feed',                                   fn($r) => $webDiscover->feed($r));
 $router->get ('/notifications',                          fn($r) => $webDiscover->notifications($r));
 
@@ -893,9 +919,9 @@ $runInternal = function (Request $r, string $command)
     if ($provided === '' || !hash_equals($internalToken, $provided)) {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc);
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config));
     $argv = ['internal', $command];
-    foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email'] as $opt) {
+    foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email', 'date', 'lang'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {
             $argv[] = '--' . $opt . '=' . (string)$r->query[$opt];
         }
@@ -949,6 +975,22 @@ $router->post('/internal/cron/game-snapshot', fn($r) => $runInternal($r, 'game:s
 // Gebiets-Besitz neu rechnen (CityConquest_Backend_Spec.md).
 $router->get('/internal/cron/region-ownership',  fn($r) => $runInternal($r, 'regions:ownership-refresh'));
 $router->post('/internal/cron/region-ownership', fn($r) => $runInternal($r, 'regions:ownership-refresh'));
+// Social-Automatik (Twitter_Automation_Concept.md §6): Tagesbericht einsammeln
+// (~19:55 UTC) + senden (~20:00 UTC). Sendet nichts, solange SOCIAL_ENABLED=0
+// oder SOCIAL_DRY_RUN=1 gesetzt ist (Dry-Run).
+$router->get('/internal/cron/social-collect',  fn($r) => $runInternal($r, 'social:collect'));
+$router->post('/internal/cron/social-collect', fn($r) => $runInternal($r, 'social:collect'));
+$router->get('/internal/cron/social-publish',  fn($r) => $runInternal($r, 'social:publish'));
+$router->post('/internal/cron/social-publish', fn($r) => $runInternal($r, 'social:publish'));
+// Trocken-Vorschau aller Kandidaten des Tages (kein Speichern/Senden).
+$router->get('/internal/social/preview',  fn($r) => $runInternal($r, 'social:preview'));
+$router->post('/internal/social/preview', fn($r) => $runInternal($r, 'social:preview'));
+// Betriebs-Überblick über die Post-Queue.
+$router->get('/internal/social/status',  fn($r) => $runInternal($r, 'social:status'));
+$router->post('/internal/social/status', fn($r) => $runInternal($r, 'social:status'));
+// Startklar-Check (Config, Migrationen, X-Verbindung); postet nichts.
+$router->get('/internal/social/doctor',  fn($r) => $runInternal($r, 'social:doctor'));
+$router->post('/internal/social/doctor', fn($r) => $runInternal($r, 'social:doctor'));
 // Einmaliger Push-Feldtest: erzeugt eine edge_taken-Mitteilung (Inbox + APNs).
 $router->get('/internal/game/test-push',  fn($r) => $runInternal($r, 'game:test-push'));
 $router->post('/internal/game/test-push', fn($r) => $runInternal($r, 'game:test-push'));

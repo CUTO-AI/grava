@@ -10,6 +10,10 @@
 !/storage/routes/.gitkeep
 # OSM-Grenzen-Zwischendateien der Gebiets-Eroberung (mehrere GB — NIE committen)
 /storage/regions/
+# Generierte Social-Media-Cards (Cache/Vorschau, jederzeit neu erzeugbar)
+/storage/social-cards/
+# Generierte OG-Karten (Runtime-Artefakt, jederzeit neu erzeugbar)
+/storage/og-images/
 .DS_Store
 *.log
 # Build-Artefakte (z. B. scripts/sync_heatmap_edges.sh export -> build/heatmap_edges.sql)
