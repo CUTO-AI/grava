@@ -139,4 +139,36 @@ final class RouteSyncTest extends IntegrationTestCase
         $this->assertGreaterThan(0, $route['stats']['distance_m'], 'Distanz wurde berechnet.');
         $this->assertIsArray($route['tags']);
     }
+
+    /**
+     * Server-seitige Sortierung: die App paginiert die Cloud-Liste, daher muss
+     * die Reihenfolge vom Server kommen — sonst stimmt sie nicht, solange noch
+     * nicht alle Seiten geladen sind. Hier über den Titel-Sort verifiziert.
+     */
+    public function testListForUserRespectsServerSideSort(): void
+    {
+        $userId = $this->createUser();
+
+        foreach (['Zeta Runde', 'Alpha Runde', 'Mike Runde'] as $title) {
+            $this->routes->createOrAddVersion(
+                userId: $userId,
+                title: $title,
+                description: null,
+                visibility: 'private',
+                source: 'app',
+                clientRouteUuid: self::uuid4(),
+                payload: $this->payload,
+            );
+        }
+
+        $titles = array_map(
+            static fn (array $r): string => $r['title'],
+            $this->routes->listForUser($userId, 50, 0, 'title'),
+        );
+        $this->assertSame(['Alpha Runde', 'Mike Runde', 'Zeta Runde'], $titles);
+
+        // Unbekannter/kein Sortschlüssel → Standard (neueste zuerst), kein Fehler.
+        $default = $this->routes->listForUser($userId, 50, 0);
+        $this->assertCount(3, $default);
+    }
 }

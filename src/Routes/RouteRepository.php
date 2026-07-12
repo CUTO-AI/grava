@@ -242,14 +242,21 @@ final class RouteRepository
      *
      * @return list<array<string,mixed>>
      */
-    public function listForUser(int $userId, int $limit = 50, int $offset = 0): array
+    public function listForUser(int $userId, int $limit = 50, int $offset = 0, string $sort = 'newest'): array
     {
         $limit  = max(1, min(200, $limit));
         $offset = max(0, $offset);
-        $sql = self::publicSelect() . '
+        // Server-seitige Sortierung, damit paginierte Clients (App) auch bei
+        // noch nicht vollständig geladener Liste eine korrekte Reihenfolge sehen.
+        $orderBy = match ($sort) {
+            'distance' => 'r.distance_m DESC, r.updated_at DESC',
+            'title'    => 'r.title ASC, r.updated_at DESC',
+            default    => 'r.updated_at DESC', // newest
+        };
+        $sql = self::publicSelect() . "
               WHERE r.user_id = ? AND r.deleted_at IS NULL
-              ORDER BY r.updated_at DESC
-              LIMIT ? OFFSET ?';
+              ORDER BY {$orderBy}
+              LIMIT ? OFFSET ?";
         $pdo = Db::pdo();
         $stmt = $pdo->prepare($sql);
         $stmt->bindValue(1, $userId, PDO::PARAM_INT);

@@ -154,7 +154,11 @@ final class RouteController
 
         $limit  = (int)($req->query['limit']  ?? 50);
         $offset = (int)($req->query['offset'] ?? 0);
-        $items  = $this->routes->listForUser($userId, $limit, $offset);
+        $sort   = (string)($req->query['sort'] ?? 'newest');
+        if (!in_array($sort, ['newest', 'distance', 'title'], true)) {
+            $sort = 'newest';
+        }
+        $items  = $this->routes->listForUser($userId, $limit, $offset, $sort);
 
         Response::json([
             'routes'     => $items,

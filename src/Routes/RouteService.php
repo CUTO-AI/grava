@@ -280,9 +280,9 @@ final class RouteService
     /**
      * @return list<array<string,mixed>>
      */
-    public function listForUser(int $userId, int $limit = 50, int $offset = 0): array
+    public function listForUser(int $userId, int $limit = 50, int $offset = 0, string $sort = 'newest'): array
     {
-        $items = $this->routes->listForUser($userId, $limit, $offset);
+        $items = $this->routes->listForUser($userId, $limit, $offset, $sort);
         $result = [];
         foreach ($items as $item) {
             $item['tags'] = $this->routes->listTags((int)$item['_internal']['route_id']);
