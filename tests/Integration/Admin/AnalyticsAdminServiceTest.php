@@ -44,9 +44,16 @@ final class AnalyticsAdminServiceTest extends IntegrationTestCase
 
         $svc = new AnalyticsAdminService($this->pdo);
         $signups = $svc->signupsPerDay(30);
+        // Dichte Reihe: heute-30 .. heute = 31 Tage, auch Tage ohne Signups.
+        $this->assertCount(31, $signups);
         $todayKey = Clock::nowUtc()->format('Y-m-d');
-        $todayRow = array_values(array_filter($signups, static fn($r) => $r['d'] === $todayKey));
-        $this->assertSame(2, $todayRow[0]['n']);
+        $byDay = [];
+        foreach ($signups as $r) { $byDay[$r['d']] = $r['n']; }
+        $this->assertSame(2, $byDay[$todayKey]);
+        // Ein Tag ohne Registrierungen ist mit 0 vertreten (nicht ausgelassen).
+        $emptyKey = Clock::nowUtc()->modify('-5 days')->format('Y-m-d');
+        $this->assertArrayHasKey($emptyKey, $byDay);
+        $this->assertSame(0, $byDay[$emptyKey]);
 
         $this->seedRoute($u1, $today, 'app');
         $this->seedRoute($u1, $today, 'app');

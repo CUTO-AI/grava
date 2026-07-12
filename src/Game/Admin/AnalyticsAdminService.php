@@ -96,21 +96,36 @@ final class AnalyticsAdminService
         return ['cohorts' => array_values($cohorts), 'maxOffset' => $maxOffset];
     }
 
-    /** @return list<array{d:string,n:int}> */
+    /**
+     * @return list<array{d:string,n:int}> DICHTE Tagesreihe: jeder Tag im Fenster
+     * [heute-$days .. heute] ist vertreten, fehlende Tage mit n=0 (nicht nur Tage
+     * mit Registrierungen/Fahrten > 0).
+     */
     private function perDay(string $table, string $col, ?string $extraWhere, int $days): array
     {
-        $since = Clock::nowUtc()->modify("-{$days} days")->format('Y-m-d');
+        $start = Clock::nowUtc()->modify("-{$days} days");
         $where = "DATE({$col}) >= ?";
         if ($extraWhere !== null) {
             $where .= " AND {$extraWhere}";
         }
         $stmt = $this->pdo->prepare(
-            "SELECT DATE({$col}) AS d, COUNT(*) AS n FROM {$table} WHERE {$where} GROUP BY d ORDER BY d"
+            "SELECT DATE({$col}) AS d, COUNT(*) AS n FROM {$table} WHERE {$where} GROUP BY d"
         );
-        $stmt->execute([$since]);
-        $out = [];
+        $stmt->execute([$start->format('Y-m-d')]);
+        $counts = [];
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-            $out[] = ['d' => (string)$r['d'], 'n' => (int)$r['n']];
+            $counts[(string)$r['d']] = (int)$r['n'];
+        }
+
+        // Lückenlose Reihe vom Startdatum bis heute (inklusive) aufbauen.
+        $out = [];
+        $end = Clock::nowUtc();
+        $cursor = new \DateTimeImmutable($start->format('Y-m-d'), new \DateTimeZone('UTC'));
+        $last = $end->format('Y-m-d');
+        while ($cursor->format('Y-m-d') <= $last) {
+            $key = $cursor->format('Y-m-d');
+            $out[] = ['d' => $key, 'n' => $counts[$key] ?? 0];
+            $cursor = $cursor->modify('+1 day');
         }
         return $out;
     }
