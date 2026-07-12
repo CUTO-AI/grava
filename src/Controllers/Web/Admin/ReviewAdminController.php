@@ -45,6 +45,7 @@ final class ReviewAdminController
             'role' => $role,
             'reports' => $this->queue->openReports(100, 0),
             'highVolume' => $this->moderation->highVolumeRiders(50),
+            'suspiciousSpeed' => $this->moderation->suspiciousSpeed(50),
         ]);
     }
 

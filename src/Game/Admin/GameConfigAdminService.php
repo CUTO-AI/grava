@@ -60,6 +60,9 @@ final class GameConfigAdminService
         private readonly PDO $pdo,
         private readonly GameConfig $config,
         private readonly GameAuditService $audit,
+        // Config-Versionierung (Phase 2): optional, damit bestehende Aufrufer/Tests
+        // ohne Versionierung weiter funktionieren.
+        private readonly ?GameConfigVersionService $versions = null,
     ) {}
 
     /**
@@ -67,7 +70,7 @@ final class GameConfigAdminService
      * @param array<string,string> $values
      * @return array<string,string> Fehler je key (leer = ok, alles geschrieben)
      */
-    public function update(int $adminUserId, array $values): array
+    public function update(int $adminUserId, array $values, string $note = ''): array
     {
         $errors = [];
         $clean = [];
@@ -117,6 +120,7 @@ final class GameConfigAdminService
         if ($errors !== []) {
             return $errors;
         }
+        $changed = false;
         foreach ($clean as $key => $value) {
             $before = $this->config->string($key);
             if ($before === $value) {
@@ -127,6 +131,13 @@ final class GameConfigAdminService
                  ON DUPLICATE KEY UPDATE config_value = VALUES(config_value)'
             )->execute([$key, $value]);
             $this->audit->record($adminUserId, 'config_update', 'config:' . $key, ['before' => $before, 'after' => $value]);
+            $changed = true;
+        }
+        // Voll-Snapshot des resultierenden Zustands (Phase 2, Rollback-fähig).
+        // GameConfig cached → der neue Stand = gecachte all() mit $clean überschrieben.
+        if ($changed && $this->versions !== null) {
+            $resulting = array_merge($this->config->all(), $clean);
+            $this->versions->record($adminUserId, $resulting, $note);
         }
         return [];
     }

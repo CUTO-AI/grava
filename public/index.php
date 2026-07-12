@@ -504,7 +504,8 @@ $webLanding  = new LandingController($basePath . '/views');
 // $adminGuard ist bereits oben (bei den API-Controllern) erstellt.
 $gameAudit       = new \App\Game\Admin\GameAuditService(Db::pdo());
 $gameAdminSvc    = new \App\Game\Admin\GameAdminService(Db::pdo(), $gameRepo, $gameConfig);
-$gameCfgAdmin    = new \App\Game\Admin\GameConfigAdminService(Db::pdo(), $gameConfig, $gameAudit);
+$gameCfgVersions = new \App\Game\Admin\GameConfigVersionService(Db::pdo());
+$gameCfgAdmin    = new \App\Game\Admin\GameConfigAdminService(Db::pdo(), $gameConfig, $gameAudit, $gameCfgVersions);
 $gameModeration  = new \App\Game\Admin\GameModerationService(Db::pdo(), $gameConfig);
 $gamePassAdmin   = new \App\Game\Admin\GamePassAdminService(Db::pdo(), $gameRepo, $gameRecalc, $gameAudit);
 $gameUserFlag    = new \App\Game\Admin\GameUserFlagService(Db::pdo(), $gameAudit);
@@ -561,6 +562,9 @@ $webReviewAdmin = new \App\Controllers\Web\Admin\ReviewAdminController(
     $webSession, $auth, $adminRoleSvc,
     new \App\Game\Admin\ReviewQueueService(Db::pdo()),
     $gameModeration, $gameAudit, $basePath . '/views',
+);
+$webConfigVerAdmin = new \App\Controllers\Web\Admin\ConfigVersionAdminController(
+    $webSession, $auth, $adminRoleSvc, $gameCfgVersions, $gameCfgAdmin, $gameAudit, $basePath . '/views',
 );
 
 // ---- JSON API ----
@@ -920,6 +924,9 @@ $router->post('/admin/rides/{id}/invalidate',          fn($r) => $webRideAdmin->
 $router->post('/admin/rides/{id}/delete',              fn($r) => $webRideAdmin->delete($r),          [$csrf]);
 $router->get ('/admin/review',                         fn($r) => $webReviewAdmin->index($r));
 $router->post('/admin/review/report/{id}',             fn($r) => $webReviewAdmin->resolveReport($r), [$csrf]);
+$router->get ('/admin/config/versions',                fn($r) => $webConfigVerAdmin->index($r));
+$router->get ('/admin/config/versions/{id}',           fn($r) => $webConfigVerAdmin->show($r));
+$router->post('/admin/config/versions/{id}/restore',   fn($r) => $webConfigVerAdmin->restore($r),    [$csrf]);
 
 // ---- Settings Web-UI (M3 Phase 0) ----
 $router->get ('/settings/handle',                        fn($r) => $webSetting->showHandle($r));

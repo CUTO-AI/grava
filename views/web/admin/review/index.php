@@ -54,8 +54,28 @@ $contentLink = static function (string $type, int $cid) use ($e): string {
 </section>
 
 <section class="card">
+    <h2><?= t('Auffällig: hohe Geschwindigkeit') ?></h2>
+    <p class="muted"><?= t('Pässe mit Ø-Kanten-Tempo über mod_max_speed_kmh (unter der harten Ingest-Grenze). Nur markiert – Fahrt im Fahrten-Modul invalidieren.') ?></p>
+    <table class="data" style="width:100%">
+        <thead><tr><th>User</th><th><?= t('Tempo') ?></th><th>Kante</th><th><?= t('Fahrt') ?></th><th><?= t('Tag') ?></th></tr></thead>
+        <tbody>
+        <?php foreach ($suspiciousSpeed as $s): ?>
+            <tr>
+                <td><a href="/admin/users/<?= (int)$s['user_id'] ?>"><?= $s['handle'] !== null ? '@' . $e($s['handle']) : 'user#' . (int)$s['user_id'] ?></a></td>
+                <td><strong><?= number_format((float)$s['avg_speed_kmh'], 1) ?> km/h</strong></td>
+                <td>edge#<?= (int)$s['edge_id'] ?></td>
+                <td><a href="/admin/rides/<?= (int)$s['route_id'] ?>">route#<?= (int)$s['route_id'] ?></a></td>
+                <td class="muted"><?= $e($s['ridden_on']) ?></td>
+            </tr>
+        <?php endforeach; ?>
+        <?php if ($suspiciousSpeed === []): ?><tr><td colspan="5" class="muted"><?= t('Nichts Auffälliges.') ?></td></tr><?php endif; ?>
+        </tbody>
+    </table>
+</section>
+
+<section class="card">
     <h2><?= t('Auffällig: viele Pässe/Tag') ?></h2>
-    <p class="muted"><?= t('Heuristik (mod_max_passes_per_day). Geschwindigkeits-Heuristik folgt, sobald Pass-Tempo gespeichert wird.') ?></p>
+    <p class="muted"><?= t('Heuristik (mod_max_passes_per_day).') ?></p>
     <table class="data" style="width:100%">
         <thead><tr><th>User</th><th><?= t('Pässe/Tag') ?></th><th><?= t('Tag') ?></th></tr></thead>
         <tbody>

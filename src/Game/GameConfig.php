@@ -42,6 +42,10 @@ final class GameConfig
         'auth_max_speed_kmh'        => '80',
         'mod_max_new_edges_per_min' => '30',
         'mod_max_passes_per_day'    => '200',
+        // Review-Heuristik: Pässe mit einer Ø-Kanten-Geschwindigkeit darüber
+        // werden zur Sichtung markiert (unter der harten auth_max_speed_kmh=80,
+        // die beim Ingest bereits verwirft). Kein Auto-Ban.
+        'mod_max_speed_kmh'         => '60',
         'group_ride_bonus'          => '1.5',
         'group_ride_min_members'    => '3',
         'crew_max_members'          => '0',
