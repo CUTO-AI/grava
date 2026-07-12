@@ -658,25 +658,37 @@ final class RegionRepository
      */
     public function activityLeaderboardByPathPrefix(string $pathPrefix, string $since, string $type, int $limit): array
     {
+        // Zuordnung wie im übrigen Spiel (effectiveClaimantId/EdgeRecalculator): ein
+        // Pass zählt für den AKTUELLEN effektiven Claimant des Fahrers — die Crew,
+        // falls er Mitglied ist, sonst sein Solo-Claimant. NICHT der historische
+        // pass.claimant_id (sonst erscheint ein Crew-Mitglied fälschlich als Solo).
+        if ($type === 'group') {
+            $cidExpr = 'gc.claimant_id';
+            $filter  = 'gc.claimant_id IS NOT NULL';
+        } else {
+            $cidExpr = 'COALESCE(rc.id, p.claimant_id)';
+            $filter  = 'gc.claimant_id IS NULL';
+        }
         $stmt = $this->pdo->prepare(
-            "SELECT p.claimant_id AS cid,
+            "SELECT {$cidExpr} AS cid,
                     SUM(e.length_m)            AS len,
                     COUNT(DISTINCT p.edge_id)  AS edges,
                     COUNT(DISTINCT p.user_id)  AS riders
                FROM game_edge_pass p
-               JOIN game_edge e     ON e.id = p.edge_id
-               JOIN game_region r   ON r.id = e.region_id
-               JOIN game_claimant c ON c.id = p.claimant_id
+               JOIN game_edge e   ON e.id = p.edge_id
+               JOIN game_region r ON r.id = e.region_id
+          LEFT JOIN game_crew_member m ON m.user_id = p.user_id
+          LEFT JOIN game_crew gc       ON gc.id = m.crew_id
+          LEFT JOIN game_claimant rc   ON rc.type = 'rider' AND rc.user_id = p.user_id
               WHERE r.path LIKE :prefix
                 AND p.ridden_on >= :since
-                AND c.type = :ctype
-           GROUP BY p.claimant_id
+                AND {$filter}
+           GROUP BY cid
            ORDER BY len DESC
               LIMIT :lim"
         );
         $stmt->bindValue(':prefix', $pathPrefix . '%');
         $stmt->bindValue(':since', $since);
-        $stmt->bindValue(':ctype', $type);
         $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
         $stmt->execute();
         $out = [];
@@ -700,15 +712,18 @@ final class RegionRepository
      */
     public function activityCounts(string $pathPrefix, string $since): array
     {
+        // Solo/Crew nach AKTUELLEM effektivem Claimant (Crew, falls Mitglied), nicht
+        // nach historischem pass.claimant_id — konsistent zum übrigen Spiel.
         $stmt = $this->pdo->prepare(
             "SELECT COUNT(DISTINCT p.user_id) AS total_riders,
-                    COUNT(DISTINCT CASE WHEN c.type = 'rider' THEN p.user_id END)    AS solo_riders,
-                    COUNT(DISTINCT CASE WHEN c.type = 'group' THEN p.user_id END)    AS crew_riders,
-                    COUNT(DISTINCT CASE WHEN c.type = 'group' THEN p.claimant_id END) AS crew_count
+                    COUNT(DISTINCT CASE WHEN gc.claimant_id IS NULL     THEN p.user_id END) AS solo_riders,
+                    COUNT(DISTINCT CASE WHEN gc.claimant_id IS NOT NULL THEN p.user_id END) AS crew_riders,
+                    COUNT(DISTINCT gc.claimant_id) AS crew_count
                FROM game_edge_pass p
-               JOIN game_edge e     ON e.id = p.edge_id
-               JOIN game_region r   ON r.id = e.region_id
-               JOIN game_claimant c ON c.id = p.claimant_id
+               JOIN game_edge e   ON e.id = p.edge_id
+               JOIN game_region r ON r.id = e.region_id
+          LEFT JOIN game_crew_member m ON m.user_id = p.user_id
+          LEFT JOIN game_crew gc       ON gc.id = m.crew_id
               WHERE r.path LIKE :prefix
                 AND p.ridden_on >= :since"
         );
@@ -741,14 +756,15 @@ final class RegionRepository
         }
         $sql = "SELECT a.id AS region_id, a.name AS name, a.level AS level, a.kind AS kind,
                        COUNT(DISTINCT p.user_id) AS war,
-                       COUNT(DISTINCT CASE WHEN c.type = 'rider' THEN p.user_id END)     AS solo_riders,
-                       COUNT(DISTINCT CASE WHEN c.type = 'group' THEN p.claimant_id END) AS crew_count,
+                       COUNT(DISTINCT CASE WHEN gc.claimant_id IS NULL THEN p.user_id END) AS solo_riders,
+                       COUNT(DISTINCT gc.claimant_id) AS crew_count,
                        COUNT(DISTINCT p.edge_id) AS edges
                   FROM game_edge_pass p
                   JOIN game_edge e     ON e.id = p.edge_id
                   JOIN game_region lf  ON lf.id = e.region_id
                   JOIN game_region a   ON a.level = :level AND lf.path LIKE CONCAT(a.path, '%')
-                  JOIN game_claimant c ON c.id = p.claimant_id
+             LEFT JOIN game_crew_member m ON m.user_id = p.user_id
+             LEFT JOIN game_crew gc       ON gc.id = m.crew_id
                  WHERE p.ridden_on >= :since
                        {$bboxFilter}
               GROUP BY a.id
@@ -795,11 +811,15 @@ final class RegionRepository
      */
     public function activityLeafUserRows(string $since): array
     {
+        // ctype = effektiver Typ des Fahrers HEUTE (Crew-Mitglied → 'group', sonst
+        // 'rider'), nicht der historische pass.claimant_id.
         $stmt = $this->pdo->prepare(
-            "SELECT DISTINCT e.region_id AS leaf, p.user_id AS uid, c.type AS ctype
+            "SELECT DISTINCT e.region_id AS leaf, p.user_id AS uid,
+                    CASE WHEN gc.claimant_id IS NOT NULL THEN 'group' ELSE 'rider' END AS ctype
                FROM game_edge_pass p
-               JOIN game_edge e     ON e.id = p.edge_id
-               JOIN game_claimant c ON c.id = p.claimant_id
+               JOIN game_edge e ON e.id = p.edge_id
+          LEFT JOIN game_crew_member m ON m.user_id = p.user_id
+          LEFT JOIN game_crew gc       ON gc.id = m.crew_id
               WHERE p.ridden_on >= :since
                 AND e.region_id IS NOT NULL"
         );
@@ -813,20 +833,22 @@ final class RegionRepository
     }
 
     /**
-     * DISTINCT (Blatt-Gebiet, Crew-Claimant) mit Pass im Fenster (nur type='group').
+     * DISTINCT (Blatt-Gebiet, Crew-Claimant) für Fahrer, die aktuell Crew-Mitglied sind.
      *
      * @return list<array{leaf:int,cid:int}>
      */
     public function activityLeafCrewRows(string $since): array
     {
+        // Crew-Claimant nach AKTUELLER Mitgliedschaft des Fahrers (INNER JOIN), nicht
+        // nach historischem Group-Pass.
         $stmt = $this->pdo->prepare(
-            "SELECT DISTINCT e.region_id AS leaf, p.claimant_id AS cid
+            "SELECT DISTINCT e.region_id AS leaf, gc.claimant_id AS cid
                FROM game_edge_pass p
-               JOIN game_edge e     ON e.id = p.edge_id
-               JOIN game_claimant c ON c.id = p.claimant_id
+               JOIN game_edge e        ON e.id = p.edge_id
+               JOIN game_crew_member m ON m.user_id = p.user_id
+               JOIN game_crew gc       ON gc.id = m.crew_id
               WHERE p.ridden_on >= :since
-                AND e.region_id IS NOT NULL
-                AND c.type = 'group'"
+                AND e.region_id IS NOT NULL"
         );
         $stmt->bindValue(':since', $since);
         $stmt->execute();
