@@ -541,6 +541,27 @@ $webAuditAdmin = new \App\Controllers\Web\Admin\AuditAdminController(
 $webRolesAdmin = new \App\Controllers\Web\Admin\RolesAdminController(
     $webSession, $auth, $adminRoleSvc, $gameAudit, $basePath . '/views',
 );
+// Backoffice Phase 1 (GameAdmin_Concept.md): Dashboard, User-360, Fahrten, Review.
+$webDashAdmin = new \App\Controllers\Web\Admin\DashboardAdminController(
+    $webSession, $auth, $adminRoleSvc,
+    new \App\Game\Admin\DashboardAdminService(Db::pdo(), $presenceSvc, $cronRunRepo, (int)($config->get('CRON_OVERDUE_FACTOR', 2) ?? 2)),
+    $basePath . '/views',
+);
+$webUserAdmin = new \App\Controllers\Web\Admin\UserAdminController(
+    $webSession, $auth, $adminRoleSvc,
+    new \App\Game\Admin\UserAdminService(Db::pdo(), $gameAdminSvc),
+    $gameUserFlag, $gameAudit, $basePath . '/views',
+);
+$webRideAdmin = new \App\Controllers\Web\Admin\RideAdminController(
+    $webSession, $auth, $adminRoleSvc,
+    new \App\Game\Admin\RideAdminService(Db::pdo()),
+    $ingestJobRepo, $gameAudit, $basePath . '/views',
+);
+$webReviewAdmin = new \App\Controllers\Web\Admin\ReviewAdminController(
+    $webSession, $auth, $adminRoleSvc,
+    new \App\Game\Admin\ReviewQueueService(Db::pdo()),
+    $gameModeration, $gameAudit, $basePath . '/views',
+);
 
 // ---- JSON API ----
 $router->post("{$apiBase}/auth/register",                fn($r) => $apiAuth->register($r));
@@ -883,6 +904,23 @@ $router->get ('/admin/roles',                          fn($r) => $webRolesAdmin-
 $router->post('/admin/roles/assign',                   fn($r) => $webRolesAdmin->assign($r),         [$csrf]);
 $router->post('/admin/roles/{user_id}/revoke',         fn($r) => $webRolesAdmin->revoke($r),         [$csrf]);
 
+// Backoffice Phase 1: Dashboard, User-360, Fahrten, Review (statische vor Param-Routen).
+$router->get ('/admin',                                fn($r) => $webDashAdmin->index($r));
+$router->get ('/admin/users',                          fn($r) => $webUserAdmin->index($r));
+$router->get ('/admin/users/{id}',                     fn($r) => $webUserAdmin->show($r));
+$router->post('/admin/users/{id}/ban',                 fn($r) => $webUserAdmin->ban($r),             [$csrf]);
+$router->post('/admin/users/{id}/unban',               fn($r) => $webUserAdmin->unban($r),           [$csrf]);
+$router->post('/admin/users/{id}/verify',              fn($r) => $webUserAdmin->verify($r),          [$csrf]);
+$router->post('/admin/users/{id}/profile',             fn($r) => $webUserAdmin->profile($r),         [$csrf]);
+$router->post('/admin/users/{id}/anonymize',           fn($r) => $webUserAdmin->anonymize($r),       [$csrf]);
+$router->get ('/admin/rides',                          fn($r) => $webRideAdmin->index($r));
+$router->get ('/admin/rides/{id}',                     fn($r) => $webRideAdmin->show($r));
+$router->post('/admin/rides/{id}/reingest',            fn($r) => $webRideAdmin->reingest($r),        [$csrf]);
+$router->post('/admin/rides/{id}/invalidate',          fn($r) => $webRideAdmin->invalidate($r),      [$csrf]);
+$router->post('/admin/rides/{id}/delete',              fn($r) => $webRideAdmin->delete($r),          [$csrf]);
+$router->get ('/admin/review',                         fn($r) => $webReviewAdmin->index($r));
+$router->post('/admin/review/report/{id}',             fn($r) => $webReviewAdmin->resolveReport($r), [$csrf]);
+
 // ---- Settings Web-UI (M3 Phase 0) ----
 $router->get ('/settings/handle',                        fn($r) => $webSetting->showHandle($r));
 $router->post('/settings/handle',                        fn($r) => $webSetting->doHandle($r), [$csrf]);
@@ -1223,7 +1261,7 @@ if ($isAdminHost) {
     // Root + Post-Login-Ziel (/dashboard) auf das Admin-Board umleiten,
     // damit der Login-Flow auf der Subdomain nicht in einem 404 endet.
     if ($reqPath === '/' || $reqPath === '/dashboard') {
-        Response::redirect('/admin/game');
+        Response::redirect('/admin');
     }
     $allowed = $isAdminPath
         || in_array($reqPath, ['/login', '/logout', '/auth/web-refresh', '/healthz', '/robots.txt'], true)

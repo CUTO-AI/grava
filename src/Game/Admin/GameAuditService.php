@@ -74,6 +74,30 @@ final class GameAuditService
         return $out;
     }
 
+    /**
+     * Audit-Zeilen zu einem bestimmten Ziel (z. B. einer User-ID), neueste zuerst.
+     * @return list<array<string,mixed>>
+     */
+    public function forTarget(string $target, int $limit = 20): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT a.id, a.admin_user_id, u.email AS admin_email, a.action, a.target,
+                    a.detail_json, a.created_at
+               FROM game_audit a
+               LEFT JOIN users u ON u.id = a.admin_user_id
+              WHERE a.target = ? ORDER BY a.id DESC LIMIT ?'
+        );
+        $stmt->bindValue(1, $target);
+        $stmt->bindValue(2, max(1, $limit), PDO::PARAM_INT);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $r['detail'] = $r['detail_json'] !== null ? json_decode((string)$r['detail_json'], true) : null;
+            $out[] = $r;
+        }
+        return $out;
+    }
+
     /** @return list<array<string,mixed>> letzte N Audit-Zeilen (neueste zuerst), detail_json dekodiert. */
     public function recent(int $limit = 20): array
     {
