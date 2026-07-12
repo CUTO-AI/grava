@@ -30,6 +30,8 @@ final class Commands
         private readonly ?\App\Game\RegionImportService $regionImport = null,
         private readonly ?\App\Game\RegionOwnershipService $regionOwnership = null,
         private readonly ?\App\Social\SocialService $social = null,
+        private readonly ?\App\Game\IngestJobRepository $ingestJobs = null,
+        private readonly ?\App\Game\IngestJobRunner $ingestRunner = null,
     ) {}
 
     public function run(array $argv): int
@@ -76,6 +78,10 @@ final class Commands
 
             case 'game:notify-dispatch':
                 return $this->notifyDispatch();
+
+            case 'cron:game-ingest':
+            case 'game:ingest-run':
+                return $this->ingestRun($argv);
 
             case 'cron:game-snapshot':
             case 'game:snapshot-daily':
@@ -548,6 +554,56 @@ final class Commands
         }
         $sent = $this->gameDispatcher->dispatch(\App\Support\Clock::nowUtc());
         echo "Spiel-Push-Dispatch: {$sent} Mitteilung(en) erzeugt.\n";
+        return 0;
+    }
+
+    /**
+     * Async-Ingest-Worker (Cron game:ingest-run, minütlich). Arbeitet die
+     * game_ingest_jobs-Queue ab, bis sie leer ist oder das Job-Budget erreicht
+     * ist (Backstop gegen Endlosläufe). Jeder Job wird atomar geklaut
+     * (FOR UPDATE SKIP LOCKED) — parallele Läufe stören sich nicht. Das schwere
+     * Map-Matching läuft hier, entkoppelt vom Client-Timeout (Migration 0054).
+     */
+    private function ingestRun(array $argv): int
+    {
+        if ($this->ingestJobs === null || $this->ingestRunner === null) {
+            echo "Async-Ingest-Worker nicht verfügbar (DI).\n";
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $max = max(1, (int)($opts['max'] ?? 20)); // Jobs pro Lauf
+        $done = 0; $failed = 0; $processed = 0;
+        while ($processed < $max) {
+            $job = $this->ingestJobs->claimNext();
+            if ($job === null) {
+                break; // Queue leer
+            }
+            $processed++;
+            $jobId = (int)$job['id'];
+            try {
+                $summary = $this->ingestRunner->run((int)$job['route_id'], (int)$job['user_id']);
+                $this->ingestJobs->markDone(
+                    $jobId,
+                    (string)json_encode($summary, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                );
+                $done++;
+            } catch (\App\Game\MatchUnavailableException $e) {
+                // Routing-Engine down → failed; die App darf später erneut aufnehmen.
+                $this->ingestJobs->markFailed($jobId, 'routing_unavailable', $e->getMessage());
+                $failed++;
+            } catch (\App\Routes\GeometryParseException $e) {
+                $this->ingestJobs->markFailed($jobId, 'unprocessable_route', $e->getMessage());
+                $failed++;
+            } catch (\App\Game\IngestRouteGoneException $e) {
+                $this->ingestJobs->markFailed($jobId, 'route_gone', $e->getMessage());
+                $failed++;
+            } catch (\Throwable $e) {
+                $this->ingestJobs->markFailed($jobId, 'error', $e->getMessage());
+                error_log("game:ingest-run job {$jobId} fehlgeschlagen: " . $e->getMessage());
+                $failed++;
+            }
+        }
+        echo "Async-Ingest: {$done} fertig, {$failed} fehlgeschlagen ({$processed} verarbeitet).\n";
         return 0;
     }
 

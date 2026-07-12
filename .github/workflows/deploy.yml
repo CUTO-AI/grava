@@ -49,5 +49,11 @@ jobs:
               "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | sudo tee VERSION >/dev/null
             # Migrationen als Laufzeit-User anwenden (idempotent; .env ist 640 root:www-data).
             sudo -u www-data php public/index.php cli:migrate
+            # Async-Ingest-Worker als Cron einrichten (idempotent). Eigene
+            # cron.d-Datei (Name ohne Punkt, sonst ignoriert cron sie), damit die
+            # bestehende User-crontab unangetastet bleibt. Läuft als www-data.
+            printf '%s\n' '* * * * * www-data php /var/www/app/public/index.php game:ingest-run >/dev/null 2>&1' \
+              | sudo tee /etc/cron.d/gravelexplorer-ingest >/dev/null
+            sudo chmod 0644 /etc/cron.d/gravelexplorer-ingest
             # OPcache/FPM neu laden, damit der neue Code sofort greift.
             sudo systemctl reload php8.4-fpm

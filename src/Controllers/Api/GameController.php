@@ -44,6 +44,9 @@ final class GameController
         private readonly ?\App\Game\RegionImportService $regionImport = null,
         private readonly ?\App\Game\RegionOwnershipService $regionOwnership = null,
         private readonly ?\App\Game\GameEventRecorder $regionEvents = null,
+        // Asynchroner Ingest (Migration 0054): der Endpoint reiht nur ein, der
+        // Cron-Worker verarbeitet. Entkoppelt lange Fahrten vom Client-Timeout.
+        private readonly ?\App\Game\IngestJobRepository $ingestJobs = null,
     ) {}
 
     /**
@@ -257,59 +260,52 @@ final class GameController
         if ($route['user_id'] !== $uid) {
             Response::error('forbidden', 'Nur der Eigentümer darf re-ingestieren.', 403);
         }
+        // Schnelle Eingabevalidierung bleibt synchron: kaputte Geometrie sofort
+        // als 422 melden, statt den Nutzer erst auf einen asynchron scheiternden
+        // Job warten zu lassen. Das eigentliche (teure) Map-Matching macht der
+        // Worker.
         $loaded = $this->routes->loadPayloadByPublicId($route['public_id']);
         try {
-            $parsed = $this->parser->parse($loaded['payload']);
+            $this->parser->parse($loaded['payload']);
         } catch (GeometryParseException $e) {
-            // Route ohne verwertbare Geometrie → kein Server-, sondern ein
-            // Eingabefehler.
             Response::error('unprocessable_route', 'Route enthält keine verwertbare Geometrie: ' . $e->getMessage(), 422);
         }
 
-        // Strava-/GPX-Importe gelten vorerst als „echt": sie tragen keine
-        // Motion-/Surface-/Radar-Daten, sollen aber dennoch Besitz beanspruchen
-        // können. Für diese Quellen wird der Motion-Authentizitätsfilter
-        // umgangen (Day-Cap, Privatzonen, start_buffer_m, Wertlogik bleiben).
-        $trusted = GameIngestionService::isTrustedSource($route['source']);
+        if ($this->ingestJobs === null) {
+            Response::error('unavailable', 'Ingest-Queue nicht verfügbar.', 503);
+        }
+        // Idempotent: erneutes „aufnehmen" setzt denselben Job auf queued zurück.
+        $jobId = $this->ingestJobs->enqueue((int)$route['route_id'], $uid);
+        Response::json(['job_id' => $jobId, 'status' => 'queued'], 202);
+    }
 
-        $radar = $parsed->sourceFormat === 'gpx'
-            ? RadarTrafficParser::parse($loaded['payload'])
-            : RadarTrafficData::empty();
-        try {
-            $summary = $this->ingest->ingest(
-                (int)$route['route_id'],
-                $uid,
-                $parsed,
-                $parsed->startedAt !== null,
-                null,
-                $radar,
-                $trusted,
-            );
-        } catch (MatchUnavailableException $e) {
-            // Routing-Engine (Valhalla) nicht erreichbar/kein Match → kein 500,
-            // sondern ein ehrliches 503: der Client darf später erneut.
-            Response::error('routing_unavailable', 'Map-Matching derzeit nicht möglich (Routing-Engine nicht erreichbar). Bitte später erneut versuchen.', 503);
+    /**
+     * GET /game/ingest/jobs/{job_id} — Status eines asynchronen Ingest-Jobs.
+     * Liefert bei `done` die Ingest-Summary (wie früher der synchrone Endpoint),
+     * bei `failed` einen error-Block. Nur der Eigentümer darf abfragen.
+     */
+    public function ingestJobStatus(Request $req): void
+    {
+        $uid = $this->userId($req);
+        if ($this->ingestJobs === null) {
+            Response::error('unavailable', 'Ingest-Queue nicht verfügbar.', 503);
         }
-        // Gebiets-Eroberung live halten: neu erschlossene Kanten ihrem Gebiet
-        // zuordnen und den Besitz-Cache neu rechnen. Bewusst NACH dem Ingest und
-        // best-effort (Fehler dürfen die Ingest-Antwort nie kippen). Beides ist
-        // dank Spatial-Index + kleinem Aktiv-Datensatz günstig.
-        if (($summary['matched'] ?? 0) > 0) {
-            try {
-                $this->regionImport?->backfillEdges(true, 500);
-                $res = $this->regionOwnership?->recomputeAll();
-                // Besitzwechsel → region_taken/region_lost-Ereignisse (Push via
-                // Dispatcher). Auslöser = der Fahrer dieses Ingests.
-                if ($res !== null && $this->regionEvents !== null && ($res['changes'] ?? []) !== []) {
-                    $this->regionEvents->recordRegionChanges(
-                        $res['changes'], $uid, \App\Support\Clock::nowUtc()->format('Y-m-d'),
-                    );
-                }
-            } catch (\Throwable $e) {
-                error_log('region refresh nach ingest fehlgeschlagen: ' . $e->getMessage());
-            }
+        $jobId = (int)($req->routeParams['job_id'] ?? 0);
+        $job = $this->ingestJobs->find($jobId);
+        if ($job === null || (int)$job['user_id'] !== $uid) {
+            Response::error('not_found', 'Ingest-Job nicht gefunden.', 404);
         }
-        Response::json($summary);
+        $out = ['job_id' => (int)$job['id'], 'status' => (string)$job['status']];
+        if ($job['status'] === 'done' && $job['summary_json'] !== null) {
+            $out['summary'] = json_decode((string)$job['summary_json'], true);
+        }
+        if ($job['status'] === 'failed') {
+            $out['error'] = [
+                'code'    => $job['error_code'] !== null ? (string)$job['error_code'] : 'error',
+                'message' => $job['error_message'] !== null ? (string)$job['error_message'] : 'Ingest fehlgeschlagen.',
+            ];
+        }
+        Response::json($out);
     }
 
     /** GET /game/rides/{routeId}/summary — Per-Ride Eroberungs-Zusammenfassung. */

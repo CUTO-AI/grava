@@ -237,6 +237,9 @@ $gameMatcher   = new ValhallaEdgeMatcher($gameValhalla);
 $gameEventRepo     = new \App\Game\GameEventRepository(Db::pdo());
 $gameEventRecorder = new \App\Game\GameEventRecorder($gameRepo, $gameEventRepo);
 $gameIngest    = new GameIngestionService($gameMatcher, $gameRepo, $gameRecalc, $gameConfig, Db::pdo(), null, $privacyZoneRepo, $gameEventRecorder);
+// Asynchroner Ingest (Migration 0054): Queue-Repo hier anlegen, damit sowohl der
+// CLI-Worker (unten) als auch der HTTP-GameController es teilen.
+$ingestJobRepo = new \App\Game\IngestJobRepository(Db::pdo());
 $edgeRecords   = new EdgeRecordService($gameRepo, $gameConfig);
 $gameRead      = new GameReadService($gameRepo, $gameConfig, $edgeRecords, $privacyZoneRepo, $gameRecalc);
 $gameRecompute = new GameRecomputeService($gameRepo, $gameRecalc);
@@ -324,7 +327,15 @@ $routeSurface = new RouteSurfaceService(
 // ---------------------------------------------------------------------------
 if (PHP_SAPI === 'cli') {
     $cliRegionRepo = new \App\Game\RegionRepository(Db::pdo());
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config));
+    // Async-Ingest-Worker (game:ingest-run): teilt sich die Ingest-Deps mit dem
+    // HTTP-Pfad, konstruiert aber eigene Region-Services über das CLI-Repo.
+    $ingestJobRunner = new \App\Game\IngestJobRunner(
+        $gameRepo, $routeService, new GeometryParser(), $gameIngest,
+        new \App\Game\RegionImportService($cliRegionRepo),
+        new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig),
+        $gameEventRecorder,
+    );
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config), $ingestJobRepo, $ingestJobRunner);
     exit($cli->run($_SERVER['argv'] ?? []));
 }
 
@@ -431,7 +442,7 @@ $gameHistory = new \App\Game\GameHistoryService($gameRepo);
 $regionRepo = new \App\Game\RegionRepository(Db::pdo());
 $regionImportSvc = new \App\Game\RegionImportService($regionRepo);
 $regionOwnershipSvc = new \App\Game\RegionOwnershipService($regionRepo, $gameConfig);
-$apiGame = new GameController($gameRead, $gameRepo, $gameIngest, $gameConfig, $routeService, new GeometryParser(), $gameRideSummary, $gameAtRisk, $gameChallenges, $gameHistory, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder);
+$apiGame = new GameController($gameRead, $gameRepo, $gameIngest, $gameConfig, $routeService, new GeometryParser(), $gameRideSummary, $gameAtRisk, $gameChallenges, $gameHistory, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder, $ingestJobRepo);
 $apiEdgeRecords = new EdgeRecordController($edgeRecords);
 $apiPlayerBoard = new PlayerLeaderboardController(new PlayerLeaderboardService($gameRepo, $gameConfig));
 $apiSegment = new SegmentSpeedController(new SegmentSpeedService($gameRepo, $gameConfig));
@@ -675,6 +686,7 @@ $router->get("{$apiBase}/game/crews/leaderboard",  fn($r) => $apiCrewBoard->inde
 $router->get("{$apiBase}/game/segments/{id}/leaderboard", fn($r) => $apiSegment->leaderboard($r), [$optionalBearer]);
 $router->get("{$apiBase}/game/me/segments",        fn($r) => $apiSegment->mySegments($r), [$requireBearer]);
 $router->post("{$apiBase}/game/ingest/{route_id}", fn($r) => $apiGame->reingest($r), [$requireBearer]);
+$router->get("{$apiBase}/game/ingest/jobs/{job_id}", fn($r) => $apiGame->ingestJobStatus($r), [$requireBearer]);
 $router->get("{$apiBase}/game/rides/{route_id}/summary", fn($r) => $apiGame->rideSummary($r), [$requireBearer]);
 $router->get ("{$apiBase}/game/crews/me",          fn($r) => $apiCrew->me($r),       [$requireBearer]);
 $router->post("{$apiBase}/game/crews/join",        fn($r) => $apiCrew->join($r),     [$requireBearer]);
