@@ -32,9 +32,83 @@ final class Commands
         private readonly ?\App\Social\SocialService $social = null,
         private readonly ?\App\Game\IngestJobRepository $ingestJobs = null,
         private readonly ?\App\Game\IngestJobRunner $ingestRunner = null,
+        private readonly ?CronRunRepository $cronRuns = null,
+        private readonly string $triggerKind = 'cron',
     ) {}
 
+    /**
+     * Setzt ein Befehl, wenn er nichts zu tun hatte (Leerlauf-Tick, z. B.
+     * game:ingest-run mit leerer Queue). Der Recording-Wrapper fasst solche
+     * Läufe zu einer Heartbeat-Zeile/Tag zusammen (Cron-Monitoring).
+     */
+    private ?bool $didWork = null;
+    private function markIdle(): void { $this->didWork = false; }
+
+    /**
+     * Recording-Wrapper um {@see dispatch()} — der einzige Choke Point für alle
+     * CLI-Befehle. Für in der {@see CronRegistry} bekannte Cron-Befehle wird der
+     * Lauf in `cron_runs` protokolliert (Start/Ende/Status/Dauer/Output-Tail).
+     * Output wird gepuffert UND wieder ausgegeben (crontab/Terminal unverändert);
+     * Aufzeichnungsfehler dürfen den Befehl nie brechen.
+     */
     public function run(array $argv): int
+    {
+        $raw = $argv[1] ?? 'help';
+        $canonical = CronRegistry::canonical($raw);
+
+        if ($this->cronRuns === null || !CronRegistry::isKnown($canonical)) {
+            return $this->dispatch($argv);   // Dev-/One-off-Befehl: ungeloggt, unverändert
+        }
+
+        $host = (string)(gethostname() ?: 'unknown');
+        $t0 = microtime(true);
+        $this->didWork = null;
+
+        $runId = null;
+        try { $runId = $this->cronRuns->begin($canonical, $this->triggerKind, $host); }
+        catch (\Throwable $e) { error_log('cron_runs begin failed: ' . $e->getMessage()); }
+
+        ob_start();
+        $code = 0; $error = null; $threw = null;
+        try {
+            $code = $this->dispatch($argv);
+        } catch (\Throwable $e) {
+            $threw = $e; $code = 1; $error = $e->getMessage();
+        }
+        $output = (string)ob_get_clean();
+        echo $output;   // stdout-Verhalten exakt erhalten
+
+        $durationMs = (int)round((microtime(true) - $t0) * 1000);
+        $status = ($threw !== null || $code !== 0) ? 'failed' : 'ok';
+        $didWork = $this->didWork ?? true;
+        $tail = $output === '' ? null : substr($output, -8192);
+
+        try {
+            // Defensiv: eine vom Befehl offen gelassene Transaktion würde den
+            // Finish-Write gefährden.
+            if (\App\Database\Db::pdo()->inTransaction()) {
+                \App\Database\Db::pdo()->rollBack();
+            }
+            if ($status === 'ok' && !$didWork) {
+                if ($runId !== null) { $this->cronRuns->deleteById($runId); }
+                $this->cronRuns->recordIdle($canonical, $host, $durationMs);
+            } elseif ($runId !== null) {
+                $this->cronRuns->finish($runId, $status, $code, $durationMs, $tail, $error, $didWork);
+            } else {
+                $this->cronRuns->insertCompleted($canonical, $status, $code, $this->triggerKind, $host, $durationMs, $didWork, $tail, $error);
+            }
+        } catch (\Throwable $e) {
+            error_log('cron_runs finish failed: ' . $e->getMessage());
+        }
+
+        if ($threw !== null) {
+            error_log("command {$canonical} threw: " . $threw->getMessage());
+        }
+        return $code;
+    }
+
+    /** Befehls-Dispatch (bisheriger run()-Rumpf). */
+    private function dispatch(array $argv): int
     {
         $command = $argv[1] ?? 'help';
 
@@ -213,6 +287,20 @@ final class Commands
         $merged['notifications_purged'] = $notifPurged;
         $merged['oauth_states_purged']  = $statesPurged;
         $merged['heatmap_cells']        = $heatmapCells;
+
+        // 6) Cron-Monitoring: hängende Läufe reifen lassen + alte Zeilen prunen.
+        if ($this->cronRuns !== null) {
+            $maxByCommand = [];
+            foreach (CronRegistry::commands() as $cmd) {
+                $maxByCommand[$cmd] = CronRegistry::meta($cmd)['max_runtime_s'] ?? 900;
+            }
+            $merged['cron_stuck_marked'] = $this->cronRuns->sweepStuck(
+                $maxByCommand, $this->config->int('CRON_STUCK_DEFAULT_S', 900),
+            );
+            $merged['cron_runs_pruned'] = $this->cronRuns->pruneOlderThan(
+                $this->config->int('CRON_RUNS_RETENTION_DAYS', 14),
+            );
+        }
 
         echo "Cleanup abgeschlossen:\n";
         foreach ($merged as $k => $v) {
@@ -576,6 +664,7 @@ final class Commands
         while ($processed < $max) {
             $job = $this->ingestJobs->claimNext();
             if ($job === null) {
+                if ($processed === 0) { $this->markIdle(); }   // Leerlauf-Tick
                 break; // Queue leer
             }
             $processed++;

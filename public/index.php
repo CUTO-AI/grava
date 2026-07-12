@@ -240,6 +240,9 @@ $gameIngest    = new GameIngestionService($gameMatcher, $gameRepo, $gameRecalc, 
 // Asynchroner Ingest (Migration 0054): Queue-Repo hier anlegen, damit sowohl der
 // CLI-Worker (unten) als auch der HTTP-GameController es teilen.
 $ingestJobRepo = new \App\Game\IngestJobRepository(Db::pdo());
+// Cron-/Job-Monitoring (Migration 0055): Lauf-Protokoll, geteilt von CLI-Worker
+// (Aufzeichnung) und Admin-Controller (Anzeige).
+$cronRunRepo = new \App\Cli\CronRunRepository(Db::pdo());
 $edgeRecords   = new EdgeRecordService($gameRepo, $gameConfig);
 $gameRead      = new GameReadService($gameRepo, $gameConfig, $edgeRecords, $privacyZoneRepo, $gameRecalc);
 $gameRecompute = new GameRecomputeService($gameRepo, $gameRecalc);
@@ -335,7 +338,7 @@ if (PHP_SAPI === 'cli') {
         new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig),
         $gameEventRecorder,
     );
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config), $ingestJobRepo, $ingestJobRunner);
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config), $ingestJobRepo, $ingestJobRunner, $cronRunRepo, 'cron');
     exit($cli->run($_SERVER['argv'] ?? []));
 }
 
@@ -517,6 +520,17 @@ $webGameEdge     = new \App\Controllers\Web\Admin\GameEdgeInspectorController(
 $routeAdminSvc   = new \App\Routes\RouteAdminService(Db::pdo());
 $webAdminUploads = new \App\Controllers\Web\Admin\AdminUploadsController(
     $webSession, $auth, $adminGuard, $routeAdminSvc, $routeService, $basePath . '/views',
+);
+// Cron-/Job-Monitoring: „run now" baut lazy eine CLI mit trigger=manual (volle
+// Deps inkl. eigenem IngestJobRunner), damit der Admin jeden Job on-demand starten
+// kann; der Lauf wird wie ein Cron-Lauf in cron_runs protokolliert.
+$makeManualCli = function () use ($basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameRepo, $gameConfig, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder, $gameIngest, $ingestJobRepo, $cronRunRepo) {
+    $runner = new \App\Game\IngestJobRunner($gameRepo, $routeService, new GeometryParser(), $gameIngest, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder);
+    return new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), $ingestJobRepo, $runner, $cronRunRepo, 'manual');
+};
+$webCronAdmin = new \App\Controllers\Web\Admin\CronAdminController(
+    $webSession, $auth, $adminGuard, $cronRunRepo, $gameAudit, $makeManualCli,
+    (int)($config->get('CRON_OVERDUE_FACTOR', 2) ?? 2), $basePath . '/views',
 );
 
 // ---- JSON API ----
@@ -849,6 +863,11 @@ $router->post('/admin/game/pass/{pass_id}/invalidate', fn($r) => $webGameEdge->i
 $router->post('/admin/game/pass/{pass_id}/reactivate', fn($r) => $webGameEdge->reactivatePass($r),   [$csrf]);
 $router->post('/admin/game/user/{user_id}/ban',        fn($r) => $webGameEdge->banUser($r),          [$csrf]);
 
+// Cron-/Job-Monitoring (statische Route vor der Param-Route registriert).
+$router->get ('/admin/cron',                           fn($r) => $webCronAdmin->dashboard($r));
+$router->get ('/admin/cron/{command}',                 fn($r) => $webCronAdmin->history($r));
+$router->post('/admin/cron/{command}/run',             fn($r) => $webCronAdmin->runNow($r),          [$csrf]);
+
 // ---- Settings Web-UI (M3 Phase 0) ----
 $router->get ('/settings/handle',                        fn($r) => $webSetting->showHandle($r));
 $router->post('/settings/handle',                        fn($r) => $webSetting->doHandle($r), [$csrf]);
@@ -923,7 +942,7 @@ $router->post('/u/{handle}/r/{id}/comments/{cid}/delete', fn($r) => $webEngage->
 // und verhalten sich wie eine unbekannte Route (404).
 $internalToken = (string)($config->get('INTERNAL_TOKEN', '') ?? '');
 $runInternal = function (Request $r, string $command)
-    use ($internalToken, $basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc) {
+    use ($internalToken, $basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, $cronRunRepo) {
     if ($internalToken === '') {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
@@ -931,7 +950,7 @@ $runInternal = function (Request $r, string $command)
     if ($provided === '' || !hash_equals($internalToken, $provided)) {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config));
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), null, null, $cronRunRepo, 'internal');
     $argv = ['internal', $command];
     foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email', 'date', 'lang'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {

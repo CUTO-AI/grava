@@ -9,6 +9,7 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 ?>
 <nav class="card" style="display:flex;gap:1rem;flex-wrap:wrap">
     <a href="/admin/game">Health</a>
+    <a href="/admin/cron">Cron</a>
     <a href="/admin/game/config">Config</a>
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/uploads">Uploads</a>
