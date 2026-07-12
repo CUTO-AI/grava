@@ -28,16 +28,28 @@ final class RideAdminService
         string $dir,
         int $limit,
         int $offset,
+        ?int $userId = null,
     ): array {
         $sort = in_array($sort, self::SORTS, true) ? $sort : 'created_at';
         $dir = strtolower($dir) === 'asc' ? 'ASC' : 'DESC';
 
         $where = ['r.deleted_at IS NULL'];
         $params = [];
+        // Exakter Fahrer-Filter (z. B. „Fahrten dieses Users") — getrennt vom
+        // unscharfen Freitext-q, damit nicht fremde Fahrten mit passendem Titel/
+        // Mail-Teilstring auftauchen.
+        if ($userId !== null) {
+            $where[] = 'r.user_id = ?';
+            $params[] = $userId;
+        }
         if ($q !== '') {
             $where[] = '(r.title LIKE ? OR u.email LIKE ? OR u.public_handle LIKE ? OR r.public_id = ? OR u.id = ?)';
             $like = '%' . $q . '%';
-            $params = [$like, $like, $like, $q, ctype_digit($q) ? (int)$q : 0];
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $q;
+            $params[] = ctype_digit($q) ? (int)$q : 0;
         }
         if ($source !== '' && in_array($source, ['app', 'import', 'strava', 'manual'], true)) {
             $where[] = 'r.source = ?';

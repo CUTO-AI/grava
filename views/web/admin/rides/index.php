@@ -2,9 +2,14 @@
 /** @var list<array<string,mixed>> $rows */
 /** @var \App\Controllers\Web\Admin\AdminListQuery $lq */
 /** @var string $source */
+/** @var ?int $userId */
 /** @var bool $hasMore */
 /** @var ?string $flash */
 $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+$pageParams = static fn(int $page): string => http_build_query(array_filter(
+    ['q' => $lq->q, 'source' => $source, 'user_id' => $userId, 'page' => $page],
+    static fn($v) => $v !== '' && $v !== null,
+));
 $km = static fn($m): string => $m === null ? '–' : number_format((int)$m / 1000, 1) . ' km';
 ?>
 <nav class="card" style="display:flex;gap:1rem;flex-wrap:wrap">
@@ -20,7 +25,12 @@ $km = static fn($m): string => $m === null ? '–' : number_format((int)$m / 100
 
 <section class="card">
     <h1><?= t('Fahrten') ?></h1>
+    <?php if ($userId !== null): ?>
+        <p><span class="badge badge-ok"><?= t('Gefiltert auf User') ?> #<?= (int)$userId ?></span>
+           <a href="/admin/rides"><?= t('Filter entfernen') ?></a></p>
+    <?php endif; ?>
     <form method="get" action="/admin/rides" style="display:flex;gap:.5rem;align-items:end;flex-wrap:wrap">
+        <?php if ($userId !== null): ?><input type="hidden" name="user_id" value="<?= (int)$userId ?>"><?php endif; ?>
         <label><?= t('Suche (Titel, User, ID)') ?><br><input type="text" name="q" value="<?= $e($lq->q) ?>" style="min-width:18rem"></label>
         <label><?= t('Quelle') ?><br>
             <select name="source">
@@ -55,7 +65,7 @@ $km = static fn($m): string => $m === null ? '–' : number_format((int)$m / 100
         </tbody>
     </table>
     <p>
-        <?php if ($lq->page > 1): ?><a href="/admin/rides?<?= $e($lq->withParams(['page' => $lq->page - 1, 'source' => $source])) ?>">&larr; <?= t('zurück') ?></a><?php endif; ?>
-        <?php if ($hasMore): ?><a href="/admin/rides?<?= $e($lq->withParams(['page' => $lq->page + 1, 'source' => $source])) ?>"><?= t('weiter') ?> &rarr;</a><?php endif; ?>
+        <?php if ($lq->page > 1): ?><a href="/admin/rides?<?= $e($pageParams($lq->page - 1)) ?>">&larr; <?= t('zurück') ?></a><?php endif; ?>
+        <?php if ($hasMore): ?><a href="/admin/rides?<?= $e($pageParams($lq->page + 1)) ?>"><?= t('weiter') ?> &rarr;</a><?php endif; ?>
     </p>
 </section>

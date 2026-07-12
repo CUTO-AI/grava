@@ -36,7 +36,7 @@ $g = $d['game'] ?? null;
         <?php if (is_array($g)): ?>
             · <?= t('Revierlänge') ?>: <?= isset($g['held_length_m']) ? number_format((float)$g['held_length_m'] / 1000, 1) . ' km' : '–' ?>
         <?php endif; ?>
-        · <a href="/admin/rides?q=<?= (int)$uid ?>"><?= t('Fahrten dieses Users') ?> &rarr;</a>
+        · <a href="/admin/rides?user_id=<?= (int)$uid ?>"><?= t('Fahrten dieses Users') ?> &rarr;</a>
     </p>
 </section>
 

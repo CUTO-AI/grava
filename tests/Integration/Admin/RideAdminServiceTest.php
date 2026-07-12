@@ -47,6 +47,22 @@ final class RideAdminServiceTest extends IntegrationTestCase
         $this->assertSame($r2, (int)$svc->search('', '', 'created_at', 'desc', 50, 0)[0]['id']);
     }
 
+    public function testUserIdFilterIsExact(): void
+    {
+        // Reproduziert den Bug: fremde Fahrten sollen NICHT auftauchen, nur weil
+        // ihre Mail/Titel den User-Teilstring enthält.
+        $u1 = $this->createUser('t1000', 'test1000@t.local');
+        $u2 = $this->createUser('t10001', 'test10001@t.local');   // Mail enthält "1000"
+        $r1 = $this->routeId($this->createRoute($u1));
+        $this->createRoute($u2);
+        $svc = new RideAdminService($this->pdo);
+
+        $rows = $svc->search('', '', 'created_at', 'desc', 50, 0, $u1);
+        $this->assertCount(1, $rows);
+        $this->assertSame($r1, (int)$rows[0]['id']);
+        $this->assertSame($u1, (int)$rows[0]['user_id']);
+    }
+
     public function testInvalidateGameWithNoPassesReturnsZero(): void
     {
         $uid = $this->createUser(null, 'r2@test.local');

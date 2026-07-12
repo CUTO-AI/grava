@@ -42,7 +42,9 @@ final class RideAdminController
         [$user, , $role] = $this->requirePermission('ride.view');
         $lq = AdminListQuery::fromRequest($req, RideAdminService::SORTS, 'created_at');
         $source = trim((string)($req->query['source'] ?? ''));
-        $rows = $this->rides->search($lq->q, $source, $lq->sort, $lq->dir, $lq->perPage, $lq->offset);
+        $userId = isset($req->query['user_id']) && $req->query['user_id'] !== ''
+            ? (int)$req->query['user_id'] : null;
+        $rows = $this->rides->search($lq->q, $source, $lq->sort, $lq->dir, $lq->perPage, $lq->offset, $userId);
         $this->view->render('admin/rides/index', [
             '_title' => 'Admin · Fahrten', '_authedUser' => $user, '_layoutWide' => true,
             'flash' => $this->takeFlash(),
@@ -50,6 +52,7 @@ final class RideAdminController
             'rows' => $rows,
             'lq' => $lq,
             'source' => $source,
+            'userId' => $userId,
             'hasMore' => $lq->hasMore(count($rows)),
         ]);
     }
