@@ -20,6 +20,7 @@ final class AdminPermissions
             'review.view', 'review.act',
             'config.view', 'config.write',
             'region.manage', 'crew.manage',
+            'broadcast.send',
             'audit.view', 'cron.view', 'cron.run',
         ],
         'support' => [

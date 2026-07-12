@@ -213,6 +213,9 @@ $apnsConfig  = new ApnsConfig(
 );
 $pushDevices = new PushDeviceRepository();
 $pushServ    = new PushService($pushDevices, new ApnsHttpClient($apnsConfig));
+// Broadcast-Push (Admin, Phase 2): eigener Transport-Client; geteilt von CLI-Worker
+// (Versand) und Admin-Controller (Einreihen/Schätzen).
+$broadcastSvc = new \App\Game\Admin\BroadcastService(Db::pdo(), new ApnsHttpClient($apnsConfig));
 // S9: Per-Typ-Push-Präferenzen — gaten den APNs-Versand (In-App bleibt).
 $notifPrefs  = new \App\Engagement\NotificationPreferenceRepository();
 $notifServ   = new NotificationService($pushServ, $notifPrefs);
@@ -338,7 +341,7 @@ if (PHP_SAPI === 'cli') {
         new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig),
         $gameEventRecorder,
     );
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config), $ingestJobRepo, $ingestJobRunner, $cronRunRepo, 'cron');
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config), $ingestJobRepo, $ingestJobRunner, $cronRunRepo, 'cron', $broadcastSvc);
     exit($cli->run($_SERVER['argv'] ?? []));
 }
 
@@ -525,9 +528,9 @@ $webAdminUploads = new \App\Controllers\Web\Admin\AdminUploadsController(
 // Cron-/Job-Monitoring: „run now" baut lazy eine CLI mit trigger=manual (volle
 // Deps inkl. eigenem IngestJobRunner), damit der Admin jeden Job on-demand starten
 // kann; der Lauf wird wie ein Cron-Lauf in cron_runs protokolliert.
-$makeManualCli = function () use ($basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameRepo, $gameConfig, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder, $gameIngest, $ingestJobRepo, $cronRunRepo) {
+$makeManualCli = function () use ($basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameRepo, $gameConfig, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder, $gameIngest, $ingestJobRepo, $cronRunRepo, $broadcastSvc) {
     $runner = new \App\Game\IngestJobRunner($gameRepo, $routeService, new GeometryParser(), $gameIngest, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder);
-    return new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), $ingestJobRepo, $runner, $cronRunRepo, 'manual');
+    return new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), $ingestJobRepo, $runner, $cronRunRepo, 'manual', $broadcastSvc);
 };
 $webCronAdmin = new \App\Controllers\Web\Admin\CronAdminController(
     $webSession, $auth, $adminGuard, $cronRunRepo, $gameAudit, $makeManualCli,
@@ -570,6 +573,9 @@ $webReviewAdmin = new \App\Controllers\Web\Admin\ReviewAdminController(
 );
 $webConfigVerAdmin = new \App\Controllers\Web\Admin\ConfigVersionAdminController(
     $webSession, $auth, $adminRoleSvc, $gameCfgVersions, $gameCfgAdmin, $gameAudit, $basePath . '/views',
+);
+$webBroadcastAdmin = new \App\Controllers\Web\Admin\BroadcastAdminController(
+    $webSession, $auth, $adminRoleSvc, $broadcastSvc, $gameAudit, $basePath . '/views',
 );
 
 // ---- JSON API ----
@@ -935,6 +941,8 @@ $router->post('/admin/config/versions/{id}/restore',   fn($r) => $webConfigVerAd
 $router->get ('/admin/analytics',                      fn($r) => $webAnalyticsAdmin->index($r));
 $router->get ('/admin/analytics/users.csv',            fn($r) => $webAnalyticsAdmin->usersCsv($r));
 $router->get ('/admin/analytics/rides.csv',            fn($r) => $webAnalyticsAdmin->ridesCsv($r));
+$router->get ('/admin/broadcast',                      fn($r) => $webBroadcastAdmin->index($r));
+$router->post('/admin/broadcast',                      fn($r) => $webBroadcastAdmin->create($r),     [$csrf]);
 
 // ---- Settings Web-UI (M3 Phase 0) ----
 $router->get ('/settings/handle',                        fn($r) => $webSetting->showHandle($r));
@@ -1010,7 +1018,7 @@ $router->post('/u/{handle}/r/{id}/comments/{cid}/delete', fn($r) => $webEngage->
 // und verhalten sich wie eine unbekannte Route (404).
 $internalToken = (string)($config->get('INTERNAL_TOKEN', '') ?? '');
 $runInternal = function (Request $r, string $command)
-    use ($internalToken, $basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, $cronRunRepo) {
+    use ($internalToken, $basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, $cronRunRepo, $broadcastSvc) {
     if ($internalToken === '') {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
@@ -1018,7 +1026,7 @@ $runInternal = function (Request $r, string $command)
     if ($provided === '' || !hash_equals($internalToken, $provided)) {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), null, null, $cronRunRepo, 'internal');
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), null, null, $cronRunRepo, 'internal', $broadcastSvc);
     $argv = ['internal', $command];
     foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email', 'date', 'lang'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {

@@ -59,5 +59,9 @@ jobs:
             printf '%s\n' '45 3 * * * www-data php /var/www/app/public/index.php cron:cleanup >/dev/null 2>&1' \
               | sudo tee /etc/cron.d/gravelexplorer-cleanup >/dev/null
             sudo chmod 0644 /etc/cron.d/gravelexplorer-cleanup
+            # Broadcast-Push-Worker (Admin-Broadcasts, entkoppelt) jede Minute.
+            printf '%s\n' '* * * * * www-data php /var/www/app/public/index.php game:broadcast-run >/dev/null 2>&1' \
+              | sudo tee /etc/cron.d/gravelexplorer-broadcast >/dev/null
+            sudo chmod 0644 /etc/cron.d/gravelexplorer-broadcast
             # OPcache/FPM neu laden, damit der neue Code sofort greift.
             sudo systemctl reload php8.4-fpm

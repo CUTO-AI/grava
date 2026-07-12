@@ -34,6 +34,7 @@ final class Commands
         private readonly ?\App\Game\IngestJobRunner $ingestRunner = null,
         private readonly ?CronRunRepository $cronRuns = null,
         private readonly string $triggerKind = 'cron',
+        private readonly ?\App\Game\Admin\BroadcastService $broadcasts = null,
     ) {}
 
     /**
@@ -156,6 +157,9 @@ final class Commands
             case 'cron:game-ingest':
             case 'game:ingest-run':
                 return $this->ingestRun($argv);
+
+            case 'game:broadcast-run':
+                return $this->broadcastRun($argv);
 
             case 'cron:game-snapshot':
             case 'game:snapshot-daily':
@@ -693,6 +697,34 @@ final class Commands
             }
         }
         echo "Async-Ingest: {$done} fertig, {$failed} fehlgeschlagen ({$processed} verarbeitet).\n";
+        return 0;
+    }
+
+    /**
+     * Broadcast-Push-Worker (Cron game:broadcast-run): sendet wartende
+     * Broadcasts (Status queued) via APNs, entkoppelt vom Web-Request. Leerlauf
+     * wird als Heartbeat zusammengefasst (Cron-Monitoring).
+     */
+    private function broadcastRun(array $argv): int
+    {
+        if ($this->broadcasts === null) {
+            echo "Broadcast-Worker nicht verfügbar (DI).\n";
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $max = max(1, (int)($opts['max'] ?? 5));
+        $done = 0; $sentTotal = 0; $processed = 0;
+        while ($processed < $max) {
+            $res = $this->broadcasts->runNext();
+            if ($res === null) {
+                if ($processed === 0) { $this->markIdle(); }
+                break;
+            }
+            $processed++;
+            $done++;
+            $sentTotal += $res['sent'];
+        }
+        echo "Broadcast: {$done} gesendet ({$sentTotal} Pushes).\n";
         return 0;
     }
 

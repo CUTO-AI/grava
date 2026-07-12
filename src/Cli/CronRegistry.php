@@ -20,6 +20,7 @@ final class CronRegistry
      */
     private const JOBS = [
         'game:ingest-run'           => ['Ingest-Worker',            60,    300],
+        'game:broadcast-run'        => ['Broadcast-Worker',         60,    600],
         'game:notify-dispatch'      => ['Push-Dispatch',            600,   120],
         'regions:backfill'          => ['Gebiete-Backfill',        900,   600],
         'game:snapshot-daily'       => ['Tages-Snapshot',          86400, 900],
