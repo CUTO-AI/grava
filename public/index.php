@@ -577,6 +577,14 @@ $webConfigVerAdmin = new \App\Controllers\Web\Admin\ConfigVersionAdminController
 $webBroadcastAdmin = new \App\Controllers\Web\Admin\BroadcastAdminController(
     $webSession, $auth, $adminRoleSvc, $broadcastSvc, $gameAudit, $basePath . '/views',
 );
+$communityAdminSvc = new \App\Game\Admin\CommunityAdminService(
+    Db::pdo(), $gameCrewRepo, $regionOwnershipSvc,
+    $gameAdminSvc, $gameFactionSvc,
+    new \App\Game\RegionService($regionRepo, $gameRepo, $gameConfig, $regionOwnershipSvc),
+);
+$webCommunityAdmin = new \App\Controllers\Web\Admin\CommunityAdminController(
+    $webSession, $auth, $adminRoleSvc, $communityAdminSvc, $gameAudit, $basePath . '/views',
+);
 
 // ---- JSON API ----
 $router->post("{$apiBase}/auth/register",                fn($r) => $apiAuth->register($r));
@@ -943,6 +951,12 @@ $router->get ('/admin/analytics/users.csv',            fn($r) => $webAnalyticsAd
 $router->get ('/admin/analytics/rides.csv',            fn($r) => $webAnalyticsAdmin->ridesCsv($r));
 $router->get ('/admin/broadcast',                      fn($r) => $webBroadcastAdmin->index($r));
 $router->post('/admin/broadcast',                      fn($r) => $webBroadcastAdmin->create($r),     [$csrf]);
+$router->get ('/admin/community',                      fn($r) => $webCommunityAdmin->index($r));
+$router->get ('/admin/community/crew/{id}',            fn($r) => $webCommunityAdmin->crew($r));
+$router->post('/admin/community/crew/{id}/rename',     fn($r) => $webCommunityAdmin->crewRename($r),      [$csrf]);
+$router->post('/admin/community/crew/{id}/clear-logo', fn($r) => $webCommunityAdmin->crewClearLogo($r),   [$csrf]);
+$router->post('/admin/community/crew/{id}/dissolve',   fn($r) => $webCommunityAdmin->crewDissolve($r),    [$csrf]);
+$router->post('/admin/community/regions/recompute',    fn($r) => $webCommunityAdmin->regionsRecompute($r),[$csrf]);
 
 // ---- Settings Web-UI (M3 Phase 0) ----
 $router->get ('/settings/handle',                        fn($r) => $webSetting->showHandle($r));

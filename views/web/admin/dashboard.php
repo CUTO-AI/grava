@@ -12,6 +12,7 @@ $cron = $m['cron'] ?? ['failed' => 0, 'overdue' => 0];
     <a href="/admin/users">User</a>
     <a href="/admin/rides">Fahrten</a>
     <a href="/admin/review">Review</a>
+    <a href="/admin/community">Community</a>
     <a href="/admin/game">Health</a>
     <a href="/admin/cron">Cron</a>
     <a href="/admin/audit">Audit</a>
