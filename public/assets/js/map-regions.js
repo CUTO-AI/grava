@@ -23,6 +23,11 @@
   try { I18N = JSON.parse(el.getAttribute('data-i18n') || '{}'); } catch (e) { I18N = {}; }
   var LOCALE = el.getAttribute('data-locale') || 'en';
   var apiBase = '/api/v1';
+  // Aktivitäts-Modus (Nordstern, UserGrowth_Concept.md §4): zeigt zusätzlich zur
+  // Besitz-Ansicht eine windowed WAR/Solo/Crew-Auswertung im Detail-Panel.
+  var ACTIVITY = el.getAttribute('data-activity') === '1';
+  var currentRegionId = null;
+  var currentDays = 7;
 
   function t(key, fallback) { return (I18N && I18N[key]) || fallback || key; }
 
@@ -290,6 +295,11 @@
       parts.push('<ul class="region-children">' + kids + '</ul>');
     }
 
+    // Aktivitäts-Sektion (nur im Aktivitäts-Modus) — wird asynchron befüllt.
+    if (ACTIVITY) {
+      parts.push('<div class="region-activity" id="region-activity"></div>');
+    }
+
     panel.innerHTML = parts.join('');
     panel.classList.add('is-open');
 
@@ -303,6 +313,66 @@
         if (id) { openDetail(id, true); }
       });
     });
+
+    if (ACTIVITY && d.id) { currentRegionId = d.id; loadActivity(d.id); }
+  }
+
+  // ---- Aktivitäts-Panel (Nordstern) ---------------------------------------
+
+  function activityRows(list) {
+    if (!list || !list.length) {
+      return '<li class="region-board__empty">' + GE.map.escapeHtml(t('actNone', 'Keine Aktivität im Zeitraum.')) + '</li>';
+    }
+    var e = GE.map.escapeHtml;
+    return list.map(function (row) {
+      var dot = (row.faction && row.faction.color)
+        ? '<span class="dot" style="background:' + row.faction.color + '"></span>' : '';
+      return '<li><span class="rk">#' + row.rank + '</span>'
+        + '<span class="nm">' + dot + e(ownerName(row)) + '</span>'
+        + '<span class="vl">' + km(row.length_m) + ' km · ' + (row.edges || 0) + '</span></li>';
+    }).join('');
+  }
+
+  function renderActivity(data) {
+    var box = document.getElementById('region-activity');
+    if (!box || !data) { return; }
+    var e = GE.map.escapeHtml;
+    var days = data.window_days || currentDays;
+    var seg =
+      '<div class="region-actseg" role="group" aria-label="' + e(t('actWindow', 'Zeitraum')) + '">'
+      + '<button type="button" class="region-actseg__btn' + (days === 7 ? ' is-active' : '') + '" data-days="7">'
+      + e(t('act7', '7 Tage')) + '</button>'
+      + '<button type="button" class="region-actseg__btn' + (days === 30 ? ' is-active' : '') + '" data-days="30">'
+      + e(t('act30', '30 Tage')) + '</button></div>';
+    var stats =
+      '<div class="region-stats region-actstats">'
+      + '<div class="region-stat"><div class="val">' + (data.total_riders || 0) + '</div><div class="lbl">' + e(t('actTotal', 'Aktive Fahrer')) + '</div></div>'
+      + '<div class="region-stat"><div class="val">' + (data.solo_riders || 0) + '</div><div class="lbl">' + e(t('actSolo', 'Solo')) + '</div></div>'
+      + '<div class="region-stat"><div class="val">' + (data.crew_count || 0) + '</div><div class="lbl">' + e(t('actCrews', 'Crews')) + '</div></div>'
+      + '</div>';
+    var html =
+      '<h3 class="region-panel__h3">' + e(t('activity', 'Aktivität')) + '</h3>'
+      + seg + stats
+      + '<h4 class="region-actboard__h4">' + e(t('actSoloBoard', 'Solo-Rangliste')) + '</h4>'
+      + '<ol class="region-board">' + activityRows(data.solo) + '</ol>'
+      + '<h4 class="region-actboard__h4">' + e(t('actCrewBoard', 'Crew-Rangliste')) + '</h4>'
+      + '<ol class="region-board">' + activityRows(data.crews) + '</ol>';
+    box.innerHTML = html;
+    Array.prototype.forEach.call(box.querySelectorAll('[data-days]'), function (b) {
+      b.addEventListener('click', function () {
+        var dd = parseInt(b.getAttribute('data-days'), 10);
+        if (dd && dd !== currentDays) { currentDays = dd; if (currentRegionId) { loadActivity(currentRegionId); } }
+      });
+    });
+  }
+
+  function loadActivity(id) {
+    var box = document.getElementById('region-activity');
+    if (box) { box.setAttribute('aria-busy', 'true'); }
+    fetchJson(apiBase + '/game/regions/' + id + '/activity?days=' + currentDays)
+      .then(function (d) { if (id === currentRegionId) { renderActivity(d); } })
+      .catch(noop)
+      .then(function () { if (box) { box.removeAttribute('aria-busy'); } });
   }
 
   function hidePanel() {

@@ -83,6 +83,38 @@ final class GameAdminController
         ]);
     }
 
+    /**
+     * WAR/Region-Auswertung (Nordstern, UserGrowth_Concept.md §4): distinct aktive
+     * Fahrer je Gebiet im Fenster (7/30 Tage) auf wählbarer Ebene, mit Solo-/Crew-
+     * Aufschlüsselung. Read-only.
+     */
+    public function regionsActivity(Request $req): void
+    {
+        [$user] = $this->requireAdmin();
+        $level = (int)($req->query['level'] ?? 6);
+        if (!in_array($level, [2, 4, 6, 8], true)) {
+            $level = 6;
+        }
+        $days = (int)($req->query['days'] ?? 7);
+        if (!in_array($days, [7, 30], true)) {
+            $days = 7;
+        }
+        // Aus dem täglichen Cache lesen (schnell); Live-Fallback, solange der Cron
+        // noch nicht gelaufen ist.
+        $cached = $this->regions->activityCacheRowCount() > 0;
+        $rows = $cached
+            ? $this->regions->cachedWarByRegion($level, $days, 200, null)
+            : $this->regions->warByRegion($level, date('Y-m-d', time() - ($days * 86400)), 200, null);
+        $this->view->render('admin/game/regions_activity', [
+            '_title' => 'Game · WAR/Region', '_authedUser' => $user, '_layoutWide' => true,
+            'flash' => $this->takeFlash(),
+            'rows'  => $rows,
+            'days'  => $days,
+            'level' => $level,
+            'cached' => $cached,
+        ]);
+    }
+
     public function config(Request $req): void
     {
         [$user] = $this->requireAdmin();

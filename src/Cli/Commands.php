@@ -35,6 +35,7 @@ final class Commands
         private readonly ?CronRunRepository $cronRuns = null,
         private readonly string $triggerKind = 'cron',
         private readonly ?\App\Game\Admin\BroadcastService $broadcasts = null,
+        private readonly ?\App\Game\RegionActivityCacheService $regionActivity = null,
     ) {}
 
     /**
@@ -183,6 +184,10 @@ final class Commands
             case 'cron:region-ownership':
             case 'regions:ownership-refresh':
                 return $this->regionsOwnershipRefresh();
+
+            case 'cron:region-activity':
+            case 'game:region-activity-refresh':
+                return $this->regionActivityRefresh();
 
             case 'regions:push':
                 return $this->regionsPush($argv);
@@ -1251,6 +1256,25 @@ final class Commands
         echo sprintf(
             "Gebiets-Besitz aktualisiert: %d Gebiet(e), %d Besitzwechsel.\n",
             $res['regions'], count($res['changes'])
+        );
+        return 0;
+    }
+
+    /**
+     * game:region-activity-refresh — täglicher Nordstern-Aktivitäts-Cache
+     * (game_region_activity): WAR + Solo/Crew je Gebiet und Fenster (7/30 Tage).
+     */
+    private function regionActivityRefresh(): int
+    {
+        if ($this->regionActivity === null) {
+            echo "game:region-activity-refresh nicht verfügbar (Service nicht verdrahtet).\n";
+            return 1;
+        }
+        ini_set('memory_limit', '1G');
+        $res = $this->regionActivity->recomputeAll();
+        echo sprintf(
+            "Gebiets-Aktivität aktualisiert: %d Fenster, %d Gebiet-Zeilen.\n",
+            $res['windows'], $res['regions']
         );
         return 0;
     }

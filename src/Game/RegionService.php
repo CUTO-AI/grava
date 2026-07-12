@@ -148,6 +148,102 @@ final class RegionService
     }
 
     /**
+     * Nordstern-Aktivität eines Gebiets (UserGrowth_Concept.md §4): distinct aktive
+     * Fahrer (WAR) im Zeitfenster, Solo/Crew-Aufschlüsselung und je eine windowed
+     * Rangliste der Solo-Fahrer und Crews. Selbst + Nachfahren über das path-Präfix.
+     *
+     * @return array<string,mixed>|null  null, wenn das Gebiet nicht existiert.
+     */
+    public function regionActivity(int $id, int $days, int $limit = 20): ?array
+    {
+        $r = $this->repo->regionFull($id);
+        if ($r === null) {
+            return null;
+        }
+        $path = (string)$r['path'];
+        $days = max(1, min(365, $days));
+        $since = $this->sinceDate($days);
+
+        $counts = $this->repo->activityCounts($path, $since);
+        return [
+            'region_id'    => (int)$r['id'],
+            'name'         => (string)$r['name'],
+            'level'        => (int)$r['level'],
+            'kind'         => (string)$r['kind'],
+            'window_days'  => $days,
+            'total_riders' => $counts['total_riders'],
+            'solo_riders'  => $counts['solo_riders'],
+            'crew_riders'  => $counts['crew_riders'],
+            'crew_count'   => $counts['crew_count'],
+            'solo'         => $this->rankActivity($this->repo->activityLeaderboardByPathPrefix($path, $since, 'rider', $limit)),
+            'crews'        => $this->rankActivity($this->repo->activityLeaderboardByPathPrefix($path, $since, 'group', $limit)),
+        ];
+    }
+
+    /**
+     * WAR-Übersicht (distinct aktive Fahrer je Gebiet) auf einer Ebene im Fenster —
+     * für die Admin-Auswertung und die Karten-Tönung. Ohne `level` wird bei bbox die
+     * zoom-passende Ebene gewählt, sonst Landkreis (6) als Admin-Standard.
+     *
+     * @param array{0:float,1:float,2:float,3:float}|null $bbox
+     * @return array{window_days:int,level:int,regions:list<array<string,mixed>>}
+     */
+    public function warOverview(int $days, ?int $level, ?array $bbox, int $limit = 200): array
+    {
+        $days = max(1, min(365, $days));
+        $lvl = $level;
+        if ($lvl === null) {
+            if ($bbox !== null) {
+                $span = max($bbox[3] - $bbox[1], $bbox[2] - $bbox[0]);
+                $lvl = $this->levelForSpan($span);
+            } else {
+                $lvl = 6;
+            }
+        }
+        // Aus dem täglichen Cache lesen (schnell), solange er befüllt ist und ein
+        // Standard-Fenster (7/30) gefragt ist — sonst Live-Fallback.
+        $useCache = in_array($days, [7, 30], true) && $this->repo->activityCacheRowCount() > 0;
+        $regions = $useCache
+            ? $this->repo->cachedWarByRegion($lvl, $days, $limit, $bbox)
+            : $this->repo->warByRegion($lvl, $this->sinceDate($days), $limit, $bbox);
+
+        return [
+            'window_days' => $days,
+            'level'       => $lvl,
+            'cached'      => $useCache,
+            'regions'     => $regions,
+        ];
+    }
+
+    /**
+     * Hängt Rang + Claimant-Infos (Anzeigename/Handle/Fraktion) an die rohen
+     * Aktivitäts-Zeilen an.
+     *
+     * @param list<array{claimant_id:int,len:float,edges:int,riders:int}> $rows
+     * @return list<array<string,mixed>>
+     */
+    private function rankActivity(array $rows): array
+    {
+        $out = [];
+        $rank = 0;
+        foreach ($rows as $e) {
+            $rank++;
+            $out[] = array_merge(
+                ['rank' => $rank],
+                $this->claimant($e['claimant_id']) ?? ['claimant_id' => $e['claimant_id']],
+                ['length_m' => $e['len'], 'edges' => $e['edges'], 'riders' => $e['riders']],
+            );
+        }
+        return $out;
+    }
+
+    /** Fenster-Startdatum (YYYY-MM-DD) für „letzte N Tage" (rollierend). */
+    private function sinceDate(int $days): string
+    {
+        return date('Y-m-d', time() - ($days * 86400));
+    }
+
+    /**
      * GET /game/me/regions — Gebiete, die der Claimant hält oder anführt.
      *
      * @return array{regions:list<array<string,mixed>>}

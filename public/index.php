@@ -341,7 +341,7 @@ if (PHP_SAPI === 'cli') {
         new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig),
         $gameEventRecorder,
     );
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config), $ingestJobRepo, $ingestJobRunner, $cronRunRepo, 'cron', $broadcastSvc);
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), new \App\Game\RegionImportService($cliRegionRepo), new \App\Game\RegionOwnershipService($cliRegionRepo, $gameConfig), new \App\Social\SocialService($config), $ingestJobRepo, $ingestJobRunner, $cronRunRepo, 'cron', $broadcastSvc, new \App\Game\RegionActivityCacheService($cliRegionRepo));
     exit($cli->run($_SERVER['argv'] ?? []));
 }
 
@@ -530,7 +530,7 @@ $webAdminUploads = new \App\Controllers\Web\Admin\AdminUploadsController(
 // kann; der Lauf wird wie ein Cron-Lauf in cron_runs protokolliert.
 $makeManualCli = function () use ($basePath, $tokens, $routeService, $config, $notifServ, $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameRepo, $gameConfig, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder, $gameIngest, $ingestJobRepo, $cronRunRepo, $broadcastSvc) {
     $runner = new \App\Game\IngestJobRunner($gameRepo, $routeService, new GeometryParser(), $gameIngest, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder);
-    return new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), $ingestJobRepo, $runner, $cronRunRepo, 'manual', $broadcastSvc);
+    return new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, new \App\Game\GameHistoryService($gameRepo), $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), $ingestJobRepo, $runner, $cronRunRepo, 'manual', $broadcastSvc, new \App\Game\RegionActivityCacheService(new \App\Game\RegionRepository(Db::pdo())));
 };
 $webCronAdmin = new \App\Controllers\Web\Admin\CronAdminController(
     $webSession, $auth, $adminGuard, $cronRunRepo, $gameAudit, $makeManualCli,
@@ -742,6 +742,10 @@ $router->get("{$apiBase}/game/progression",        fn($r) => $apiGame->progressi
 // adaptiv), Detail mit Breadcrumb/Kindern/Bestenliste, eigene Gebiete.
 $router->get("{$apiBase}/game/regions",            fn($r) => $apiRegion->index($r),  [$optionalBearer]);
 $router->get("{$apiBase}/game/me/regions",         fn($r) => $apiRegion->mine($r),   [$requireBearer]);
+// Nordstern-Aktivität (UserGrowth_Concept.md §4): WAR/Region-Übersicht (Karte/Admin)
+// + Solo/Crew-Aktivitäts-Rangliste je Gebiet. Statische Route VOR /game/regions/{id}.
+$router->get("{$apiBase}/game/regions/activity-overview", fn($r) => $apiRegion->activityOverview($r), [$optionalBearer]);
+$router->get("{$apiBase}/game/regions/{id}/activity",     fn($r) => $apiRegion->activity($r),         [$optionalBearer]);
 $router->get("{$apiBase}/game/regions/{id}",       fn($r) => $apiRegion->detail($r), [$optionalBearer]);
 // Solo-/Spieler-Rangliste (S7): world anonym, friends/me brauchen Bearer.
 $router->get("{$apiBase}/game/leaderboard",        fn($r) => $apiPlayerBoard->index($r), [$optionalBearer]);
@@ -848,6 +852,9 @@ $router->get('/features',          fn($r) => $webFeatures->show($r));
 $router->get('/pulse',             fn($r) => $webPulse->show($r));
 // Öffentliche Auswertungen (WebAnalytics_Concept.md): Ranglisten + Gebiete (SSR).
 $router->get('/rangliste',            fn($r) => $webRankings->show($r, 'solo'));
+// „Über Karte" (UserGrowth_Concept.md §4): Statische Route VOR /rangliste/{tab},
+// sonst würde „karte" als Tab gematcht.
+$router->get('/rangliste/karte',      fn($r) => $webRankings->map($r));
 $router->get('/rangliste/{tab}',      fn($r) => $webRankings->show($r, (string)($r->routeParams['tab'] ?? 'solo')));
 $router->get('/gebiete',              fn($r) => $webRegions->index($r));
 // Statische Route VOR /gebiete/{id}, sonst würde „karte" als ID gematcht.
@@ -907,6 +914,7 @@ $router->get ('/admin/game/players',                   fn($r) => $webGameAdmin->
 $router->get ('/admin/game/player',                    fn($r) => $webGameAdmin->player($r));
 $router->get ('/admin/game/crews',                     fn($r) => $webGameAdmin->crews($r));
 $router->get ('/admin/game/regions',                   fn($r) => $webGameAdmin->regions($r));
+$router->get ('/admin/game/regions/activity',          fn($r) => $webGameAdmin->regionsActivity($r));
 $router->get ('/admin/game/map',                       fn($r) => $webGameAdmin->map($r));
 $router->get ('/admin/game/edges.geojson',             fn($r) => $webGameAdmin->edgesGeoJson($r));
 $router->get ('/admin/game/edge',                      fn($r) => $webGameEdge->show($r));
@@ -1040,7 +1048,7 @@ $runInternal = function (Request $r, string $command)
     if ($provided === '' || !hash_equals($internalToken, $provided)) {
         Response::error('not_found', 'Nicht gefunden.', 404);
     }
-    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), null, null, $cronRunRepo, 'internal', $broadcastSvc);
+    $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), null, null, $cronRunRepo, 'internal', $broadcastSvc, new \App\Game\RegionActivityCacheService(new \App\Game\RegionRepository(Db::pdo())));
     $argv = ['internal', $command];
     foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email', 'date', 'lang'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {
@@ -1098,6 +1106,8 @@ $router->post('/internal/cron/game-snapshot', fn($r) => $runInternal($r, 'game:s
 // Gebiets-Besitz neu rechnen (CityConquest_Backend_Spec.md).
 $router->get('/internal/cron/region-ownership',  fn($r) => $runInternal($r, 'regions:ownership-refresh'));
 $router->post('/internal/cron/region-ownership', fn($r) => $runInternal($r, 'regions:ownership-refresh'));
+$router->get('/internal/cron/region-activity',   fn($r) => $runInternal($r, 'game:region-activity-refresh'));
+$router->post('/internal/cron/region-activity',  fn($r) => $runInternal($r, 'game:region-activity-refresh'));
 // Social-Automatik (Twitter_Automation_Concept.md §6): Tagesbericht einsammeln
 // (~19:55 UTC) + senden (~20:00 UTC). Sendet nichts, solange SOCIAL_ENABLED=0
 // oder SOCIAL_DRY_RUN=1 gesetzt ist (Dry-Run).

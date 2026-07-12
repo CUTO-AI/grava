@@ -52,6 +52,28 @@ final class RegionController
         Response::json($detail);
     }
 
+    /** GET /game/regions/{id}/activity?days=7|30 — Nordstern-Aktivität (WAR + Solo/Crew-Rangliste). */
+    public function activity(Request $req): void
+    {
+        $id = (int)($req->routeParams['id'] ?? 0);
+        $out = $this->service->regionActivity($id, $this->parseDays($req->query['days'] ?? null));
+        if ($out === null) {
+            Response::error('not_found', 'Gebiet nicht gefunden.', 404);
+        }
+        Response::json($out);
+    }
+
+    /** GET /game/regions/activity-overview?days=&level=&bbox= — WAR je Gebiet (Karte/Admin). */
+    public function activityOverview(Request $req): void
+    {
+        $bbox = MapLod::parseBbox((string)($req->query['bbox'] ?? ''));
+        Response::json($this->service->warOverview(
+            $this->parseDays($req->query['days'] ?? null),
+            $this->parseLevel($req->query['level'] ?? null),
+            $bbox,
+        ));
+    }
+
     /** GET /game/me/regions?level= (Bearer). */
     public function mine(Request $req): void
     {
@@ -62,6 +84,13 @@ final class RegionController
         }
         $claimant = $this->repo->effectiveClaimantId($uid);
         Response::json($this->service->myRegions($claimant, $this->parseLevel($req->query['level'] ?? null)));
+    }
+
+    /** Zeitfenster in Tagen — nur 7 oder 30 zulässig (Default 7). */
+    private function parseDays(mixed $raw): int
+    {
+        $d = is_scalar($raw) ? (int)$raw : 0;
+        return in_array($d, [7, 30], true) ? $d : 7;
     }
 
     private function parseLevel(mixed $raw): ?int

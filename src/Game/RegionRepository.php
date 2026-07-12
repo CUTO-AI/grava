@@ -647,6 +647,315 @@ final class RegionRepository
     }
 
     /**
+     * Windowed-Aktivitäts-Bestenliste (Nordstern-Metrik, UserGrowth_Concept.md §4):
+     * gefahrene Kanten im Gebiet (Selbst + Nachfahren über path-Präfix) innerhalb
+     * eines Zeitfensters (ridden_on >= :since), gruppiert nach Claimant und gefiltert
+     * nach Claimant-Typ ('rider' = Solo, 'group' = Crew). Sortiert nach gefahrener
+     * Länge. Quelle ist der Ereignisstrom {@see game_edge_pass}, nicht der Besitz —
+     * misst also echte Aktivität im Fenster.
+     *
+     * @return list<array{claimant_id:int,len:float,edges:int,riders:int}>
+     */
+    public function activityLeaderboardByPathPrefix(string $pathPrefix, string $since, string $type, int $limit): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT p.claimant_id AS cid,
+                    SUM(e.length_m)            AS len,
+                    COUNT(DISTINCT p.edge_id)  AS edges,
+                    COUNT(DISTINCT p.user_id)  AS riders
+               FROM game_edge_pass p
+               JOIN game_edge e     ON e.id = p.edge_id
+               JOIN game_region r   ON r.id = e.region_id
+               JOIN game_claimant c ON c.id = p.claimant_id
+              WHERE r.path LIKE :prefix
+                AND p.ridden_on >= :since
+                AND c.type = :ctype
+           GROUP BY p.claimant_id
+           ORDER BY len DESC
+              LIMIT :lim"
+        );
+        $stmt->bindValue(':prefix', $pathPrefix . '%');
+        $stmt->bindValue(':since', $since);
+        $stmt->bindValue(':ctype', $type);
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = [
+                'claimant_id' => (int)$r['cid'],
+                'len'         => (float)$r['len'],
+                'edges'       => (int)$r['edges'],
+                'riders'      => (int)$r['riders'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * Zusammenfassung der Aktivität in einem Gebiet + Nachfahren im Fenster:
+     * WAR (distinct aktive Fahrer, Nordstern), aufgeschlüsselt in Solo-Fahrer,
+     * Crew-Fahrer und Anzahl aktiver Crews.
+     *
+     * @return array{total_riders:int,solo_riders:int,crew_riders:int,crew_count:int}
+     */
+    public function activityCounts(string $pathPrefix, string $since): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT COUNT(DISTINCT p.user_id) AS total_riders,
+                    COUNT(DISTINCT CASE WHEN c.type = 'rider' THEN p.user_id END)    AS solo_riders,
+                    COUNT(DISTINCT CASE WHEN c.type = 'group' THEN p.user_id END)    AS crew_riders,
+                    COUNT(DISTINCT CASE WHEN c.type = 'group' THEN p.claimant_id END) AS crew_count
+               FROM game_edge_pass p
+               JOIN game_edge e     ON e.id = p.edge_id
+               JOIN game_region r   ON r.id = e.region_id
+               JOIN game_claimant c ON c.id = p.claimant_id
+              WHERE r.path LIKE :prefix
+                AND p.ridden_on >= :since"
+        );
+        $stmt->bindValue(':prefix', $pathPrefix . '%');
+        $stmt->bindValue(':since', $since);
+        $stmt->execute();
+        $r = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        return [
+            'total_riders' => (int)($r['total_riders'] ?? 0),
+            'solo_riders'  => (int)($r['solo_riders'] ?? 0),
+            'crew_riders'  => (int)($r['crew_riders'] ?? 0),
+            'crew_count'   => (int)($r['crew_count'] ?? 0),
+        ];
+    }
+
+    /**
+     * WAR (distinct aktive Fahrer) je Gebiet auf einer Ebene im Fenster — für die
+     * Admin-Übersicht und die Karten-Tönung. Der Blatt-Pass wird über das
+     * path-Präfix des Ahnen-Gebiets der Zielebene aggregiert. Optional bbox-gefiltert.
+     *
+     * @param array{0:float,1:float,2:float,3:float}|null $bbox [minLon,minLat,maxLon,maxLat]
+     * @return list<array{region_id:int,name:string,level:int,kind:string,war:int,solo_riders:int,crew_count:int,edges:int}>
+     */
+    public function warByRegion(int $level, string $since, int $limit, ?array $bbox = null): array
+    {
+        $bboxFilter = '';
+        if ($bbox !== null) {
+            $bboxFilter = ' AND a.min_lat <= :maxLat AND a.max_lat >= :minLat'
+                        . ' AND a.min_lon <= :maxLon AND a.max_lon >= :minLon';
+        }
+        $sql = "SELECT a.id AS region_id, a.name AS name, a.level AS level, a.kind AS kind,
+                       COUNT(DISTINCT p.user_id) AS war,
+                       COUNT(DISTINCT CASE WHEN c.type = 'rider' THEN p.user_id END)     AS solo_riders,
+                       COUNT(DISTINCT CASE WHEN c.type = 'group' THEN p.claimant_id END) AS crew_count,
+                       COUNT(DISTINCT p.edge_id) AS edges
+                  FROM game_edge_pass p
+                  JOIN game_edge e     ON e.id = p.edge_id
+                  JOIN game_region lf  ON lf.id = e.region_id
+                  JOIN game_region a   ON a.level = :level AND lf.path LIKE CONCAT(a.path, '%')
+                  JOIN game_claimant c ON c.id = p.claimant_id
+                 WHERE p.ridden_on >= :since
+                       {$bboxFilter}
+              GROUP BY a.id
+              ORDER BY war DESC
+                 LIMIT :lim";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':level', $level, PDO::PARAM_INT);
+        $stmt->bindValue(':since', $since);
+        if ($bbox !== null) {
+            [$minLon, $minLat, $maxLon, $maxLat] = $bbox;
+            $stmt->bindValue(':minLon', $minLon);
+            $stmt->bindValue(':minLat', $minLat);
+            $stmt->bindValue(':maxLon', $maxLon);
+            $stmt->bindValue(':maxLat', $maxLat);
+        }
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = [
+                'region_id'   => (int)$r['region_id'],
+                'name'        => (string)$r['name'],
+                'level'       => (int)$r['level'],
+                'kind'        => (string)$r['kind'],
+                'war'         => (int)$r['war'],
+                'solo_riders' => (int)$r['solo_riders'],
+                'crew_count'  => (int)$r['crew_count'],
+                'edges'       => (int)$r['edges'],
+            ];
+        }
+        return $out;
+    }
+
+    // ---- Aktivitäts-Cache (Nordstern) --------------------------------------
+    // Roh-Zeilen fürs PHP-Rollup: WAR (distinct Fahrer) ist NICHT additiv über die
+    // Hierarchie, daher liefern wir pro Blatt-Gebiet die distinct (Fahrer,Typ)- und
+    // Crew-Mengen sowie die additive Kantenzahl; der Cache-Service unioniert sie
+    // entlang des path auf alle Ahnen (analog RegionOwnershipService).
+
+    /**
+     * DISTINCT (Blatt-Gebiet, Fahrer, Claimant-Typ) mit Pass im Fenster.
+     *
+     * @return list<array{leaf:int,uid:int,ctype:string}>
+     */
+    public function activityLeafUserRows(string $since): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT DISTINCT e.region_id AS leaf, p.user_id AS uid, c.type AS ctype
+               FROM game_edge_pass p
+               JOIN game_edge e     ON e.id = p.edge_id
+               JOIN game_claimant c ON c.id = p.claimant_id
+              WHERE p.ridden_on >= :since
+                AND e.region_id IS NOT NULL"
+        );
+        $stmt->bindValue(':since', $since);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = ['leaf' => (int)$r['leaf'], 'uid' => (int)$r['uid'], 'ctype' => (string)$r['ctype']];
+        }
+        return $out;
+    }
+
+    /**
+     * DISTINCT (Blatt-Gebiet, Crew-Claimant) mit Pass im Fenster (nur type='group').
+     *
+     * @return list<array{leaf:int,cid:int}>
+     */
+    public function activityLeafCrewRows(string $since): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT DISTINCT e.region_id AS leaf, p.claimant_id AS cid
+               FROM game_edge_pass p
+               JOIN game_edge e     ON e.id = p.edge_id
+               JOIN game_claimant c ON c.id = p.claimant_id
+              WHERE p.ridden_on >= :since
+                AND e.region_id IS NOT NULL
+                AND c.type = 'group'"
+        );
+        $stmt->bindValue(':since', $since);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = ['leaf' => (int)$r['leaf'], 'cid' => (int)$r['cid']];
+        }
+        return $out;
+    }
+
+    /**
+     * Distinct-Kantenzahl je Blatt-Gebiet im Fenster (additiv über die Hierarchie,
+     * da jede Kante genau EINEM Blatt-Gebiet zugeordnet ist).
+     *
+     * @return list<array{leaf:int,edges:int}>
+     */
+    public function activityLeafEdgeCounts(string $since): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT e.region_id AS leaf, COUNT(DISTINCT p.edge_id) AS edges
+               FROM game_edge_pass p
+               JOIN game_edge e ON e.id = p.edge_id
+              WHERE p.ridden_on >= :since
+                AND e.region_id IS NOT NULL
+           GROUP BY e.region_id"
+        );
+        $stmt->bindValue(':since', $since);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = ['leaf' => (int)$r['leaf'], 'edges' => (int)$r['edges']];
+        }
+        return $out;
+    }
+
+    /**
+     * Ersetzt den Cache für EIN Fenster atomar (DELETE + gebündelte INSERTs). Nur
+     * Gebiete mit Aktivität bekommen eine Zeile.
+     *
+     * @param array<int,array{war:int,solo:int,crew_riders:int,crew_count:int,edges:int}> $rows
+     */
+    public function replaceActivityCache(int $window, array $rows): void
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $del = $this->pdo->prepare('DELETE FROM game_region_activity WHERE window_days = ?');
+            $del->execute([$window]);
+
+            if ($rows !== []) {
+                $ids = array_keys($rows);
+                foreach (array_chunk($ids, 500) as $chunk) {
+                    $tuples = [];
+                    $vals = [];
+                    foreach ($chunk as $rid) {
+                        $r = $rows[$rid];
+                        $tuples[] = '(?,?,?,?,?,?,?)';
+                        array_push($vals, (int)$rid, $window, $r['war'], $r['solo'], $r['crew_riders'], $r['crew_count'], $r['edges']);
+                    }
+                    $sql = 'INSERT INTO game_region_activity
+                                (region_id, window_days, war, solo_riders, crew_riders, crew_count, edges)
+                            VALUES ' . implode(',', $tuples);
+                    $this->pdo->prepare($sql)->execute($vals);
+                }
+            }
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /** Zeilenzahl des Aktivitäts-Caches (0 = Cron noch nie gelaufen → Live-Fallback). */
+    public function activityCacheRowCount(): int
+    {
+        return (int)$this->pdo->query('SELECT COUNT(*) FROM game_region_activity')->fetchColumn();
+    }
+
+    /**
+     * WAR je Gebiet auf einer Ebene AUS DEM CACHE (schnell). Gleiche Zeilenform wie
+     * {@see warByRegion()}.
+     *
+     * @param array{0:float,1:float,2:float,3:float}|null $bbox
+     * @return list<array{region_id:int,name:string,level:int,kind:string,war:int,solo_riders:int,crew_count:int,edges:int}>
+     */
+    public function cachedWarByRegion(int $level, int $window, int $limit, ?array $bbox = null): array
+    {
+        $bboxFilter = '';
+        if ($bbox !== null) {
+            $bboxFilter = ' AND r.min_lat <= :maxLat AND r.max_lat >= :minLat'
+                        . ' AND r.min_lon <= :maxLon AND r.max_lon >= :minLon';
+        }
+        $sql = "SELECT r.id AS region_id, r.name AS name, r.level AS level, r.kind AS kind,
+                       a.war AS war, a.solo_riders AS solo_riders, a.crew_count AS crew_count, a.edges AS edges
+                  FROM game_region_activity a
+                  JOIN game_region r ON r.id = a.region_id
+                 WHERE a.window_days = :win
+                   AND r.level = :level
+                       {$bboxFilter}
+              ORDER BY a.war DESC
+                 LIMIT :lim";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':win', $window, PDO::PARAM_INT);
+        $stmt->bindValue(':level', $level, PDO::PARAM_INT);
+        if ($bbox !== null) {
+            [$minLon, $minLat, $maxLon, $maxLat] = $bbox;
+            $stmt->bindValue(':minLon', $minLon);
+            $stmt->bindValue(':minLat', $minLat);
+            $stmt->bindValue(':maxLon', $maxLon);
+            $stmt->bindValue(':maxLat', $maxLat);
+        }
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[] = [
+                'region_id'   => (int)$r['region_id'],
+                'name'        => (string)$r['name'],
+                'level'       => (int)$r['level'],
+                'kind'        => (string)$r['kind'],
+                'war'         => (int)$r['war'],
+                'solo_riders' => (int)$r['solo_riders'],
+                'crew_count'  => (int)$r['crew_count'],
+                'edges'       => (int)$r['edges'],
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * Gebiete, die ein Claimant hält oder anführt (owned/contesting).
      *
      * @return list<array<string,mixed>>

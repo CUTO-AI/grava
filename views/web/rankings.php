@@ -24,6 +24,7 @@ $km = static fn(float $m): string => number_format($m / 1000, 1);
     <a href="/rangliste/solo"       class="rank-tab<?= $tab === 'solo' ? ' is-active' : '' ?>"><?= t('Solo') ?></a>
     <a href="/rangliste/crews"      class="rank-tab<?= $tab === 'crews' ? ' is-active' : '' ?>"><?= t('Crews') ?></a>
     <a href="/rangliste/fraktionen" class="rank-tab<?= $tab === 'fraktionen' ? ' is-active' : '' ?>"><?= t('Fraktionen') ?></a>
+    <a href="/rangliste/karte"      class="rank-tab"><?= t('Über Karte') ?></a>
 </nav>
 
 <section class="card">

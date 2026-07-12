@@ -110,6 +110,17 @@
 .region-children .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
 .region-children .dot--free { background: rgba(150,180,210,.35); }
 
+/* Aktivitäts-Panel (Nordstern, UserGrowth_Concept.md §4). */
+.region-activity { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft, #20242e); }
+.region-activity[aria-busy="true"] { opacity: .5; }
+.region-actseg { display: inline-flex; border: 1px solid var(--line-soft, #2a2f3a); border-radius: 999px; overflow: hidden; margin-bottom: 10px; }
+.region-actseg__btn { background: transparent; border: 0; cursor: pointer; padding: 5px 14px; font-family: var(--font-mono, monospace); font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted, #8a97a6); }
+.region-actseg__btn.is-active { background: var(--primary, #06b6d4); color: #06121a; }
+.region-actstats { margin-bottom: 10px; }
+.region-actboard__h4 { font-family: var(--font-mono, monospace); font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted, #8a97a6); margin: 12px 0 4px; }
+.region-board__empty { color: var(--text-muted, #8a97a6); font-size: .84rem; font-style: italic; }
+.region-board .nm .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+
 @media (max-width: 620px) {
     .region-map-wrap { height: 78vh; }
     .region-panel { width: 100%; border-left: 0; }

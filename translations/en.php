@@ -735,4 +735,17 @@ return [
     'Anteil' => 'Share',
     'Unter-Gebiete' => 'Sub-areas',
     'Ebene' => 'Level',
+    // Ranglisten „Über Karte" / Nordstern-Aktivität (UserGrowth_Concept.md §4)
+    'Über Karte' => 'By map',
+    'Zeitraum' => 'Period',
+    '7 Tage' => '7 days',
+    '30 Tage' => '30 days',
+    'Aktive Fahrer' => 'Active riders',
+    'Solo-Rangliste' => 'Solo ranking',
+    'Crew-Rangliste' => 'Crew ranking',
+    'Keine Aktivität im Zeitraum.' => 'No activity in this period.',
+    'Tippe ein Gebiet an — die Karte zeigt, wer in den letzten 7 oder 30 Tagen dort aktiv war (gesamt, solo und als Crew).'
+        => 'Tap an area — the map shows who was active there over the last 7 or 30 days (total, solo and as a crew).',
+    'Zoom rein für Landkreise und Gemeinden; wähle ein Gebiet für die Aktivitäts-Rangliste.'
+        => 'Zoom in for districts and municipalities; pick an area for its activity ranking.',
 ];

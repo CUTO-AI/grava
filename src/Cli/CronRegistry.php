@@ -25,6 +25,7 @@ final class CronRegistry
         'regions:backfill'          => ['Gebiete-Backfill',        900,   600],
         'game:snapshot-daily'       => ['Tages-Snapshot',          86400, 900],
         'regions:ownership-refresh' => ['Gebiets-Besitz',          86400, 900],
+        'game:region-activity-refresh' => ['Gebiets-Aktivität',    86400, 900],
         'cron:cleanup'              => ['Cleanup / Retention',      86400, 600],
     ];
 
@@ -37,6 +38,7 @@ final class CronRegistry
         'cron:game-ingest'       => 'game:ingest-run',
         'cron:region-ownership'  => 'regions:ownership-refresh',
         'cron:game-snapshot'     => 'game:snapshot-daily',
+        'cron:region-activity'   => 'game:region-activity-refresh',
         'cleanup'                => 'cron:cleanup',
     ];
 

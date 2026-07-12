@@ -63,5 +63,9 @@ jobs:
             printf '%s\n' '* * * * * www-data php /var/www/app/public/index.php game:broadcast-run >/dev/null 2>&1' \
               | sudo tee /etc/cron.d/gravelexplorer-broadcast >/dev/null
             sudo chmod 0644 /etc/cron.d/gravelexplorer-broadcast
+            # Nordstern-Aktivitäts-Cache (WAR/Region, 7/30 Tage) täglich 03:50.
+            printf '%s\n' '50 3 * * * www-data php /var/www/app/public/index.php game:region-activity-refresh >/dev/null 2>&1' \
+              | sudo tee /etc/cron.d/gravelexplorer-region-activity >/dev/null
+            sudo chmod 0644 /etc/cron.d/gravelexplorer-region-activity
             # OPcache/FPM neu laden, damit der neue Code sofort greift.
             sudo systemctl reload php8.4-fpm

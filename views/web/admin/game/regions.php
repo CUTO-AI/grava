@@ -19,6 +19,7 @@ $kindLabel = static function (int $level): string {
     <a href="/admin/game/players"><?= t('Spieler') ?></a>
     <a href="/admin/game/crews">Crews</a>
     <a href="/admin/game/regions">Gebiete</a>
+    <a href="/admin/game/regions/activity">WAR/Region</a>
     <a href="/admin/game/edge">Inspector</a>
     <a href="/admin/game/map"><?= t('Karte') ?></a>
 </nav>

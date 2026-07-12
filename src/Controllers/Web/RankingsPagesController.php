@@ -72,4 +72,33 @@ final class RankingsPagesController
             'factions'     => $facts,
         ]);
     }
+
+    /**
+     * „Über Karte"-Tab der Ranglisten (UserGrowth_Concept.md §4): dieselbe
+     * interaktive Gebiets-Karte wie die Startseite; Klick auf ein Gebiet zeigt die
+     * windowed Nordstern-Aktivität (Gesamt/Solo/Crews, 7/30 Tage). Client-seitig
+     * same-origin aus /api/v1/game/regions[/{id}][/activity] (map-regions.js,
+     * data-activity="1").
+     */
+    public function map(Request $req): void
+    {
+        $user = null;
+        $ctx = $this->webSession->resolve();
+        if ($ctx !== null) {
+            $user = $this->auth->loadUserPublic($ctx['user_id']);
+            Csrf::ensureStarted();
+        }
+
+        $this->view->render('rankings_map', [
+            '_title'       => t('Über Karte') . ' · ' . t('Ranglisten') . ' · CYBERRIDE',
+            '_authedUser'  => $user,
+            '_pageStyles'  => ['/assets/vendor/leaflet/leaflet.css', '/assets/css/regions-map.css', '/assets/css/analytics.css'],
+            '_pageScripts' => [
+                '/assets/vendor/leaflet/leaflet.js',
+                '/assets/js/map-core.js',
+                '/assets/js/map-regions.js',
+            ],
+            '_layoutWide'  => true,
+        ]);
+    }
 }
