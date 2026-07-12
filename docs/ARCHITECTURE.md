@@ -27,7 +27,7 @@ GRAVA ist ein PHP/MySQL-Monolith, der drei Dinge aus **einem** Front-Controller
 
 | Umgebung | Haupt-Host | Admin-Host | DB |
 |----------|------------|------------|----|
-| Produktion | `grava.world` | `admin.grava.world` | `gravelexplorer` |
+| Produktion | `grava.world` | `admin.cyberride.world` | `gravelexplorer` |
 | Lokal (MAMP) | `gravelexplorer.test:8890` | `admin.grava.test` | `gravelexplorer` (+ `gravelexplorer_test`) |
 
 > **Stabil halten (nicht umbenennen):** DB-Name `gravelexplorer`,
@@ -193,7 +193,7 @@ Setup: `backend/GAME_DASHBOARD_SETUP.md`.
 In `public/index.php` (Ende) entscheidet `App\Game\Admin\AdminHost::isAdmin()`
 anhand des `Host`-Headers, ob es sich um den Admin-Host handelt:
 
-- **Admin-Host (`admin.grava.world`):** Es sind nur erlaubt: `/admin/*`,
+- **Admin-Host (`admin.cyberride.world`):** Es sind nur erlaubt: `/admin/*`,
   `/login`, `/logout`, `/auth/web-refresh`, `/healthz`, `/internal/*`,
   `/assets/*`, Favicons. `/` und `/dashboard` werden auf `/admin/game`
   umgeleitet. Alles andere → 404.
@@ -322,7 +322,7 @@ Ohne gesetzten Token verhalten sie sich wie 404.
 
 - **DocumentRoot** zeigt auf `public/`. HTTPS Pflicht (HSTS aktiv über TLS).
 - `.env` aus `.env.example`: `APP_ENV=production`, neuer `APP_KEY`, DB-/SMTP-Daten,
-  `COOKIE_DOMAIN=grava.world`, `ADMIN_HOST=admin.grava.world`, `ADMIN_EMAILS`,
+  `COOKIE_DOMAIN=grava.world`, `ADMIN_HOST=admin.cyberride.world`, `ADMIN_EMAILS`,
   `INTERNAL_TOKEN`, `VALHALLA_BASE_URL`.
 - **Valhalla** läuft als Docker-Container (Hetzner-Deploy:
   `docker/valhalla/DEPLOY_HETZNER.md`); nur Precompute/Ingest nutzen ihn.

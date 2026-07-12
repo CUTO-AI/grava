@@ -500,7 +500,7 @@ $webLegal    = new LegalPagesController($basePath . '/views');
 $webAdminRef = new AdminReferralPagesController($webSession, $auth, $referrals, $config, $basePath . '/views');
 $webLanding  = new LandingController($basePath . '/views');
 
-// ---- Game-Admin-Dashboard (Stufe 1) — nur unter admin.grava.world erreichbar ----
+// ---- Game-Admin-Dashboard (Stufe 1) — nur unter dem Admin-Host erreichbar ----
 // $adminGuard ist bereits oben (bei den API-Controllern) erstellt.
 $gameAudit       = new \App\Game\Admin\GameAuditService(Db::pdo());
 $gameAdminSvc    = new \App\Game\Admin\GameAdminService(Db::pdo(), $gameRepo, $gameConfig);
@@ -1192,13 +1192,15 @@ $router->get('/healthz', function ($r) use ($basePath, $gameValhalla, $apnsConfi
     Response::json($body, $httpStatus);
 });
 
-// ---- Host-aware Admin-Split: /admin/* nur unter admin.grava.world, sonst 404 ----
+// ---- Host-aware Admin-Split: /admin/* nur unter dem Admin-Host, sonst 404 ----
+// Admin-Host = ADMIN_HOST (kommasepariert) ∪ admin.<APP_URL/PUBLIC_WEB_URL>.
 // Das PHP-Session-Cookie setzt keine Domain → die Admin-Session auf der
 // Subdomain ist automatisch host-gebunden (eigenes Cookie + CSRF).
 $isAdminHost = \App\Game\Admin\AdminHost::isAdmin(
     (string)$request->header('Host', ''),
     (string)$config->get('ADMIN_HOST', ''),
     (string)$config->get('APP_URL', ''),
+    (string)$config->get('PUBLIC_WEB_URL', ''),
 );
 $reqPath = $request->path;
 $isAdminPath = ($reqPath === '/admin' || str_starts_with($reqPath, '/admin/'));
