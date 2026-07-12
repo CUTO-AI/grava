@@ -7,6 +7,7 @@ $cron = $m['cron'] ?? ['failed' => 0, 'overdue' => 0];
 ?>
 <nav class="card" style="display:flex;gap:1rem;flex-wrap:wrap">
     <a href="/admin"><strong>Übersicht</strong></a>
+    <a href="/admin/analytics">Analytics</a>
     <a href="/admin/users">User</a>
     <a href="/admin/rides">Fahrten</a>
     <a href="/admin/review">Review</a>

@@ -548,15 +548,20 @@ $webDashAdmin = new \App\Controllers\Web\Admin\DashboardAdminController(
     new \App\Game\Admin\DashboardAdminService(Db::pdo(), $presenceSvc, $cronRunRepo, (int)($config->get('CRON_OVERDUE_FACTOR', 2) ?? 2)),
     $basePath . '/views',
 );
+$userAdminSvc = new \App\Game\Admin\UserAdminService(Db::pdo(), $gameAdminSvc);
+$rideAdminSvc = new \App\Game\Admin\RideAdminService(Db::pdo());
 $webUserAdmin = new \App\Controllers\Web\Admin\UserAdminController(
-    $webSession, $auth, $adminRoleSvc,
-    new \App\Game\Admin\UserAdminService(Db::pdo(), $gameAdminSvc),
+    $webSession, $auth, $adminRoleSvc, $userAdminSvc,
     $gameUserFlag, $gameAudit, $basePath . '/views',
 );
 $webRideAdmin = new \App\Controllers\Web\Admin\RideAdminController(
-    $webSession, $auth, $adminRoleSvc,
-    new \App\Game\Admin\RideAdminService(Db::pdo()),
+    $webSession, $auth, $adminRoleSvc, $rideAdminSvc,
     $ingestJobRepo, $gameAudit, $basePath . '/views',
+);
+$webAnalyticsAdmin = new \App\Controllers\Web\Admin\AnalyticsAdminController(
+    $webSession, $auth, $adminRoleSvc,
+    new \App\Game\Admin\AnalyticsAdminService(Db::pdo()),
+    $userAdminSvc, $rideAdminSvc, $basePath . '/views',
 );
 $webReviewAdmin = new \App\Controllers\Web\Admin\ReviewAdminController(
     $webSession, $auth, $adminRoleSvc,
@@ -927,6 +932,9 @@ $router->post('/admin/review/report/{id}',             fn($r) => $webReviewAdmin
 $router->get ('/admin/config/versions',                fn($r) => $webConfigVerAdmin->index($r));
 $router->get ('/admin/config/versions/{id}',           fn($r) => $webConfigVerAdmin->show($r));
 $router->post('/admin/config/versions/{id}/restore',   fn($r) => $webConfigVerAdmin->restore($r),    [$csrf]);
+$router->get ('/admin/analytics',                      fn($r) => $webAnalyticsAdmin->index($r));
+$router->get ('/admin/analytics/users.csv',            fn($r) => $webAnalyticsAdmin->usersCsv($r));
+$router->get ('/admin/analytics/rides.csv',            fn($r) => $webAnalyticsAdmin->ridesCsv($r));
 
 // ---- Settings Web-UI (M3 Phase 0) ----
 $router->get ('/settings/handle',                        fn($r) => $webSetting->showHandle($r));

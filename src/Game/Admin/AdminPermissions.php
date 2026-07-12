@@ -14,7 +14,7 @@ final class AdminPermissions
     /** @var array<string,list<string>> Rolle => erlaubte Rechte (super = alles) */
     private const MATRIX = [
         'operator' => [
-            'dashboard.view',
+            'dashboard.view', 'analytics.view',
             'user.view', 'user.support', 'user.ban', 'user.edit',
             'ride.view', 'ride.reingest', 'ride.invalidate', 'ride.delete',
             'review.view', 'review.act',
@@ -23,14 +23,14 @@ final class AdminPermissions
             'audit.view', 'cron.view', 'cron.run',
         ],
         'support' => [
-            'dashboard.view',
+            'dashboard.view', 'analytics.view',
             'user.view', 'user.support',
             'ride.view',
             'review.view',
             'audit.view', 'cron.view',
         ],
         'analyst' => [
-            'dashboard.view',
+            'dashboard.view', 'analytics.view',
             'user.view', 'ride.view', 'review.view',
             'audit.view', 'cron.view',
         ],
