@@ -20,6 +20,8 @@ $ago = static function ($s): string {
 <nav class="card" style="display:flex;gap:1rem;flex-wrap:wrap">
     <a href="/admin/game">Health</a>
     <a href="/admin/cron"><strong>Cron</strong></a>
+    <a href="/admin/audit">Audit</a>
+    <a href="/admin/roles">Rollen</a>
     <a href="/admin/game/config">Config</a>
     <a href="/admin/game/ingest">Ingest</a>
     <a href="/admin/uploads">Uploads</a>

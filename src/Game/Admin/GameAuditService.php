@@ -22,6 +22,58 @@ final class GameAuditService
         ]);
     }
 
+    /**
+     * Durchsuchbare Audit-Sicht (Backoffice, GameAdmin_Concept.md Phase 0). Filtert
+     * optional nach Admin-E-Mail (Teiltext), Aktion (Teiltext) und Zeitraum; joint
+     * die Admin-E-Mail dazu. Paginierbar über limit/offset.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function search(
+        ?string $adminEmail = null,
+        ?string $action = null,
+        ?string $since = null,
+        int $limit = 50,
+        int $offset = 0,
+    ): array {
+        $where = [];
+        $params = [];
+        if ($adminEmail !== null && $adminEmail !== '') {
+            $where[] = 'u.email LIKE ?';
+            $params[] = '%' . $adminEmail . '%';
+        }
+        if ($action !== null && $action !== '') {
+            $where[] = 'a.action LIKE ?';
+            $params[] = '%' . $action . '%';
+        }
+        if ($since !== null && $since !== '') {
+            $where[] = 'a.created_at >= ?';
+            $params[] = $since;
+        }
+        $sql = 'SELECT a.id, a.admin_user_id, u.email AS admin_email, a.action, a.target,
+                       a.detail_json, a.created_at
+                  FROM game_audit a
+                  LEFT JOIN users u ON u.id = a.admin_user_id';
+        if ($where !== []) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY a.id DESC LIMIT ? OFFSET ?';
+        $stmt = $this->pdo->prepare($sql);
+        $i = 1;
+        foreach ($params as $p) {
+            $stmt->bindValue($i++, $p);
+        }
+        $stmt->bindValue($i++, max(1, $limit), PDO::PARAM_INT);
+        $stmt->bindValue($i, max(0, $offset), PDO::PARAM_INT);
+        $stmt->execute();
+        $out = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $r['detail'] = $r['detail_json'] !== null ? json_decode((string)$r['detail_json'], true) : null;
+            $out[] = $r;
+        }
+        return $out;
+    }
+
     /** @return list<array<string,mixed>> letzte N Audit-Zeilen (neueste zuerst), detail_json dekodiert. */
     public function recent(int $limit = 20): array
     {

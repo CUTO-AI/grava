@@ -532,6 +532,15 @@ $webCronAdmin = new \App\Controllers\Web\Admin\CronAdminController(
     $webSession, $auth, $adminGuard, $cronRunRepo, $gameAudit, $makeManualCli,
     (int)($config->get('CRON_OVERDUE_FACTOR', 2) ?? 2), $basePath . '/views',
 );
+// Backoffice Phase 0 (GameAdmin_Concept.md): RBAC-Rollenauflösung + Audit-Sicht +
+// Rollen-Verwaltung. $adminGuard liefert weiterhin `super` aus ADMIN_EMAILS.
+$adminRoleSvc = new \App\Game\Admin\AdminRoleService(Db::pdo(), $adminGuard);
+$webAuditAdmin = new \App\Controllers\Web\Admin\AuditAdminController(
+    $webSession, $auth, $adminRoleSvc, $gameAudit, $basePath . '/views',
+);
+$webRolesAdmin = new \App\Controllers\Web\Admin\RolesAdminController(
+    $webSession, $auth, $adminRoleSvc, $gameAudit, $basePath . '/views',
+);
 
 // ---- JSON API ----
 $router->post("{$apiBase}/auth/register",                fn($r) => $apiAuth->register($r));
@@ -867,6 +876,12 @@ $router->post('/admin/game/user/{user_id}/ban',        fn($r) => $webGameEdge->b
 $router->get ('/admin/cron',                           fn($r) => $webCronAdmin->dashboard($r));
 $router->get ('/admin/cron/{command}',                 fn($r) => $webCronAdmin->history($r));
 $router->post('/admin/cron/{command}/run',             fn($r) => $webCronAdmin->runNow($r),          [$csrf]);
+
+// Backoffice Phase 0: Audit-Sicht + RBAC-Rollenverwaltung.
+$router->get ('/admin/audit',                          fn($r) => $webAuditAdmin->index($r));
+$router->get ('/admin/roles',                          fn($r) => $webRolesAdmin->index($r));
+$router->post('/admin/roles/assign',                   fn($r) => $webRolesAdmin->assign($r),         [$csrf]);
+$router->post('/admin/roles/{user_id}/revoke',         fn($r) => $webRolesAdmin->revoke($r),         [$csrf]);
 
 // ---- Settings Web-UI (M3 Phase 0) ----
 $router->get ('/settings/handle',                        fn($r) => $webSetting->showHandle($r));
