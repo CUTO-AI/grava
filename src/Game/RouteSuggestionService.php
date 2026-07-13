@@ -60,6 +60,9 @@ final class RouteSuggestionService
         if ($cands === []) {
             return ['reason' => 'no_candidates'];
         }
+        // Volle Kandidatenliste merken — die Greedy-Auswahl (array_splice) leert
+        // $cands; danach zählen wir ALLE eroberbaren Kanten ENTLANG der Route.
+        $allCands = $cands;
 
         // Dichte-Sweep (Nearest-Next): von der aktuellen Position immer die
         // NÄCHSTGELEGENE noch offene eroberbare Kante nehmen, solange (Weg +
@@ -116,11 +119,25 @@ final class RouteSuggestionService
             return ['reason' => 'routing_failed', 'candidate_count' => $candidateCount, 'selected_count' => count($selected)];
         }
 
+        // Eroberbare Kanten ENTLANG der Route zählen (nicht nur die Wegpunkte):
+        // ein Kandidat gilt als erobert, wenn sein Mittelpunkt nahe der Routenlinie
+        // liegt — so spiegelt die Zahl wider, was man beim Fahren tatsächlich flippt.
+        $coords = $route['coordinates'];
+        [$rMinLon, $rMinLat, $rMaxLon, $rMaxLat] = self::bounds($coords);
+        $bufDeg = 0.001; // ~100 m bbox-Puffer für den Vorfilter
+        $captureThresholdM = 50.0;
+
         $capturedValue = 0.0;
         $ids = [];
-        foreach ($selected as $c) {
-            $capturedValue += $c['value'];
-            $ids[] = $c['id'];
+        foreach ($allCands as $c) {
+            if ($c['lon'] < $rMinLon - $bufDeg || $c['lon'] > $rMaxLon + $bufDeg
+                || $c['lat'] < $rMinLat - $bufDeg || $c['lat'] > $rMaxLat + $bufDeg) {
+                continue; // klar außerhalb der Route → überspringen (billig)
+            }
+            if (self::pointToPolylineM($c['lat'], $c['lon'], $coords) <= $captureThresholdM) {
+                $ids[] = $c['id'];
+                $capturedValue += $c['value'];
+            }
         }
 
         return [
@@ -132,7 +149,7 @@ final class RouteSuggestionService
             'captured_value' => round($capturedValue, 1),
             'candidate_count' => $candidateCount,
             // GeoJSON LineString (coordinates = [lon, lat]) — direkt karten-/GPX-fähig.
-            'geometry'       => ['type' => 'LineString', 'coordinates' => $route['coordinates']],
+            'geometry'       => ['type' => 'LineString', 'coordinates' => $coords],
         ];
     }
 
@@ -167,5 +184,61 @@ final class RouteSuggestionService
         $dLon = deg2rad($lon2 - $lon1);
         $a = sin($dLat / 2) ** 2 + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
         return $r * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    /**
+     * bbox einer [lon,lat]-Punktliste → [minLon, minLat, maxLon, maxLat].
+     *
+     * @param list<array{0:float,1:float}> $coords
+     * @return array{0:float,1:float,2:float,3:float}
+     */
+    private static function bounds(array $coords): array
+    {
+        $minLon = INF; $minLat = INF; $maxLon = -INF; $maxLat = -INF;
+        foreach ($coords as $c) {
+            $lon = (float)$c[0]; $lat = (float)$c[1];
+            $minLon = min($minLon, $lon); $maxLon = max($maxLon, $lon);
+            $minLat = min($minLat, $lat); $maxLat = max($maxLat, $lat);
+        }
+        return [$minLon, $minLat, $maxLon, $maxLat];
+    }
+
+    /**
+     * Kürzester Abstand (Meter) eines Punkts zur Polylinie (Punkt-zu-Segment,
+     * äquirektanguläre Projektion um den Punkt — bei diesen Distanzen genau genug).
+     *
+     * @param list<array{0:float,1:float}> $coords [lon,lat]-Paare
+     */
+    private static function pointToPolylineM(float $lat, float $lon, array $coords): float
+    {
+        $mPerDegLat = 111320.0;
+        $mPerDegLon = 111320.0 * cos(deg2rad($lat));
+        $best = INF;
+        $prevX = null; $prevY = null;
+        foreach ($coords as $c) {
+            $x = ((float)$c[0] - $lon) * $mPerDegLon;
+            $y = ((float)$c[1] - $lat) * $mPerDegLat;
+            if ($prevX !== null) {
+                $best = min($best, self::segDistM($x, $y, $prevX, $prevY));
+                if ($best === 0.0) {
+                    return 0.0;
+                }
+            }
+            $prevX = $x; $prevY = $y;
+        }
+        return $best;
+    }
+
+    /** Abstand des Ursprungs (0,0) zum Segment A→B in Metern (planar). */
+    private static function segDistM(float $ax, float $ay, float $bx, float $by): float
+    {
+        $dx = $bx - $ax; $dy = $by - $ay;
+        $l2 = $dx * $dx + $dy * $dy;
+        if ($l2 <= 0.0) {
+            return sqrt($ax * $ax + $ay * $ay);
+        }
+        $t = max(0.0, min(1.0, -($ax * $dx + $ay * $dy) / $l2));
+        $cx = $ax + $t * $dx; $cy = $ay + $t * $dy;
+        return sqrt($cx * $cx + $cy * $cy);
     }
 }
