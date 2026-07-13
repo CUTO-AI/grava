@@ -363,6 +363,29 @@ final class GameRepository
      * @param list<int> $userIds Mitglieder des Viewer-Claimants (Rider=1)
      * @return list<array{edge_id:int,ridden_at:string}>
      */
+    /**
+     * Kanten-Gewinne/-Verluste eines Users im Fenster aus dem Event-Ledger
+     * (game_event). „Gewonnen" = erobert/zurückerobert/neu erschlossen; „verloren"
+     * = an einen anderen Claimant abgegeben. Für den Home-„Revier-Puls".
+     *
+     * @return array{gained:int,lost:int}
+     */
+    public function edgeEventCounts(int $userId, string $sinceDatetime): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT
+                SUM(type IN ('edge_taken','edge_reclaimed','edge_new')) AS gained,
+                SUM(type = 'edge_lost')                                 AS lost
+               FROM game_event
+              WHERE user_id = :uid AND created_at >= :since"
+        );
+        $stmt->bindValue(':uid', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':since', $sinceDatetime);
+        $stmt->execute();
+        $r = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        return ['gained' => (int)($r['gained'] ?? 0), 'lost' => (int)($r['lost'] ?? 0)];
+    }
+
     public function passesForEdgesByUsers(array $edgeIds, array $userIds): array
     {
         if ($edgeIds === [] || $userIds === []) {

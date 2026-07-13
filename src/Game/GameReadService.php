@@ -361,6 +361,12 @@ final class GameReadService
             $out['longest_streak_weeks']    = $streak['longest_streak_weeks'];
             $out['streak_grace_remaining']  = $streak['streak_grace_remaining'];
 
+            // Kanten-Gewinne/-Verluste der letzten 7 Tage (Home „Revier-Puls").
+            $since7 = Clock::nowUtc()->modify('-7 days')->format('Y-m-d H:i:s');
+            $ev = $this->repo->edgeEventCounts($userId, $since7);
+            $out['edges_gained_7d'] = $ev['gained'];
+            $out['edges_lost_7d']   = $ev['lost'];
+
             // Ränge & Abzeichen (RankBadges_Concept.md), additiv. Nutzt die
             // bereits berechneten Stats/Streak/Records (keine Doppel-Queries),
             // materialisiert neu erreichte Abzeichen-Stufen lazy.

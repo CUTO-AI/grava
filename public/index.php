@@ -759,6 +759,7 @@ $router->get("{$apiBase}/game/regions/{id}",       fn($r) => $apiRegion->detail(
 // Kanten in der Nähe eine fahrbare Runde. Beta: Bearer+verifiziert, Pro-Gate folgt.
 $router->post("{$apiBase}/game/route-suggestion",  fn($r) => $apiRouteSuggest->suggest($r), [$requireBearer, $requireVerified]);
 $router->get("{$apiBase}/game/entitlements",       fn($r) => $apiRouteSuggest->entitlements($r), [$requireBearer]);
+$router->get("{$apiBase}/game/reachable-count",    fn($r) => $apiRouteSuggest->reachableCount($r), [$requireBearer]);
 // Solo-/Spieler-Rangliste (S7): world anonym, friends/me brauchen Bearer.
 $router->get("{$apiBase}/game/leaderboard",        fn($r) => $apiPlayerBoard->index($r), [$optionalBearer]);
 // Globale Crew-Rangliste (all-time, gehaltene Strecke). Statische Route VOR

@@ -138,6 +138,21 @@ final class RouteSuggestionService
     }
 
     /**
+     * Anzahl eroberbarer (`in_reach`) Kanten im Umkreis um einen Punkt — für den
+     * Home-„Revier-Puls". Nutzt dieselbe Kandidatenlogik wie der Routenvorschlag.
+     */
+    public function reachableCount(int $claimantId, ?int $viewerUserId, float $lat, float $lon, float $km): int
+    {
+        $km = max(1.0, min(50.0, $km));
+        $dLat = $km / 111.0;
+        $dLon = $km / (111.0 * max(0.2, cos(deg2rad($lat))));
+        return count($this->read->routeSuggestionCandidates(
+            $lon - $dLon, $lat - $dLat, $lon + $dLon, $lat + $dLat,
+            $claimantId, $viewerUserId, $lat, $lon, 2000
+        ));
+    }
+
+    /**
      * Nearest-Next-Auswahl mit optionalem Mindestabstand zwischen Wegpunkten.
      * `$cands` wird per Wert übergeben (interne array_splice mutiert den Aufrufer
      * NICHT) → mehrfach aufrufbar. `$spacingM = 0` → reiner dichter Sweep.

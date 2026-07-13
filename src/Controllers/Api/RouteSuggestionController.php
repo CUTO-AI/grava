@@ -81,6 +81,20 @@ final class RouteSuggestionController
         }
     }
 
+    /** GET /game/reachable-count?lat=&lon=&km= — Anzahl eroberbarer Kanten in der Nähe. */
+    public function reachableCount(Request $req): void
+    {
+        $uid = $this->userId($req);
+        $lat = $this->floatOrNull($req->query['lat'] ?? null);
+        $lon = $this->floatOrNull($req->query['lon'] ?? null);
+        if ($lat === null || $lon === null || $lat < -90 || $lat > 90 || $lon < -180 || $lon > 180) {
+            Response::error('validation_error', 'lat/lon erforderlich (gültige Koordinaten).', 422);
+        }
+        $km = $this->floatOrNull($req->query['km'] ?? null) ?? 10.0;
+        $claimant = $this->repo->effectiveClaimantId($uid);
+        Response::json(['reachable' => $this->service->reachableCount($claimant, $uid, $lat, $lon, $km)]);
+    }
+
     /** GET /game/entitlements — was der Client zeigen/gaten soll. */
     public function entitlements(Request $req): void
     {
