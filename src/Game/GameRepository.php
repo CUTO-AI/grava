@@ -821,6 +821,40 @@ final class GameRepository
     }
 
     /**
+     * Kandidaten für den Eroberungs-Routenvorschlag (RouteSuggestion_Concept.md):
+     * NICHT dem Claimant gehörende Kanten im Ausschnitt, **nach Nähe zum Start
+     * sortiert** (damit eine Kappung die NÄCHSTgelegenen behält, nicht die per id
+     * ersten). Liefert die Felder, die {@see GameReadService::routeSuggestionCandidates}
+     * für die in_reach-Prüfung + Mittelpunkt braucht.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function edgesForSuggestion(
+        float $minLon, float $minLat, float $maxLon, float $maxLat,
+        int $claimantId, float $startLat, float $startLon, int $limit,
+    ): array {
+        $sql = 'SELECT id, geom_geojson, value_cached, owner_claimant_id, owner_presence_cached
+                  FROM game_edge
+                 WHERE max_lat >= :minLat AND min_lat <= :maxLat
+                   AND max_lon >= :minLon AND min_lon <= :maxLon
+                   AND (owner_claimant_id IS NULL OR owner_claimant_id <> :claimant)
+              ORDER BY (((min_lat + max_lat) / 2) - :clat) * (((min_lat + max_lat) / 2) - :clat)
+                     + (((min_lon + max_lon) / 2) - :clon) * (((min_lon + max_lon) / 2) - :clon) ASC
+                 LIMIT :lim';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':minLat', $minLat);
+        $stmt->bindValue(':maxLat', $maxLat);
+        $stmt->bindValue(':minLon', $minLon);
+        $stmt->bindValue(':maxLon', $maxLon);
+        $stmt->bindValue(':claimant', $claimantId, PDO::PARAM_INT);
+        $stmt->bindValue(':clat', $startLat);
+        $stmt->bindValue(':clon', $startLon);
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
      * Aggregiert die Spielkanten im Ausschnitt zu Besitz-Dichte-Zellen eines
      * Gitters der Weite $grid (Grad) — die LOD-Stufe für weite Zooms, in denen
      * Einzelkanten zu zahlreich sind (GameOwnershipOverview_Backend_Spec).

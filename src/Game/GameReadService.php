@@ -124,6 +124,65 @@ final class GameReadService
     }
 
     /**
+     * Eroberbare (`in_reach`) Kandidaten für den Routenvorschlag
+     * (RouteSuggestion_Concept.md): NICHT-eigene Kanten im Ausschnitt, nach Nähe
+     * zum Start sortiert (die Kappung behält die nächsten), mit derselben Präsenz-/
+     * Zonen-Logik wie {@see edgesInBbox()} — anders als dort aber besitz-gefiltert
+     * und proximitäts-sortiert, damit in dichten Gegenden die wenigen eroberbaren
+     * Kanten nicht durch ein id-basiertes Limit verloren gehen.
+     *
+     * @return list<array{id:int,lat:float,lon:float,value:float}>
+     */
+    public function routeSuggestionCandidates(
+        float $minLon, float $minLat, float $maxLon, float $maxLat,
+        int $claimantId, ?int $viewerUserId, float $startLat, float $startLon, int $limit,
+    ): array {
+        $rows = $this->repo->edgesForSuggestion($minLon, $minLat, $maxLon, $maxLat, $claimantId, $startLat, $startLon, $limit);
+        if ($rows === []) {
+            return [];
+        }
+        $now = Clock::nowUtc();
+        $edgeIds = array_map(static fn($r) => (int)$r['id'], $rows);
+        $members = $this->repo->usersForClaimant($claimantId);
+        $windowDays = $this->config->int('presence_window_days');
+
+        $viewerPresence = [];
+        foreach ($this->repo->passesForEdgesByUsers($edgeIds, $members) as $p) {
+            $w = GameMath::presenceWeight($this->ageDays($p['ridden_at'], $now), $windowDays);
+            $viewerPresence[$p['edge_id']] = ($viewerPresence[$p['edge_id']] ?? 0.0) + $w;
+        }
+        $hysteresis = $this->config->floatOrNull('rush_hysteresis_factor')
+            ?? $this->config->float('hysteresis_factor');
+        $zone = ($viewerUserId !== null && $this->zones !== null)
+            ? $this->zones->enabledZoneForUser($viewerUserId) : null;
+
+        $out = [];
+        foreach ($rows as $row) {
+            $ownerId = $row['owner_claimant_id'] !== null ? (int)$row['owner_claimant_id'] : null;
+            $ownerIsMe = $ownerId !== null && $ownerId === $claimantId;
+            if (!$this->inReach($row, $ownerIsMe, $viewerPresence[(int)$row['id']] ?? 0.0, $hysteresis, $zone)) {
+                continue;
+            }
+            $geom = json_decode((string)($row['geom_geojson'] ?? ''), true);
+            $coords = is_array($geom) ? ($geom['coordinates'] ?? null) : null;
+            if (!is_array($coords) || $coords === []) {
+                continue;
+            }
+            $mid = $coords[intdiv(count($coords), 2)];
+            if (!is_array($mid) || count($mid) < 2) {
+                continue;
+            }
+            $out[] = [
+                'id'    => (int)$row['id'],
+                'lat'   => (float)$mid[1],
+                'lon'   => (float)$mid[0],
+                'value' => (float)($row['value_cached'] ?? 0.0),
+            ];
+        }
+        return $out;
+    }
+
+    /**
      * `in_reach` einer Kante für den Viewer (GAME_IN_REACH_BACKEND.md):
      * true, wenn die Kante nicht dem Viewer gehört und ein einziger weiterer
      * authentischer Pass (Gewicht 1,0) seine Präsenz über die Übernahme-

@@ -46,24 +46,16 @@ final class RouteSuggestionService
         $radiusKm = $maxKm / 2.0 + 1.0;
         $dLat = $radiusKm / 111.0;
         $dLon = $radiusKm / (111.0 * max(0.2, cos(deg2rad($startLat))));
-        $bbox = sprintf(
-            '%.6f,%.6f,%.6f,%.6f',
-            $startLon - $dLon, $startLat - $dLat, $startLon + $dLon, $startLat + $dLat
-        );
 
-        // Eroberbare Kanten holen (in_reach nur mit Claimant; Heimatzone maskiert).
-        $edges = $this->read->edgesInBbox($bbox, $claimantId, null, 500, $viewerUserId);
-        $cands = [];
-        foreach ($edges as $e) {
-            if (($e['in_reach'] ?? false) !== true) {
-                continue;
-            }
-            $mid = self::midpoint(is_array($e['geom'] ?? null) ? $e['geom'] : null);
-            if ($mid === null) {
-                continue;
-            }
-            $cands[] = ['id' => (int)$e['id'], 'lat' => $mid[0], 'lon' => $mid[1], 'value' => (float)($e['value'] ?? 0.0)];
-        }
+        // Eroberbare (in_reach) Kandidaten: nicht-eigene Kanten, nach Nähe zum Start
+        // sortiert und besitz-gefiltert (sonst würde ein id-basiertes Limit in
+        // dichten Gegenden die wenigen eroberbaren Kanten wegschneiden). Kandidaten
+        // kommen bereits als {id, lat, lon (Mittelpunkt), value}. Limit 1500 deckt
+        // auch große Budgets ab und hält die Präsenz-Query bezahlbar.
+        $cands = $this->read->routeSuggestionCandidates(
+            $startLon - $dLon, $startLat - $dLat, $startLon + $dLon, $startLat + $dLat,
+            $claimantId, $viewerUserId, $startLat, $startLon, 1500
+        );
         $candidateCount = count($cands);
         if ($cands === []) {
             return ['reason' => 'no_candidates'];
@@ -145,25 +137,6 @@ final class RouteSuggestionService
             // GeoJSON LineString (coordinates = [lon, lat]) — direkt karten-/GPX-fähig.
             'geometry'       => ['type' => 'LineString', 'coordinates' => $route['coordinates']],
         ];
-    }
-
-    /**
-     * Mittelpunkt-Koordinate einer LineString-Geometrie → [lat, lon].
-     *
-     * @param array<string,mixed>|null $geom GeoJSON
-     * @return array{0:float,1:float}|null
-     */
-    private static function midpoint(?array $geom): ?array
-    {
-        $coords = is_array($geom['coordinates'] ?? null) ? $geom['coordinates'] : null;
-        if ($coords === null || $coords === []) {
-            return null;
-        }
-        $c = $coords[intdiv(count($coords), 2)];
-        if (!is_array($c) || count($c) < 2) {
-            return null;
-        }
-        return [(float)$c[1], (float)$c[0]]; // [lat, lon] aus [lon, lat]
     }
 
     private static function haversineM(float $lat1, float $lon1, float $lat2, float $lon2): float
