@@ -36,7 +36,7 @@ final class RouteSuggestionService
         float $startLon,
         float $maxKm,
         bool $loop = true,
-        int $maxWaypoints = 20,
+        int $maxWaypoints = 40,
     ): ?array {
         $maxKm = max(2.0, min(200.0, $maxKm));
         $budgetM = $maxKm * 1000.0;
@@ -61,27 +61,27 @@ final class RouteSuggestionService
             return ['reason' => 'no_candidates'];
         }
 
-        // Greedy: von der aktuellen Position die Kante mit bestem Wert pro
-        // Zusatz-Luftliniendistanz wählen, solange (Weg + Rückweg) ins Budget passt.
+        // Dichte-Sweep (Nearest-Next): von der aktuellen Position immer die
+        // NÄCHSTGELEGENE noch offene eroberbare Kante nehmen, solange (Weg +
+        // Rückweg) ins Budget passt. Das packt möglichst VIELE Kanten in die Runde
+        // (Ziel: viel Neuland einsammeln), statt zu einzelnen hochwertigen Kanten
+        // zu springen.
         $selected = [];
         $curLat = $startLat;
         $curLon = $startLon;
         $usedM = 0.0;
         while ($cands !== [] && count($selected) < $maxWaypoints) {
             $bestIdx = -1;
-            $bestScore = -1.0;
-            $bestLegM = 0.0;
+            $bestLegM = INF;
             foreach ($cands as $i => $c) {
                 $legM = self::haversineM($curLat, $curLon, $c['lat'], $c['lon']);
                 $retM = $loop ? self::haversineM($c['lat'], $c['lon'], $startLat, $startLon) : 0.0;
                 if ($usedM + $legM + $retM > $budgetM) {
                     continue;
                 }
-                $score = $c['value'] / max(50.0, $legM);   // Wert je Meter Umweg
-                if ($score > $bestScore) {
-                    $bestScore = $score;
-                    $bestIdx = $i;
+                if ($legM < $bestLegM) {
                     $bestLegM = $legM;
+                    $bestIdx = $i;
                 }
             }
             if ($bestIdx < 0) {
@@ -98,23 +98,12 @@ final class RouteSuggestionService
             return ['reason' => 'no_candidates'];
         }
 
-        // Wegpunkte: Start, gewählte Kanten-Mittelpunkte, (Rundtour: zurück zum Start).
-        $locations = [['lat' => $startLat, 'lon' => $startLon]];
-        foreach ($selected as $c) {
-            $locations[] = ['lat' => $c['lat'], 'lon' => $c['lon']];
-        }
-        if ($loop) {
-            $locations[] = ['lat' => $startLat, 'lon' => $startLon];
-        }
-
-        // Valhalla kann bei Transport-/5xx-Fehlern eine ValhallaUnavailableException
-        // werfen (so der Map-Matching-Pfad für Retries). Hier wollen wir sauber
-        // degradieren, nicht 500en → abfangen und als routing_failed behandeln.
-        try {
-            $route = $this->valhalla->optimizedRoute($locations);
-        } catch (\Throwable $e) {
-            error_log('RouteSuggestion: Valhalla optimizedRoute Exception: ' . $e->getMessage());
-            $route = null;
+        // Route bauen; scheitert es mit vielen Wegpunkten (evtl. Valhallas
+        // max_locations), einmal mit weniger Wegpunkten erneut versuchen.
+        $route = $this->routeThrough($selected, $startLat, $startLon, $loop);
+        if ($route === null && count($selected) > 20) {
+            $selected = array_slice($selected, 0, 20);
+            $route = $this->routeThrough($selected, $startLat, $startLon, $loop);
         }
         if ($route === null) {
             // Kandidaten waren da, aber Valhalla konnte keine fahrbare Runde bilden
@@ -145,6 +134,30 @@ final class RouteSuggestionService
             // GeoJSON LineString (coordinates = [lon, lat]) — direkt karten-/GPX-fähig.
             'geometry'       => ['type' => 'LineString', 'coordinates' => $route['coordinates']],
         ];
+    }
+
+    /**
+     * Baut die Route durch die gewählten Kanten (Start → Wegpunkte → ggf. Start).
+     * Fängt Valhalla-Ausfälle ab (kein 500) → null bei Fehlschlag.
+     *
+     * @param list<array{id:int,lat:float,lon:float,value:float}> $selected
+     * @return array{distance_m:float,duration_s:float,coordinates:list<array{0:float,1:float}>}|null
+     */
+    private function routeThrough(array $selected, float $startLat, float $startLon, bool $loop): ?array
+    {
+        $locations = [['lat' => $startLat, 'lon' => $startLon]];
+        foreach ($selected as $c) {
+            $locations[] = ['lat' => $c['lat'], 'lon' => $c['lon']];
+        }
+        if ($loop) {
+            $locations[] = ['lat' => $startLat, 'lon' => $startLon];
+        }
+        try {
+            return $this->valhalla->optimizedRoute($locations);
+        } catch (\Throwable $e) {
+            error_log('RouteSuggestion: Valhalla Exception: ' . $e->getMessage());
+            return null;
+        }
     }
 
     private static function haversineM(float $lat1, float $lon1, float $lat2, float $lon2): float
