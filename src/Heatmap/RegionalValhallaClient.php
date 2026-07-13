@@ -36,6 +36,11 @@ final class RegionalValhallaClient extends ValhallaClient
         return $this->pick($points)->matchTrace($points);
     }
 
+    public function optimizedRoute(array $locations): ?array
+    {
+        return $this->pick($locations)->optimizedRoute($locations);
+    }
+
     /** Die für diese Spur zuständige Instanz (erster Punkt in einer bbox gewinnt). */
     private function pick(array $points): ValhallaClient
     {

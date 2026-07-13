@@ -449,6 +449,11 @@ $regionRepo = new \App\Game\RegionRepository(Db::pdo());
 $regionImportSvc = new \App\Game\RegionImportService($regionRepo);
 $regionOwnershipSvc = new \App\Game\RegionOwnershipService($regionRepo, $gameConfig);
 $apiGame = new GameController($gameRead, $gameRepo, $gameIngest, $gameConfig, $routeService, new GeometryParser(), $gameRideSummary, $gameAtRisk, $gameChallenges, $gameHistory, $regionImportSvc, $regionOwnershipSvc, $gameEventRecorder, $ingestJobRepo);
+// Eroberungs-Routenvorschlag (RouteSuggestion_Concept.md, Pro-Feature, Beta ohne Gate).
+$apiRouteSuggest = new \App\Controllers\Api\RouteSuggestionController(
+    new \App\Game\RouteSuggestionService($gameRead, $gameValhalla),
+    $gameRepo,
+);
 $apiEdgeRecords = new EdgeRecordController($edgeRecords);
 $apiPlayerBoard = new PlayerLeaderboardController(new PlayerLeaderboardService($gameRepo, $gameConfig));
 $apiSegment = new SegmentSpeedController(new SegmentSpeedService($gameRepo, $gameConfig));
@@ -747,6 +752,9 @@ $router->get("{$apiBase}/game/me/regions",         fn($r) => $apiRegion->mine($r
 $router->get("{$apiBase}/game/regions/activity-overview", fn($r) => $apiRegion->activityOverview($r), [$optionalBearer]);
 $router->get("{$apiBase}/game/regions/{id}/activity",     fn($r) => $apiRegion->activity($r),         [$optionalBearer]);
 $router->get("{$apiBase}/game/regions/{id}",       fn($r) => $apiRegion->detail($r), [$optionalBearer]);
+// Eroberungs-Routenvorschlag (RouteSuggestion_Concept.md): baut aus eroberbaren
+// Kanten in der Nähe eine fahrbare Runde. Beta: Bearer+verifiziert, Pro-Gate folgt.
+$router->post("{$apiBase}/game/route-suggestion",  fn($r) => $apiRouteSuggest->suggest($r), [$requireBearer, $requireVerified]);
 // Solo-/Spieler-Rangliste (S7): world anonym, friends/me brauchen Bearer.
 $router->get("{$apiBase}/game/leaderboard",        fn($r) => $apiPlayerBoard->index($r), [$optionalBearer]);
 // Globale Crew-Rangliste (all-time, gehaltene Strecke). Statische Route VOR

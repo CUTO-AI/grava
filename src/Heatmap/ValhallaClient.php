@@ -75,6 +75,79 @@ class ValhallaClient
         return $match;
     }
 
+    /**
+     * Optimiert die Reihenfolge der Zwischen-Wegpunkte und liefert eine fahrbare
+     * Route (Valhalla `/optimized_route`). Erste und letzte Location bleiben fix —
+     * für eine Rundtour also beide = Start. Defensiv: `null` bei Transport-/
+     * Parse-Fehler oder wenn keine Route zustande kommt.
+     *
+     * @param list<array{lat:float,lon:float}> $locations mind. 2 (Start + Ziel)
+     * @return array{distance_m:float,duration_s:float,coordinates:list<array{0:float,1:float}>}|null
+     */
+    public function optimizedRoute(array $locations): ?array
+    {
+        $locs = [];
+        foreach ($locations as $l) {
+            if (!isset($l['lat'], $l['lon'])) {
+                continue;
+            }
+            $locs[] = ['lat' => (float)$l['lat'], 'lon' => (float)$l['lon']];
+        }
+        if (count($locs) < 2) {
+            return null;
+        }
+        $body = json_encode([
+            'locations' => $locs,
+            'costing'   => $this->costing,
+            'units'     => 'kilometers',
+        ], JSON_THROW_ON_ERROR);
+
+        $json = $this->post('/optimized_route', $body, count($locs));
+        return $json === null ? null : self::parseRoute($json);
+    }
+
+    /**
+     * Parst eine `/optimized_route`- bzw. `/route`-Antwort (statisch + ohne I/O,
+     * testbar): fügt die Bein-Shapes zu einer Polylinie zusammen und liest die
+     * Gesamt-Länge/-Zeit aus `trip.summary`.
+     *
+     * @return array{distance_m:float,duration_s:float,coordinates:list<array{0:float,1:float}>}|null
+     */
+    public static function parseRoute(string $json): ?array
+    {
+        try {
+            $d = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+        $trip = is_array($d) && isset($d['trip']) && is_array($d['trip']) ? $d['trip'] : null;
+        $legs = $trip !== null && isset($trip['legs']) && is_array($trip['legs']) ? $trip['legs'] : null;
+        if ($legs === null || $legs === []) {
+            return null;
+        }
+        $units = is_string($trip['units'] ?? null) ? $trip['units'] : 'kilometers';
+        $toMeters = ($units === 'miles') ? 1609.344 : 1000.0;
+
+        $coords = [];
+        foreach ($legs as $leg) {
+            if (!is_array($leg) || !isset($leg['shape']) || !is_string($leg['shape'])) {
+                continue;
+            }
+            foreach (self::decodePolyline($leg['shape']) as $c) {
+                $coords[] = $c;
+            }
+        }
+        if ($coords === []) {
+            return null;
+        }
+        $summary = is_array($trip['summary'] ?? null) ? $trip['summary'] : [];
+        return [
+            'distance_m'  => (float)($summary['length'] ?? 0) * $toMeters,
+            'duration_s'  => (float)($summary['time'] ?? 0),
+            'coordinates' => $coords,
+        ];
+    }
+
     /** Die konfigurierte Basis-URL (für Diagnose/Anzeige im Admin-Dashboard). */
     public function baseUrl(): string
     {
