@@ -69,33 +69,17 @@ final class RouteSuggestionService
         // Rückweg) ins Budget passt. Das packt möglichst VIELE Kanten in die Runde
         // (Ziel: viel Neuland einsammeln), statt zu einzelnen hochwertigen Kanten
         // zu springen.
-        $selected = [];
-        $curLat = $startLat;
-        $curLon = $startLon;
-        $usedM = 0.0;
-        while ($cands !== [] && count($selected) < $maxWaypoints) {
-            $bestIdx = -1;
-            $bestLegM = INF;
-            foreach ($cands as $i => $c) {
-                $legM = self::haversineM($curLat, $curLon, $c['lat'], $c['lon']);
-                $retM = $loop ? self::haversineM($c['lat'], $c['lon'], $startLat, $startLon) : 0.0;
-                if ($usedM + $legM + $retM > $budgetM) {
-                    continue;
-                }
-                if ($legM < $bestLegM) {
-                    $bestLegM = $legM;
-                    $bestIdx = $i;
-                }
-            }
-            if ($bestIdx < 0) {
-                break;
-            }
-            $c = $cands[$bestIdx];
-            $selected[] = $c;
-            $usedM += $bestLegM;
-            $curLat = $c['lat'];
-            $curLon = $c['lon'];
-            array_splice($cands, $bestIdx, 1);
+        // Mindestabstand zwischen Wegpunkten: verteilt die (begrenzten) Wegpunkte
+        // über die Fläche, statt sie im dichtesten Fleck zu clustern → die Route
+        // füllt das Distanz-Budget und streift so VIEL mehr eroberbare Kanten
+        // (die dazwischen zählt der Along-Route-Schritt unten). Skaliert mit dem
+        // Budget; bei zu strenger Spreizung (zu wenige Wegpunkte gefunden) lockern.
+        $spacingM = max(150.0, $budgetM / ($maxWaypoints * 2.0));
+        $selected = $this->greedySpread($cands, $startLat, $startLon, $budgetM, $loop, $maxWaypoints, $spacingM);
+        // Falls die Spreizung zu wenige Wegpunkte fand (dichte Kanten liegen enger
+        // beieinander als der Abstand), ohne Mindestabstand erneut (dichter Sweep).
+        if (count($selected) < min(8, count($cands))) {
+            $selected = $this->greedySpread($cands, $startLat, $startLon, $budgetM, $loop, $maxWaypoints, 0.0);
         }
         if ($selected === []) {
             return ['reason' => 'no_candidates'];
@@ -151,6 +135,61 @@ final class RouteSuggestionService
             // GeoJSON LineString (coordinates = [lon, lat]) — direkt karten-/GPX-fähig.
             'geometry'       => ['type' => 'LineString', 'coordinates' => $coords],
         ];
+    }
+
+    /**
+     * Nearest-Next-Auswahl mit optionalem Mindestabstand zwischen Wegpunkten.
+     * `$cands` wird per Wert übergeben (interne array_splice mutiert den Aufrufer
+     * NICHT) → mehrfach aufrufbar. `$spacingM = 0` → reiner dichter Sweep.
+     *
+     * @param list<array{id:int,lat:float,lon:float,value:float}> $cands
+     * @return list<array{id:int,lat:float,lon:float,value:float}>
+     */
+    private function greedySpread(
+        array $cands, float $startLat, float $startLon,
+        float $budgetM, bool $loop, int $maxWaypoints, float $spacingM,
+    ): array {
+        $selected = [];
+        $curLat = $startLat;
+        $curLon = $startLon;
+        $usedM = 0.0;
+        while ($cands !== [] && count($selected) < $maxWaypoints) {
+            $bestIdx = -1;
+            $bestLegM = INF;
+            foreach ($cands as $i => $c) {
+                $legM = self::haversineM($curLat, $curLon, $c['lat'], $c['lon']);
+                $retM = $loop ? self::haversineM($c['lat'], $c['lon'], $startLat, $startLon) : 0.0;
+                if ($usedM + $legM + $retM > $budgetM) {
+                    continue;
+                }
+                if ($spacingM > 0.0) {
+                    $tooClose = false;
+                    foreach ($selected as $s) {
+                        if (self::haversineM($s['lat'], $s['lon'], $c['lat'], $c['lon']) < $spacingM) {
+                            $tooClose = true;
+                            break;
+                        }
+                    }
+                    if ($tooClose) {
+                        continue;
+                    }
+                }
+                if ($legM < $bestLegM) {
+                    $bestLegM = $legM;
+                    $bestIdx = $i;
+                }
+            }
+            if ($bestIdx < 0) {
+                break;
+            }
+            $c = $cands[$bestIdx];
+            $selected[] = $c;
+            $usedM += $bestLegM;
+            $curLat = $c['lat'];
+            $curLon = $c['lon'];
+            array_splice($cands, $bestIdx, 1);
+        }
+        return $selected;
     }
 
     /**
