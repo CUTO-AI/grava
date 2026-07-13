@@ -107,7 +107,15 @@ final class RouteSuggestionService
             $locations[] = ['lat' => $startLat, 'lon' => $startLon];
         }
 
-        $route = $this->valhalla->optimizedRoute($locations);
+        // Valhalla kann bei Transport-/5xx-Fehlern eine ValhallaUnavailableException
+        // werfen (so der Map-Matching-Pfad für Retries). Hier wollen wir sauber
+        // degradieren, nicht 500en → abfangen und als routing_failed behandeln.
+        try {
+            $route = $this->valhalla->optimizedRoute($locations);
+        } catch (\Throwable $e) {
+            error_log('RouteSuggestion: Valhalla optimizedRoute Exception: ' . $e->getMessage());
+            $route = null;
+        }
         if ($route === null) {
             // Kandidaten waren da, aber Valhalla konnte keine fahrbare Runde bilden
             // (z. B. Wegpunkt nicht ans Routing-Netz snappbar). Für die Diagnose

@@ -102,7 +102,11 @@ class ValhallaClient
             'units'     => 'kilometers',
         ], JSON_THROW_ON_ERROR);
 
-        $json = $this->post('/optimized_route', $body, count($locs));
+        // Bewusst der Kern-Endpoint `/route` (in jeder Instanz vorhanden) statt
+        // `/optimized_route`: die Aufrufer ordnen die Wegpunkte bereits sinnvoll
+        // (nächster-zuerst), und `/route` respektiert die gegebene Reihenfolge.
+        // Antwortformat ist identisch → dieselbe parseRoute().
+        $json = $this->post('/route', $body, count($locs));
         return $json === null ? null : self::parseRoute($json);
     }
 
