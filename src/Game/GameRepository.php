@@ -833,13 +833,16 @@ final class GameRepository
         float $minLon, float $minLat, float $maxLon, float $maxLat,
         int $claimantId, float $startLat, float $startLon, int $limit,
     ): array {
+        // Hinweis: benannte Parameter dürfen bei nativen (nicht-emulierten) Prepares
+        // nur EINMAL vorkommen → für die doppelt genutzten Start-Koordinaten je
+        // eigene Namen (:clat1/:clat2/:clon1/:clon2), analog zum cid1/2/3-Muster.
         $sql = 'SELECT id, geom_geojson, value_cached, owner_claimant_id, owner_presence_cached
                   FROM game_edge
                  WHERE max_lat >= :minLat AND min_lat <= :maxLat
                    AND max_lon >= :minLon AND min_lon <= :maxLon
                    AND (owner_claimant_id IS NULL OR owner_claimant_id <> :claimant)
-              ORDER BY (((min_lat + max_lat) / 2) - :clat) * (((min_lat + max_lat) / 2) - :clat)
-                     + (((min_lon + max_lon) / 2) - :clon) * (((min_lon + max_lon) / 2) - :clon) ASC
+              ORDER BY (((min_lat + max_lat) / 2) - :clat1) * (((min_lat + max_lat) / 2) - :clat2)
+                     + (((min_lon + max_lon) / 2) - :clon1) * (((min_lon + max_lon) / 2) - :clon2) ASC
                  LIMIT :lim';
         $stmt = $this->pdo->prepare($sql);
         $stmt->bindValue(':minLat', $minLat);
@@ -847,8 +850,10 @@ final class GameRepository
         $stmt->bindValue(':minLon', $minLon);
         $stmt->bindValue(':maxLon', $maxLon);
         $stmt->bindValue(':claimant', $claimantId, PDO::PARAM_INT);
-        $stmt->bindValue(':clat', $startLat);
-        $stmt->bindValue(':clon', $startLon);
+        $stmt->bindValue(':clat1', $startLat);
+        $stmt->bindValue(':clat2', $startLat);
+        $stmt->bindValue(':clon1', $startLon);
+        $stmt->bindValue(':clon2', $startLon);
         $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
