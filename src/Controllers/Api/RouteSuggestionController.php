@@ -56,11 +56,29 @@ final class RouteSuggestionController
         $loop = filter_var($req->input('loop') ?? true, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true;
 
         $claimant = $this->repo->effectiveClaimantId($uid);
-        $out = $this->service->suggest($claimant, $uid, $lat, $lon, $maxKm, $loop);
-        if ($out === null) {
-            Response::error('no_candidates', 'Keine eroberbaren Kanten in Reichweite. Radius oder Budget erhöhen.', 409);
+        $res = $this->service->suggest($claimant, $uid, $lat, $lon, $maxKm, $loop);
+
+        switch ($res['reason'] ?? 'no_candidates') {
+            case 'ok':
+                Response::json($res);
+                return;
+            case 'routing_failed':
+                // Kanten waren da, aber keine fahrbare Runde möglich — eigener Code,
+                // damit der Client (und wir) es von „keine Kanten" unterscheiden kann.
+                Response::error(
+                    'routing_failed',
+                    'Kanten in der Nähe gefunden, aber es ließ sich keine fahrbare Runde bilden. Versuch eine andere Distanz oder einen anderen Start.',
+                    502
+                );
+                return;
+            default:
+                Response::error(
+                    'no_candidates',
+                    'Keine eroberbaren Kanten in Reichweite. Radius/Budget erhöhen oder anderen Start wählen.',
+                    409
+                );
+                return;
         }
-        Response::json($out);
     }
 
     /** GET /game/entitlements — was der Client zeigen/gaten soll. */

@@ -24,7 +24,10 @@ final class RouteSuggestionService
     ) {}
 
     /**
-     * @return array<string,mixed>|null  null = keine eroberbaren Kanten in Reichweite
+     * @return array<string,mixed>  immer mit Schlüssel `reason`:
+     *   'ok'             → Vorschlag (distance_m, captured_*, geometry, …)
+     *   'no_candidates'  → keine eroberbaren Kanten in Reichweite
+     *   'routing_failed' → Kandidaten da, aber Valhalla lieferte keine Route
      */
     public function suggest(
         int $claimantId,
@@ -61,8 +64,9 @@ final class RouteSuggestionService
             }
             $cands[] = ['id' => (int)$e['id'], 'lat' => $mid[0], 'lon' => $mid[1], 'value' => (float)($e['value'] ?? 0.0)];
         }
+        $candidateCount = count($cands);
         if ($cands === []) {
-            return null;
+            return ['reason' => 'no_candidates'];
         }
 
         // Greedy: von der aktuellen Position die Kante mit bestem Wert pro
@@ -99,7 +103,7 @@ final class RouteSuggestionService
             array_splice($cands, $bestIdx, 1);
         }
         if ($selected === []) {
-            return null;
+            return ['reason' => 'no_candidates'];
         }
 
         // Wegpunkte: Start, gewählte Kanten-Mittelpunkte, (Rundtour: zurück zum Start).
@@ -113,7 +117,14 @@ final class RouteSuggestionService
 
         $route = $this->valhalla->optimizedRoute($locations);
         if ($route === null) {
-            return null;
+            // Kandidaten waren da, aber Valhalla konnte keine fahrbare Runde bilden
+            // (z. B. Wegpunkt nicht ans Routing-Netz snappbar). Für die Diagnose
+            // getrennt vom „keine Kandidaten"-Fall melden.
+            error_log(sprintf(
+                'RouteSuggestion routing_failed: start=%.5f,%.5f waypoints=%d candidates=%d selected=%d costing/instanz siehe Valhalla-Log',
+                $startLat, $startLon, count($locations), $candidateCount, count($selected)
+            ));
+            return ['reason' => 'routing_failed', 'candidate_count' => $candidateCount, 'selected_count' => count($selected)];
         }
 
         $capturedValue = 0.0;
@@ -124,11 +135,13 @@ final class RouteSuggestionService
         }
 
         return [
+            'reason'         => 'ok',
             'distance_m'     => round($route['distance_m'], 1),
             'duration_s_est' => (int)round($route['duration_s']),
             'captured_edges' => $ids,
             'captured_count' => count($ids),
             'captured_value' => round($capturedValue, 1),
+            'candidate_count' => $candidateCount,
             // GeoJSON LineString (coordinates = [lon, lat]) — direkt karten-/GPX-fähig.
             'geometry'       => ['type' => 'LineString', 'coordinates' => $route['coordinates']],
         ];
