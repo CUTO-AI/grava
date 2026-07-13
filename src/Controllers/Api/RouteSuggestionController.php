@@ -3,6 +3,9 @@ declare(strict_types=1);
 
 namespace App\Controllers\Api;
 
+use App\Auth\RateLimiter;
+use App\Game\EntitlementService;
+use App\Game\GameConfig;
 use App\Game\GameRepository;
 use App\Game\RouteSuggestionService;
 use App\Http\Request;
@@ -11,24 +14,36 @@ use App\Http\Response;
 /**
  * HTTP-Adapter für den Eroberungs-Routenvorschlag (RouteSuggestion_Concept.md):
  *   POST /game/route-suggestion   (Bearer + verifiziert)
+ *   GET  /game/entitlements       (Bearer)
  *
- * BETA (Phase B): noch OHNE Pro-Gate und OHNE Rate-Limit — beides folgt in
- * Phase D. Der effektive Claimant wird wie bei /game/edges bestimmt.
+ * Phase D vorbereitet, aber OFFEN: Solange `pro_gating_enabled` = 0 ist, darf
+ * jede:r den Vorschlag nutzen ({@see EntitlementService::allowsPro()}). Das
+ * Tages-Limit greift nur, wenn `route_suggestion_daily_limit` > 0 gesetzt wird.
  */
 final class RouteSuggestionController
 {
     public function __construct(
         private readonly RouteSuggestionService $service,
         private readonly GameRepository $repo,
+        private readonly EntitlementService $entitlements,
+        private readonly RateLimiter $rateLimiter,
+        private readonly GameConfig $config,
     ) {}
 
     /** POST /game/route-suggestion */
     public function suggest(Request $req): void
     {
-        $u = $req->user;
-        $uid = $u !== null ? (int)($u->internal_id ?? 0) : 0;
-        if ($uid <= 0) {
-            Response::error('unauthorized', 'Authentifizierung erforderlich.', 401);
+        $uid = $this->userId($req);
+
+        // Pro-Gate — no-op, solange das Flag aus ist (Beta: alles offen).
+        if (!$this->entitlements->allowsPro($uid)) {
+            Response::error('payment_required', 'Diese Funktion ist Teil von CYBERRIDE Pro.', 402);
+        }
+
+        // Optionales Tages-Limit (0 = unbegrenzt).
+        $dailyLimit = $this->config->int('route_suggestion_daily_limit');
+        if ($dailyLimit > 0 && $this->rateLimiter->hitDaily('route_suggestion', (string)$uid, $dailyLimit)) {
+            Response::error('rate_limited', 'Tages-Limit für Routenvorschläge erreicht. Morgen wieder.', 429);
         }
 
         $lat = $this->floatOrNull($req->input('start_lat'));
@@ -46,6 +61,26 @@ final class RouteSuggestionController
             Response::error('no_candidates', 'Keine eroberbaren Kanten in Reichweite. Radius oder Budget erhöhen.', 409);
         }
         Response::json($out);
+    }
+
+    /** GET /game/entitlements — was der Client zeigen/gaten soll. */
+    public function entitlements(Request $req): void
+    {
+        $uid = $this->userId($req);
+        Response::json([
+            'pro'            => $this->entitlements->isPro($uid),
+            'gating_enabled' => $this->entitlements->gatingEnabled(),
+        ]);
+    }
+
+    private function userId(Request $req): int
+    {
+        $u = $req->user;
+        $uid = $u !== null ? (int)($u->internal_id ?? 0) : 0;
+        if ($uid <= 0) {
+            Response::error('unauthorized', 'Authentifizierung erforderlich.', 401);
+        }
+        return $uid;
     }
 
     private function floatOrNull(mixed $v): ?float

@@ -58,6 +58,28 @@ final class RateLimiter
         return $count > $max;
     }
 
+    /**
+     * Tages-Kontingent (UTC-Kalendertag) je Aktion + Identifier. `max <= 0`
+     * bedeutet unbegrenzt (Drossel aus) → immer false. Nutzt dieselbe
+     * `rate_limits`-Tabelle wie {@see hit()}, nur mit tages-ausgerichtetem Fenster.
+     */
+    public function hitDaily(string $action, string $identifier, int $max): bool
+    {
+        if ($max <= 0) {
+            return false;
+        }
+        $windowStart = gmdate('Y-m-d 00:00:00');
+        $pdo = Db::pdo();
+        $stmt = $pdo->prepare(
+            'INSERT INTO rate_limits (action, identifier, window_start, count)
+             VALUES (?, ?, ?, 1)
+             ON DUPLICATE KEY UPDATE count = LAST_INSERT_ID(count + 1)'
+        );
+        $stmt->execute([$action, substr($identifier, 0, 254), $windowStart]);
+        $count = $stmt->rowCount() === 1 ? 1 : (int)$pdo->lastInsertId();
+        return $count > $max;
+    }
+
     public function retryAfter(): int
     {
         $windowSeconds = max(60, $this->config->int('RATE_WINDOW_SECONDS', 900));

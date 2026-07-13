@@ -453,6 +453,9 @@ $apiGame = new GameController($gameRead, $gameRepo, $gameIngest, $gameConfig, $r
 $apiRouteSuggest = new \App\Controllers\Api\RouteSuggestionController(
     new \App\Game\RouteSuggestionService($gameRead, $gameValhalla),
     $gameRepo,
+    new \App\Game\EntitlementService(Db::pdo(), $gameConfig),
+    new \App\Auth\RateLimiter($config),
+    $gameConfig,
 );
 $apiEdgeRecords = new EdgeRecordController($edgeRecords);
 $apiPlayerBoard = new PlayerLeaderboardController(new PlayerLeaderboardService($gameRepo, $gameConfig));
@@ -755,6 +758,7 @@ $router->get("{$apiBase}/game/regions/{id}",       fn($r) => $apiRegion->detail(
 // Eroberungs-Routenvorschlag (RouteSuggestion_Concept.md): baut aus eroberbaren
 // Kanten in der Nähe eine fahrbare Runde. Beta: Bearer+verifiziert, Pro-Gate folgt.
 $router->post("{$apiBase}/game/route-suggestion",  fn($r) => $apiRouteSuggest->suggest($r), [$requireBearer, $requireVerified]);
+$router->get("{$apiBase}/game/entitlements",       fn($r) => $apiRouteSuggest->entitlements($r), [$requireBearer]);
 // Solo-/Spieler-Rangliste (S7): world anonym, friends/me brauchen Bearer.
 $router->get("{$apiBase}/game/leaderboard",        fn($r) => $apiPlayerBoard->index($r), [$optionalBearer]);
 // Globale Crew-Rangliste (all-time, gehaltene Strecke). Statische Route VOR
