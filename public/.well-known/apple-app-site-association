@@ -6,6 +6,8 @@
         "components": [
           { "/": "/share/*" },
           { "/": "/i/*" },
+          { "/": "/c/*" },
+          { "/": "/verein-aktivieren/*" },
           { "/": "/verify-email", "?": { "token": "?*" } },
           { "/": "/reset-password", "?": { "token": "?*" } }
         ]
