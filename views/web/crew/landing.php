@@ -27,21 +27,26 @@ $open = htmlspecialchars($open_url, ENT_QUOTES, 'UTF-8');
         <p class="muted"><?= t('Diese Einladung ist ungültig oder abgelaufen.') ?></p>
     <?php endif; ?>
 
-    <p><?= t('CYBERRIDE ist das Spiel für Gravel & Rennrad: Fahre, erobere deine Region und tritt deinem Verein bei.') ?></p>
+    <p><?= t('CYBERRIDE ist das Spiel für Gravel & Rennrad: Fahre, erobere deine Region und tritt deinem Verein bei. Dazu brauchst du die kostenlose CYBERRIDE-App.') ?></p>
 
-    <p>
-        <a href="<?= $open ?>" class="button" data-ga-event="crew_open_in_app"><?= t('In der App öffnen') ?></a>
-    </p>
+    <h2><?= t('So trittst du bei') ?></h2>
+    <ol>
+        <li><?= t('CYBERRIDE-App installieren.') ?></li>
+        <li><?= t('Diesen Link danach erneut auf dem iPhone öffnen — die App übernimmt die Einladung automatisch.') ?></li>
+    </ol>
 
     <?php if ($app_store_url !== ''): ?>
         <p>
             <a href="<?= htmlspecialchars($app_store_url, ENT_QUOTES, 'UTF-8') ?>" class="button"
-               data-ga-event="appstore_click" data-ga-source="crew"><?= t('App laden') ?></a>
+               data-ga-event="appstore_click" data-ga-source="crew"><?= t('CYBERRIDE-App laden') ?></a>
         </p>
+    <?php else: ?>
+        <p class="muted"><?= t('Die CYBERRIDE-App ist bald im App Store verfügbar.') ?></p>
     <?php endif; ?>
 
-    <p class="muted">
-        <?= t('App schon installiert? Öffne diesen Link auf deinem iPhone – die App übernimmt die Einladung automatisch. Falls nicht, gib den Code') ?>
-        <strong><?= $code ?></strong> <?= t('in der App unter „Crew beitreten" ein.') ?>
+    <p class="muted" style="margin-top:14px;">
+        <?= t('App schon installiert?') ?>
+        <a href="<?= $open ?>" data-ga-event="crew_open_in_app"><?= t('In der App öffnen') ?></a>
+        · <?= t('Oder in der App unter „Crew beitreten" den Code eingeben:') ?> <strong><?= $code ?></strong>
     </p>
 </section>
