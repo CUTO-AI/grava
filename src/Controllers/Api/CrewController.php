@@ -34,6 +34,22 @@ final class CrewController
         Response::json($profile);
     }
 
+    /**
+     * GET /game/crews/by-code/{code} — öffentliches Crew-Profil per Einladungs-
+     * code (Crew-Invite-Link /c/{code}, OptionalBearer). Für die Beitritts-
+     * Bestätigung „Tritt Verein X bei" vor dem Join; kein Bearer nötig, damit
+     * es auch vor dem Signup funktioniert.
+     */
+    public function showByCode(Request $req): void
+    {
+        $code = trim((string)($req->routeParams['code'] ?? ''));
+        $profile = $this->crews->profileByJoinCode($code);
+        if ($profile === null) {
+            Response::error('not_found', 'Einladung ungültig oder abgelaufen.', 404);
+        }
+        Response::json($profile);
+    }
+
     public function join(Request $req): void
     {
         $uid  = $this->userId($req);

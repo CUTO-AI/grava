@@ -792,6 +792,9 @@ $router->post  ("{$apiBase}/game/crews/{slug}/captain",  fn($r) => $apiCrew->cla
 $router->post  ("{$apiBase}/game/crews/{slug}/logo",     fn($r) => $apiCrewLogo->upload($r),   [$requireBearer]);
 $router->delete("{$apiBase}/game/crews/{slug}/logo",     fn($r) => $apiCrewLogo->delete($r),   [$requireBearer]);
 $router->get ("{$apiBase}/game/crews/{slug}/leaderboard", fn($r) => $apiCrew->leaderboard($r), [$requireBearer]);
+// Öffentliches Profil per Einladungscode (Crew-Invite-Link). Statische Route
+// VOR /game/crews/{slug} (2 Segmente → kollidiert nicht, hier zur Klarheit).
+$router->get ("{$apiBase}/game/crews/by-code/{code}", fn($r) => $apiCrew->showByCode($r), [$optionalBearer]);
 $router->get ("{$apiBase}/game/crews/{slug}",      fn($r) => $apiCrew->show($r),     [$requireBearer]);
 
 // ---- Presence (Live-Aktiv-Zähler — PRESENCE_BACKEND.md) ----

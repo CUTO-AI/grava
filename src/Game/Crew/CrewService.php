@@ -254,6 +254,26 @@ final class CrewService
     }
 
     /**
+     * Öffentliches Crew-Profil per Einladungscode (Crew-Invite-Link /c/{code}).
+     * Für die Beitritts-Bestätigung, bevor der Nutzer joint — daher ohne
+     * join_code im Payload. Code wird wie beim Join normalisiert (strtoupper).
+     *
+     * @return array<string,mixed>|null
+     */
+    public function profileByJoinCode(string $joinCode): ?array
+    {
+        $joinCode = strtoupper(trim($joinCode));
+        if ($joinCode === '') {
+            return null;
+        }
+        $crew = $this->crews->crewByJoinCode($joinCode);
+        if ($crew === null) {
+            return null;
+        }
+        return $this->crewPayload((int)$crew['id'], false);
+    }
+
+    /**
      * Crew-Rangliste (nur Mitglieder, siehe backend/CREW_LEADERBOARD_BACKEND.md):
      * pro Mitglied Präsenz-Beitrag auf crew-eigenen Kanten, getragenes Gebiet
      * (Kanten, wo es Top-Beitragender ist) und 90-Tage-Aktivität. Reine
