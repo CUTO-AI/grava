@@ -5,6 +5,7 @@ namespace App\Controllers\Web\Admin;
 
 use App\Auth\AuthService;
 use App\Auth\WebSession;
+use App\Config\Config;
 use App\Controllers\Web\WebView;
 use App\Game\Admin\AdminGuard;
 use App\Game\Crew\CrewService;
@@ -36,6 +37,7 @@ final class ClubCrmController
         private readonly CrewService $crews,
         private readonly MailService $mail,
         private readonly SupporterAccountingService $supporter,
+        private readonly Config $appConfig,
         string $viewsPath,
     ) {
         $this->view = new WebView($viewsPath);
@@ -131,12 +133,23 @@ final class ClubCrmController
             'membership_url'      => null,
         ]);
         $this->prospects->setInvited($id, $token, Clock::nowUtc()->format('Y-m-d H:i:s.v'));
-        $this->mail->send($email, $name, 'club_verify_invite', [
+        $activateUrl = 'https://cyberride.world/verein-aktivieren/' . $token;
+
+        $mailHost = trim((string)$this->appConfig->get('MAIL_HOST', ''));
+        if ($mailHost === '') {
+            // MAIL_HOST leer → MailService würde nur auf Platte schreiben (kein
+            // echter Versand). Ehrlich melden + Link zum manuellen Teilen geben.
+            $this->flash('⚠️ Mailversand ist nicht konfiguriert (MAIL_HOST leer) — es wurde KEINE E-Mail gesendet. Aktivierungslink manuell teilen: ' . $activateUrl);
+            Response::redirect('/admin/crm');
+        }
+        $sent = $this->mail->send($email, $name, 'club_verify_invite', [
             'org_name'     => $name,
-            'activate_url' => 'https://cyberride.world/verein-aktivieren/' . $token,
+            'activate_url' => $activateUrl,
             'app_name'     => 'CYBERRIDE',
         ]);
-        $this->flash('Einladung gesendet an ' . $email . '.');
+        $this->flash($sent
+            ? ('Einladung gesendet an ' . $email . '. Aktivierungslink: ' . $activateUrl)
+            : ('⚠️ Mailversand fehlgeschlagen (SMTP) — bitte Log prüfen. Aktivierungslink manuell: ' . $activateUrl));
         Response::redirect('/admin/crm');
     }
 

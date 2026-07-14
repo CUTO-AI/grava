@@ -552,7 +552,7 @@ $supporterAccounting = new \App\Growth\SupporterAccountingService(
 );
 $webCrm = new \App\Controllers\Web\Admin\ClubCrmController(
     $webSession, $auth, $adminGuard,
-    $clubProspectRepo, $gameCrewSvc, $mailer, $supporterAccounting, $basePath . '/views',
+    $clubProspectRepo, $gameCrewSvc, $mailer, $supporterAccounting, $config, $basePath . '/views',
 );
 // Backoffice Phase 0 (GameAdmin_Concept.md): RBAC-Rollenauflösung + Audit-Sicht +
 // Rollen-Verwaltung. $adminGuard liefert weiterhin `super` aus ADMIN_EMAILS.
