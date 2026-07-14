@@ -345,3 +345,11 @@ code {
 .nav-form { display: inline; margin: 0; }
 .nav-button { background: none; border: none; padding: 0; cursor: pointer; font-family: var(--font-mono); font-size: var(--text-xs); letter-spacing: var(--track-wide); text-transform: uppercase; color: var(--text-muted); transition: color 160ms; }
 .nav-button:hover { color: var(--cyan-500); }
+
+/* Admin-Backoffice: keine Sekundär-/Platzhalter-Schrift dunkler als der Body
+   (#B6C6DA / --ink-700) — Lesbarkeit im Admin, ohne das öffentliche Design zu
+   ändern (nur unter body.is-admin, gesetzt von WebView für /admin-Pfade). */
+body.is-admin .cyber-main {
+    --text-muted: var(--ink-700);
+    --text-disabled: var(--ink-700);
+}

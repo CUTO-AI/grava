@@ -59,6 +59,11 @@ final class WebView
         // (robuster als die Auto-Erfassung; page_location = sauberer Canonical).
         $vars['_analyticsGroup'] = $vars['_analyticsGroup'] ?? self::analyticsGroupForPath($path);
 
+        // Body-Klasse für den Admin-Bereich: hebt dort die Sekundär-/Deaktiviert-
+        // Textfarben auf mind. Body-Helligkeit an (app.css .is-admin), ohne das
+        // öffentliche Design zu verändern.
+        $vars['_bodyClass'] = $vars['_bodyClass'] ?? (str_starts_with($path, '/admin') ? 'is-admin' : '');
+
         $base    = rtrim($this->viewsPath, '/') . '/web/';
         $partial = $base . $view . '.php';
         $layout  = $base . 'layout.php';

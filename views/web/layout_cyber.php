@@ -89,7 +89,7 @@ $_wrapClass = 'cr-wrap' . ($_layoutWide ? '' : ' cr-wrap--narrow');
 <link rel="stylesheet" href="<?= htmlspecialchars((string)$_href, ENT_QUOTES, 'UTF-8') ?>">
 <?php endforeach; ?>
 </head>
-<body>
+<body class="<?= htmlspecialchars((string)($_bodyClass ?? ''), ENT_QUOTES, 'UTF-8') ?>">
 <header class="site-header" id="siteHeader">
   <a class="brand" href="/">
     <span class="glyph"><b>C</b></span>
