@@ -12,6 +12,7 @@ use App\Growth\ClubProspectRepository;
 use App\Http\Middleware\Csrf;
 use App\Http\Request;
 use App\Http\Response;
+use App\Mail\MailService;
 use App\Support\Clock;
 
 /**
@@ -32,6 +33,7 @@ final class CrewPagesController
         private readonly CookieAuth $cookieAuth,
         private readonly WebSession $webSession,
         private readonly ClubProspectRepository $prospects,
+        private readonly MailService $mail,
         string $viewsPath,
     ) {
         $this->view = new WebView($viewsPath);
@@ -177,6 +179,90 @@ final class CrewPagesController
             'flash'         => $this->takeFlash(),
             'app_store_url' => (string)$this->config->get('APP_STORE_URL', ''),
         ]);
+    }
+
+    /**
+     * POST /verein/einladen — Mitglieder per E-Mail einladen (einzeln oder als
+     * Komma-/Zeilen-Liste). Verschickt den Beitritts-Link /c/{CODE}. Nur der
+     * Vorstand (Captain) darf einladen. Obergrenze pro Absenden: 50.
+     */
+    public function inviteMembers(Request $req): void
+    {
+        $ctx = $this->webSession->resolve();
+        if ($ctx === null) {
+            Response::redirect('/login');
+        }
+        $crew = $this->crews->me((int)$ctx['user_id']);
+        // me() liefert join_code nur für den Captain → zugleich die Berechtigung.
+        $code = is_array($crew) ? (string)($crew['join_code'] ?? '') : '';
+        if ($crew === null || $code === '') {
+            $this->flash('Nur der Vereins-Vorstand kann Einladungen versenden.');
+            Response::redirect('/verein');
+        }
+
+        // Adressen aus einem Feld: getrennt durch Komma, Semikolon, Leerraum/Zeilen.
+        $parts = preg_split('/[\s,;]+/', (string)$req->input('emails', ''), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $seen = [];
+        $valid = [];
+        $invalid = 0;
+        foreach ($parts as $part) {
+            $addr = strtolower(trim($part));
+            if ($addr === '' || isset($seen[$addr])) {
+                continue;
+            }
+            $seen[$addr] = true;
+            if (filter_var($addr, FILTER_VALIDATE_EMAIL) !== false) {
+                $valid[] = $addr;
+            } else {
+                $invalid++;
+            }
+        }
+        if ($valid === []) {
+            $this->flash($invalid === 0 ? 'Bitte mindestens eine E-Mail-Adresse eingeben.' : 'Keine gültige E-Mail-Adresse erkannt.');
+            Response::redirect('/verein');
+        }
+
+        $cap = 50;
+        $skipped = 0;
+        if (count($valid) > $cap) {
+            $skipped = count($valid) - $cap;
+            $valid = array_slice($valid, 0, $cap);
+        }
+
+        $joinUrl = 'https://cyberride.world/c/' . rawurlencode($code);
+        if (trim((string)$this->config->get('MAIL_HOST', '')) === '') {
+            $this->flash('⚠️ Mailversand ist nicht konfiguriert — teile den Einladungslink bitte manuell: ' . $joinUrl);
+            Response::redirect('/verein');
+        }
+
+        $vars = [
+            'crew_name' => (string)$crew['name'],
+            'join_url'  => $joinUrl,
+            'join_code' => $code,
+            'app_name'  => (string)$this->config->get('APP_NAME', 'CYBERRIDE'),
+        ];
+        $sent = 0;
+        $failed = 0;
+        foreach ($valid as $addr) {
+            if ($this->mail->send($addr, null, 'crew_member_invite', $vars)) {
+                $sent++;
+            } else {
+                $failed++;
+            }
+        }
+
+        $msg = $sent . ' Einladung(en) versendet.';
+        if ($failed > 0) {
+            $msg .= ' ' . $failed . ' fehlgeschlagen (SMTP — Log prüfen).';
+        }
+        if ($invalid > 0) {
+            $msg .= ' ' . $invalid . ' ungültige Adresse(n) übersprungen.';
+        }
+        if ($skipped > 0) {
+            $msg .= ' ' . $skipped . ' über dem Limit (' . $cap . ') nicht versendet.';
+        }
+        $this->flash($msg);
+        Response::redirect('/verein');
     }
 
     private function flash(string $msg): void

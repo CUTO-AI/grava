@@ -2,6 +2,7 @@
 /** @var array<string,mixed>|null $crew */
 /** @var ?string $flash */
 /** @var string $app_store_url */
+/** @var string $_csrf */
 $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 $members = is_array($crew['members'] ?? null) ? $crew['members'] : [];
 $code = (string)($crew['join_code'] ?? '');
@@ -30,6 +31,18 @@ $inviteUrl = $code !== '' ? 'https://cyberride.world/c/' . $code : '';
         <p>Teile diesen Link mit euren Mitgliedern. Wer ihn öffnet, installiert die App und tritt eurem Verein bei:</p>
         <p style="font-size:1.05rem;word-break:break-all;"><a href="<?= $e($inviteUrl) ?>"><?= $e($inviteUrl) ?></a></p>
         <p class="muted">Einladungscode: <strong><?= $e($code) ?></strong></p>
+
+        <h3 style="margin-top:22px;">Per E-Mail einladen</h3>
+        <p class="muted">Eine oder mehrere Adressen — durch Komma, Semikolon oder Zeilenumbruch getrennt. Jede bekommt den Beitritts-Link.</p>
+        <form method="post" action="/verein/einladen">
+            <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
+            <label>E-Mail-Adressen der Mitglieder
+                <textarea name="emails" rows="4" required
+                          placeholder="anna@example.com, ben@example.com&#10;carla@example.com"
+                          autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>
+            </label>
+            <button type="submit">Einladungen senden</button>
+        </form>
     </section>
     <?php endif; ?>
 

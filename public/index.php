@@ -508,7 +508,7 @@ $webEngage   = new EngagementPagesController($webSession, $likeServ, $commentSer
 $webStrava   = new StravaPagesController($webSession, $auth, $stravaServ, $basePath . '/views');
 $webSurface  = new SurfaceCheckController($webSession, $auth, $routeSurface, $config, $basePath . '/views');
 $webReferral = new ReferralPagesController($config, $basePath . '/views');
-$webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $auth, $cookieAuth, $webSession, $clubProspectRepo, $basePath . '/views');
+$webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $auth, $cookieAuth, $webSession, $clubProspectRepo, $mailer, $basePath . '/views');
 $webLegal    = new LegalPagesController($basePath . '/views');
 $webAdminRef = new AdminReferralPagesController($webSession, $auth, $referrals, $config, $basePath . '/views');
 $webLanding  = new LandingController($basePath . '/views');
@@ -929,6 +929,7 @@ $router->get ('/verein-aktivieren/{token}',              fn($r) => $webCrewPages
 $router->post('/verein-aktivieren/{token}',              fn($r) => $webCrewPages->activateSubmit($r), [$csrf]);
 $router->get ('/verein/handle-verfuegbar',               fn($r) => $webCrewPages->handleAvailable($r));
 $router->get ('/verein',                                 fn($r) => $webCrewPages->cockpit($r));
+$router->post('/verein/einladen',                        fn($r) => $webCrewPages->inviteMembers($r), [$csrf]);
 
 // ---- Admin-Auswertung Empfehlungen (M7) — ADMIN_EMAILS-Gate ----
 $router->get ('/admin/referrals',                        fn($r) => $webAdminRef->index($r));
