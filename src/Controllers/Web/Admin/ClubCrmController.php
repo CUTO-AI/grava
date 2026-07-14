@@ -9,6 +9,7 @@ use App\Controllers\Web\WebView;
 use App\Game\Admin\AdminGuard;
 use App\Game\Crew\CrewService;
 use App\Growth\ClubProspectRepository;
+use App\Growth\SupporterAccountingService;
 use App\Http\Middleware\Csrf;
 use App\Http\Request;
 use App\Http\Response;
@@ -34,9 +35,28 @@ final class ClubCrmController
         private readonly ClubProspectRepository $prospects,
         private readonly CrewService $crews,
         private readonly MailService $mail,
+        private readonly SupporterAccountingService $supporter,
         string $viewsPath,
     ) {
         $this->view = new WebView($viewsPath);
+    }
+
+    /** GET /admin/crm/supporter — read-only Supporter-Ökonomie-Messung (A8). */
+    public function supporter(Request $req): void
+    {
+        [$user] = $this->requireAdmin();
+        $period = trim((string)($req->query['period'] ?? ''));
+        if (preg_match('/^\d{4}-\d{2}$/', $period) !== 1) {
+            $period = gmdate('Y-m');
+        }
+        $this->view->render('admin/crm/supporter', [
+            '_title'      => 'Supporter-Ökonomie',
+            '_authedUser' => $user,
+            '_layoutWide' => true,
+            'flash'       => $this->takeFlash(),
+            'period'      => $period,
+            'rows'        => $this->supporter->report($period),
+        ]);
     }
 
     /** GET /admin/crm — Liste + Funnel-Zählung + Eingabemaske. */

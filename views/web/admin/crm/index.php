@@ -10,6 +10,7 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 <nav class="card" style="display:flex;gap:1rem;flex-wrap:wrap">
     <a href="/admin/game">Game</a>
     <a href="/admin/crm"><strong>Vereins-CRM</strong></a>
+    <a href="/admin/crm/supporter">Supporter-Ökonomie</a>
 </nav>
 
 <section class="card">

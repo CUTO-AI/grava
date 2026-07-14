@@ -547,9 +547,12 @@ $webCronAdmin = new \App\Controllers\Web\Admin\CronAdminController(
     (int)($config->get('CRON_OVERDUE_FACTOR', 2) ?? 2), $basePath . '/views',
 );
 // Vereins-CRM / Outreach (CrewInvite_Onboarding_Spec §8.3, Phase 3).
+$supporterAccounting = new \App\Growth\SupporterAccountingService(
+    Db::pdo(), $gameConfig, new \App\Game\RegionRepository(Db::pdo()),
+);
 $webCrm = new \App\Controllers\Web\Admin\ClubCrmController(
     $webSession, $auth, $adminGuard,
-    $clubProspectRepo, $gameCrewSvc, $mailer, $basePath . '/views',
+    $clubProspectRepo, $gameCrewSvc, $mailer, $supporterAccounting, $basePath . '/views',
 );
 // Backoffice Phase 0 (GameAdmin_Concept.md): RBAC-Rollenauflösung + Audit-Sicht +
 // Rollen-Verwaltung. $adminGuard liefert weiterhin `super` aus ADMIN_EMAILS.
@@ -947,6 +950,7 @@ $router->get ('/admin/game/crews',                     fn($r) => $webGameAdmin->
 $router->get ('/admin/crm',                            fn($r) => $webCrm->index($r));
 $router->post('/admin/crm',                            fn($r) => $webCrm->create($r), [$csrf]);
 $router->post('/admin/crm/import',                     fn($r) => $webCrm->importCsv($r), [$csrf]);
+$router->get ('/admin/crm/supporter',                  fn($r) => $webCrm->supporter($r));
 $router->post('/admin/crm/{id}/invite',                fn($r) => $webCrm->invite($r), [$csrf]);
 $router->post('/admin/crm/{id}',                       fn($r) => $webCrm->update($r), [$csrf]);
 $router->get ('/admin/game/regions',                   fn($r) => $webGameAdmin->regions($r));
@@ -1087,7 +1091,7 @@ $runInternal = function (Request $r, string $command)
     $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), null, null, $cronRunRepo, 'internal', $broadcastSvc, new \App\Game\RegionActivityCacheService(new \App\Game\RegionRepository(Db::pdo())));
     $argv = ['internal', $command];
     foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email', 'date', 'lang',
-              'name', 'org', 'court', 'regno', 'charitable', 'source', 'membership'] as $opt) {
+              'name', 'org', 'court', 'regno', 'charitable', 'source', 'membership', 'period'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {
             $argv[] = '--' . $opt . '=' . (string)$r->query[$opt];
         }
@@ -1170,6 +1174,9 @@ $router->post('/internal/game/heal-crews', fn($r) => $runInternal($r, 'game:heal
 // Token-geschützt; Args: name, org, court, regno, charitable, source, email, membership.
 $router->get('/internal/crews/verify-invite',  fn($r) => $runInternal($r, 'crews:verify-invite'));
 $router->post('/internal/crews/verify-invite', fn($r) => $runInternal($r, 'crews:verify-invite'));
+// Supporter-Snapshot manuell/Cron auslösen (A8). No-op bei supporter_program_enabled=0.
+$router->get('/internal/supporter/snapshot',   fn($r) => $runInternal($r, 'supporter:snapshot-monthly'));
+$router->post('/internal/supporter/snapshot',  fn($r) => $runInternal($r, 'supporter:snapshot-monthly'));
 // Read-only Log-Tail für Diagnose ohne SSH (z. B. frischer PDO/SQLSTATE-Stacktrace).
 $router->get('/internal/logtail',  fn($r) => $runInternal($r, 'internal:logtail'));
 $router->post('/internal/logtail', fn($r) => $runInternal($r, 'internal:logtail'));

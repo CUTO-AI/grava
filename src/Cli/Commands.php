@@ -168,6 +168,9 @@ final class Commands
             case 'game:snapshot-daily':
                 return $this->gameSnapshotDaily();
 
+            case 'supporter:snapshot-monthly':
+                return $this->supporterSnapshot($argv);
+
             case 'regions:import':
                 return $this->regionsImport($argv);
 
@@ -390,6 +393,38 @@ final class Commands
             echo "Crew '{$h['slug']}': Captain → User #{$h['promoted_user_id']}.\n";
         }
         echo 'Geheilt: ' . count($healed) . " Crew(s).\n";
+        return 0;
+    }
+
+    /**
+     * Supporter-Ökonomie-Snapshot (A8, Supporter_Economy_Spec.md): rechnet Basis/
+     * Champion/Bonus je Landkreis für die Periode und schreibt den Snapshot. No-op,
+     * solange `supporter_program_enabled=0`. KEINE Auszahlung.
+     *
+     * @param list<string> $argv
+     */
+    private function supporterSnapshot(array $argv): int
+    {
+        $opts = $this->parseOptions($argv);
+        $period = trim((string)($opts['period'] ?? ''));
+        if ($period === '' || preg_match('/^\d{4}-\d{2}$/', $period) !== 1) {
+            $period = gmdate('Y-m');
+        }
+        $pdo = \App\Database\Db::pdo();
+        $svc = new \App\Growth\SupporterAccountingService(
+            $pdo,
+            new \App\Game\GameConfig($pdo),
+            new \App\Game\RegionRepository($pdo),
+        );
+        $res = $svc->computeAndStore($period);
+        if (!$res['enabled']) {
+            echo "Supporter-Programm deaktiviert (supporter_program_enabled=0) — nichts berechnet.\n";
+            return 0;
+        }
+        printf(
+            "Supporter-Snapshot %s: %d Landkreise, %d Vereins-Zeilen, Basis %.2f €, Bonus %.2f €.\n",
+            $res['period'], $res['landkreise'], $res['clubs'], $res['basis_ct'] / 100, $res['bonus_ct'] / 100,
+        );
         return 0;
     }
 

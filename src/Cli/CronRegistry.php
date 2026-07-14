@@ -27,6 +27,7 @@ final class CronRegistry
         'regions:ownership-refresh' => ['Gebiets-Besitz',          86400, 900],
         'game:region-activity-refresh' => ['Gebiets-Aktivität',    86400, 900],
         'cron:cleanup'              => ['Cleanup / Retention',      86400, 600],
+        'supporter:snapshot-monthly'=> ['Supporter-Snapshot',       86400, 900],
     ];
 
     /**
