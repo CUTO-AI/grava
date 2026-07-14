@@ -1074,7 +1074,8 @@ $runInternal = function (Request $r, string $command)
     }
     $cli = new Commands($basePath, $tokens, $routeService, $config, $notifServ, new HeatmapService(), $heatmapLines, $gameRecompute, $gameRushSvc, $gameCrewSvc, $edgeBackfill, $gameDispatcher, $gameHistory, $regionImportSvc, $regionOwnershipSvc, new \App\Social\SocialService($config), null, null, $cronRunRepo, 'internal', $broadcastSvc, new \App\Game\RegionActivityCacheService(new \App\Game\RegionRepository(Db::pdo())));
     $argv = ['internal', $command];
-    foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email', 'date', 'lang'] as $opt) {
+    foreach (['limit', 'sleep-ms', 'after-route-id', 'after-id', 'bbox', 'handle', 'user', 'actor', 'actor-id', 'edge', 'all', 'batch', 'email', 'date', 'lang',
+              'name', 'org', 'court', 'regno', 'charitable', 'source', 'membership'] as $opt) {
         if (isset($r->query[$opt]) && (string)$r->query[$opt] !== '') {
             $argv[] = '--' . $opt . '=' . (string)$r->query[$opt];
         }
@@ -1153,6 +1154,10 @@ $router->get('/internal/game/test-push',  fn($r) => $runInternal($r, 'game:test-
 $router->post('/internal/game/test-push', fn($r) => $runInternal($r, 'game:test-push'));
 $router->get('/internal/game/heal-crews',  fn($r) => $runInternal($r, 'game:heal-crews'));
 $router->post('/internal/game/heal-crews', fn($r) => $runInternal($r, 'game:heal-crews'));
+// Vereins-Aktivierungslink minten (Pilot-Seeding, bis Admin-Web-Modul da ist).
+// Token-geschützt; Args: name, org, court, regno, charitable, source, email, membership.
+$router->get('/internal/crews/verify-invite',  fn($r) => $runInternal($r, 'crews:verify-invite'));
+$router->post('/internal/crews/verify-invite', fn($r) => $runInternal($r, 'crews:verify-invite'));
 // Read-only Log-Tail für Diagnose ohne SSH (z. B. frischer PDO/SQLSTATE-Stacktrace).
 $router->get('/internal/logtail',  fn($r) => $runInternal($r, 'internal:logtail'));
 $router->post('/internal/logtail', fn($r) => $runInternal($r, 'internal:logtail'));
