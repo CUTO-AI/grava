@@ -507,6 +507,7 @@ $webEngage   = new EngagementPagesController($webSession, $likeServ, $commentSer
 $webStrava   = new StravaPagesController($webSession, $auth, $stravaServ, $basePath . '/views');
 $webSurface  = new SurfaceCheckController($webSession, $auth, $routeSurface, $config, $basePath . '/views');
 $webReferral = new ReferralPagesController($config, $basePath . '/views');
+$webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $basePath . '/views');
 $webLegal    = new LegalPagesController($basePath . '/views');
 $webAdminRef = new AdminReferralPagesController($webSession, $auth, $referrals, $config, $basePath . '/views');
 $webLanding  = new LandingController($basePath . '/views');
@@ -909,6 +910,11 @@ $router->get ('/share/{token}/geojson',                  fn($r) => $webShare->ge
 // iOS fängt /i/{code} als Universal Link ab; im Browser ist dies die
 // Fallback-Werbeseite mit sichtbarem Code + App-Store-/Register-Link.
 $router->get ('/i/{code}',                               fn($r) => $webReferral->landing($r));
+
+// ---- Crew-/Vereins-Einladungs-Landingpage — öffentlich, kein Login ----
+// iOS fängt /c/{code} als Universal Link ab; im Browser ist dies die
+// Fallback-Seite mit Crew-Name + „In der App öffnen"/App-Store-Link.
+$router->get ('/c/{code}',                               fn($r) => $webCrewPages->landing($r));
 
 // ---- Admin-Auswertung Empfehlungen (M7) — ADMIN_EMAILS-Gate ----
 $router->get ('/admin/referrals',                        fn($r) => $webAdminRef->index($r));
