@@ -179,6 +179,26 @@ final class Request
         ];
     }
 
+    /**
+     * Roher PHP-Upload-Fehlercode (UPLOAD_ERR_*) für ein Form-Feld, oder null
+     * wenn kein Eintrag existiert. Anders als {@see file()} verschluckt das den
+     * Fehler nicht — nötig, um "Datei zu groß" (UPLOAD_ERR_INI_SIZE) von einem
+     * echten fehlenden Feld zu unterscheiden.
+     */
+    public function uploadErrorCode(string $name): ?int
+    {
+        $f = $this->files[$name] ?? null;
+        if (!is_array($f) || !isset($f['error'])) {
+            return null;
+        }
+        return (int)$f['error'];
+    }
+
+    public function contentLength(): int
+    {
+        return (int)$this->header('Content-Length', '0');
+    }
+
     public function isMultipart(): bool
     {
         return stripos($this->header('Content-Type'), 'multipart/form-data') !== false;

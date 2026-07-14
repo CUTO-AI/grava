@@ -67,5 +67,15 @@ jobs:
             printf '%s\n' '50 3 * * * www-data php /var/www/app/public/index.php game:region-activity-refresh >/dev/null 2>&1' \
               | sudo tee /etc/cron.d/gravelexplorer-region-activity >/dev/null
             sudo chmod 0644 /etc/cron.d/gravelexplorer-region-activity
-            # OPcache/FPM neu laden, damit der neue Code sofort greift.
+            # PHP-Upload-Limits an die App-Grenze (REQUEST_MAX_UPLOAD_BYTES = 25 MB)
+            # angleichen. Debian-Defaults (upload_max_filesize 2M / post_max_size 8M)
+            # brechen große Routen-GPX ab, BEVOR die App-Prüfung greift — $_FILES
+            # kommt dann leer an und der Upload meldet irreführend "payload fehlt".
+            # post_max_size > upload_max_filesize (multipart-Overhead + Formfelder).
+            printf '%s\n' \
+              'upload_max_filesize = 32M' \
+              'post_max_size = 40M' \
+              | sudo tee /etc/php/8.4/fpm/conf.d/90-cyberride-uploads.ini >/dev/null
+            sudo chmod 0644 /etc/php/8.4/fpm/conf.d/90-cyberride-uploads.ini
+            # OPcache/FPM neu laden, damit der neue Code + INI-Limits sofort greifen.
             sudo systemctl reload php8.4-fpm

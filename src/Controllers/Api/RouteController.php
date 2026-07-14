@@ -52,6 +52,18 @@ final class RouteController
         if ($req->isMultipart()) {
             $upload = $req->file('payload');
             if ($upload === null) {
+                // Die häufigste echte Ursache ist nicht ein fehlendes Feld,
+                // sondern eine zu große Datei — die dann von PHP verworfen wird,
+                // BEVOR unsere App-Grenze (REQUEST_MAX_UPLOAD_BYTES) greift:
+                //  • > upload_max_filesize → $_FILES['payload'] mit UPLOAD_ERR_INI_SIZE
+                //  • Gesamt-Body > post_max_size → $_POST UND $_FILES komplett leer
+                //    (trotz vorhandener Content-Length).
+                // Beides sauber als 413 melden statt irreführend "payload fehlt".
+                $errCode = $req->uploadErrorCode('payload');
+                $bodyDropped = $req->post === [] && $req->files === [] && $req->contentLength() > 0;
+                if (in_array($errCode, [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE], true) || $bodyDropped) {
+                    Response::error('payload_too_large', 'Datei ist zu groß.', 413);
+                }
                 Response::error('validation_error', 'Bitte überprüfe deine Eingaben.', 422, [
                     'payload' => ['Datei ist erforderlich (Form-Feld "payload").'],
                 ]);
