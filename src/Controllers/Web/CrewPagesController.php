@@ -66,7 +66,9 @@ final class CrewPagesController
     public function activate(Request $req): void
     {
         $token = (string)($req->routeParams['token'] ?? '');
-        if (preg_match('/^[a-f0-9]{32}$/i', $token) !== 1) {
+        // Tolerant: echte Tokens sind 32 Hex, aber wir zeigen die Info-Seite für
+        // jeden plausiblen Token statt still auf die Startseite zu springen.
+        if (preg_match('/^[A-Za-z0-9]{8,64}$/', $token) !== 1) {
             Response::redirect('/');
         }
         // Outreach-Funnel: „Link geöffnet" (nur der App-lose Browser-Fall landet
