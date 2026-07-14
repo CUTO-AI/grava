@@ -43,9 +43,15 @@ $action = '/verein-aktivieren/' . rawurlencode($token);
                 <p>Du bist angemeldet — ein Klick genügt.</p>
                 <button type="submit">Verein jetzt aktivieren</button>
             <?php else: ?>
-                <label>E-Mail (aus eurem Vereinskontakt)
-                    <input type="email" value="<?= $e($info['contact_email'] ?? '') ?>" readonly>
-                </label>
+                <?php if (!empty($info['contact_email'])): ?>
+                    <label>E-Mail (aus eurem Vereinskontakt)
+                        <input type="email" name="email" value="<?= $e($info['contact_email']) ?>" readonly>
+                    </label>
+                <?php else: ?>
+                    <label>E-Mail für euren Vereins-Account
+                        <input type="email" name="email" required autocomplete="email">
+                    </label>
+                <?php endif; ?>
                 <label>Passwort für euren Vereins-Account (min. 10 Zeichen)
                     <input type="password" name="password" minlength="10" required autocomplete="new-password">
                 </label>

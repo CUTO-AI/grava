@@ -97,10 +97,15 @@ final class CrewPagesController
         if ($ctx !== null) {
             $userId = (int)$ctx['user_id'];
         } else {
-            $email = (string)($info['contact_email'] ?? '');
-            $pw    = (string)$req->input('password', '');
+            // E-Mail bevorzugt aus dem Token (per Token nachgewiesen); fehlt sie
+            // (z. B. CLI-Token ohne --email), nimm die im Formular eingegebene.
+            $email = trim((string)($info['contact_email'] ?? ''));
             if ($email === '') {
-                $this->flash('Für diese Einladung ist keine E-Mail hinterlegt — bitte melde dich zuerst an.');
+                $email = trim((string)$req->input('email', ''));
+            }
+            $pw = (string)$req->input('password', '');
+            if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                $this->flash('Bitte eine gültige E-Mail-Adresse angeben.');
                 Response::redirect('/verein-aktivieren/' . rawurlencode($token));
             }
             if (strlen($pw) < 10) {
