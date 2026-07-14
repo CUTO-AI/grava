@@ -14,6 +14,7 @@ return [
         'updates'  => 'Updates',
         'heatmap'  => 'Heatmap',
         'live'     => 'Live',
+        'clubs'    => 'Vereine',
         'login'    => 'Login',
         'getApp'   => 'App laden',
     ],
@@ -112,6 +113,56 @@ return [
         'fine'   => 'IOS 16+ · ANDROID BALD · DE · AT · CH',
     ],
     'trailerCaption' => 'Trailer-Platzhalter — hier kommt der Season-03-Film rein',
+    'clubs' => [
+        // Homepage-Teaser
+        'kicker' => '// FÜR VEREINE',
+        'h2'     => 'Bring deinen Verein auf die Karte',
+        'lead'   => 'CYBERRIDE macht eure Region zum umkämpften Revier — und euren Radverein zur Crew, die es hält. Kostenlos, fair, aus eigener Kraft.',
+        'points' => [
+            'Neue Mitglieder gewinnen — jede Einladung führt direkt zu eurem Verein',
+            'Sichtbarkeit — der aktivste Verein führt eure Region an',
+            'Offizieller, geschützter Vereins-Account — nur ihr führt euren Verein',
+        ],
+        'cta'    => 'Vereine & Vorteile',
+        // Eigene Seite /vereine
+        'meta'   => [
+            'title'       => 'CYBERRIDE für Vereine — Mitglieder, Sichtbarkeit, eure Region',
+            'description' => 'Bring deinen Radverein zu CYBERRIDE: neue Mitglieder, Sichtbarkeit und eure Region halten — kostenlos und fair, aus reiner Fahrleistung.',
+        ],
+        'hero'   => [
+            'badge'   => 'FÜR RADSPORT-VEREINE',
+            'title1'  => 'Euer Verein.',
+            'title2'  => 'Eure Region.',
+            'lead'    => 'CYBERRIDE ist das Radsport-Spiel, bei dem Vereine um die Sektoren ihrer Region fahren. Für den Verein kostenlos, für alle fair — kein Bezahl-Vorteil, reines Radfahren.',
+            'formCta' => 'Verein anmelden',
+            'appCta'  => 'App laden',
+        ],
+        'benefits' => [
+            'kicker' => '// WARUM ALS VEREIN MITMACHEN',
+            'h2'     => 'Das bekommt euer Verein',
+            'items'  => [
+                ['icon' => 'users',        'title' => 'Neue Mitglieder & Nachwuchs',   'body' => 'Jeder Einladungslink führt direkt zu eurem Verein — macht aus Fahrern Mitglieder.'],
+                ['icon' => 'trophy',       'title' => 'Sichtbarkeit in eurer Region',  'body' => 'Der aktivste Verein führt die regionale Rangliste an. Seid der Name, den alle sehen.'],
+                ['icon' => 'shield-check', 'title' => 'Offizieller, geschützter Account', 'body' => 'Ein verifizierter Vereins-Account, den nur ihr führt — niemand sonst.'],
+                ['icon' => 'layout-dashboard', 'title' => 'Gemeinsam, in einem Cockpit', 'body' => 'Ladet Mitglieder per E-Mail ein, seht euren Kader und euren Vereins-Fortschritt an einem Ort.'],
+                ['icon' => 'scale',        'title' => 'Fair by Design',                'body' => 'Ranglisten und Belohnungen erfährt man — man kauft sie nicht. Kein Pay-to-Win.'],
+                ['icon' => 'piggy-bank',   'title' => 'Vereinskasse (Pilot)',          'body' => 'In Pilotregionen können die Kilometer eures Vereins in die Vereinskasse fließen. Schrittweiser Rollout — sprecht uns an.'],
+            ],
+        ],
+        'form'   => [
+            'kicker'     => '// VEREIN ANMELDEN',
+            'h2'         => 'Auf die Einladungsliste',
+            'lead'       => 'Erzählt uns kurz von eurem Verein — wir schicken euch einen Aktivierungslink. Unverbindlich.',
+            'name'       => 'Vereinsname',
+            'region'     => 'Landkreis / Region',
+            'email'      => 'Kontakt-E-Mail',
+            'discipline' => 'Disziplin (Rennrad, Gravel, MTB…)',
+            'submit'     => 'Verein anmelden',
+            'fine'       => 'Wir nutzen eure Angaben nur, um euch zu CYBERRIDE für Vereine zu kontaktieren.',
+            'ok'         => 'Danke! Wir haben euren Verein notiert und melden uns.',
+            'err'        => 'Bitte mindestens Vereinsname und eine gültige Kontakt-E-Mail angeben.',
+        ],
+    ],
     'footer' => [
         'tagline' => 'Fahre, erobere, baue die Karte. Untergrund · Verkehr · Gefahren — die Daten, die den anderen fehlen.',
         'cols' => [

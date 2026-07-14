@@ -7,10 +7,11 @@ $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 
 // SEO/Canonical: absolute Marken-URL der Startseite (unabhängig vom Request-Host).
 // Sprach-bewusst: DE = /?lang=de, EN/Default = paramlos.
+$CR_PATH      = $CR_PATH ?? '/'; // Seitenpfad für Canonical/hreflang (Default = Startseite)
 $_hasSiteUrl  = class_exists('\\App\\Support\\SiteUrl');
 $CR_BASE      = $_hasSiteUrl ? \App\Support\SiteUrl::base() : '';
-$CR_CANONICAL = $_hasSiteUrl ? \App\Support\SiteUrl::localized('/', $CR_LANG) : (($CR_BASE !== '' ? $CR_BASE : '') . '/');
-$CR_HREFLANG  = $_hasSiteUrl ? \App\Support\SiteUrl::hreflangLinks('/') : '';
+$CR_CANONICAL = $_hasSiteUrl ? \App\Support\SiteUrl::localized($CR_PATH, $CR_LANG) : (($CR_BASE !== '' ? $CR_BASE : '') . $CR_PATH);
+$CR_HREFLANG  = $_hasSiteUrl ? \App\Support\SiteUrl::hreflangLinks($CR_PATH) : '';
 $CR_OG_IMAGE  = '/assets/brand/icon-512.png';
 $CR_OG_LOCALE = $CR_LANG === 'de' ? 'de_DE' : 'en_US';
 $CR_OG_LOCALE_ALT = $CR_LANG === 'de' ? 'en_US' : 'de_DE';
@@ -68,9 +69,10 @@ $CR_OG_LOCALE_ALT = $CR_LANG === 'de' ? 'en_US' : 'de_DE';
   </a>
   <nav class="site-nav">
     <div class="navlinks">
-      <a href="#features"><?= $e($T['nav']['features']) ?></a>
-      <a href="#news"><?= $e($T['nav']['news']) ?></a>
-      <a href="#updates"><?= $e($T['nav']['updates']) ?></a>
+      <a href="/#features"><?= $e($T['nav']['features']) ?></a>
+      <a href="/vereine"><?= $e($T['nav']['clubs']) ?></a>
+      <a href="/#news"><?= $e($T['nav']['news']) ?></a>
+      <a href="/#updates"><?= $e($T['nav']['updates']) ?></a>
       <a href="/heatmap"><?= $e($T['nav']['heatmap']) ?></a>
       <a href="/pulse"><?= $e($T['nav']['live']) ?></a>
     </div>

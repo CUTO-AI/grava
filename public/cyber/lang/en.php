@@ -15,6 +15,7 @@ return [
         'updates'  => 'Updates',
         'heatmap'  => 'Heatmap',
         'live'     => 'Live',
+        'clubs'    => 'Clubs',
         'login'    => 'Login',
         'getApp'   => 'Get the App',
     ],
@@ -114,6 +115,56 @@ return [
         'fine'   => 'IOS 16+ · ANDROID SOON · DE · AT · CH',
     ],
     'trailerCaption' => 'Trailer placeholder — drop the Season 03 film here',
+    'clubs' => [
+        // Homepage-Teaser
+        'kicker' => '// FOR CLUBS',
+        'h2'     => 'Bring your club onto the map',
+        'lead'   => 'CYBERRIDE turns your region into contested territory — and your cycling club into the crew that holds it. Free, fair, ride-powered.',
+        'points' => [
+            'Win new members — every invite links straight to your club',
+            'Visibility — the most active club leads your region',
+            'Official, protected club account — only you run your club',
+        ],
+        'cta'    => 'Clubs & benefits',
+        // Dedicated page /vereine
+        'meta'   => [
+            'title'       => 'CYBERRIDE for Clubs — Members, Visibility, Your Region',
+            'description' => 'Bring your cycling club to CYBERRIDE: win members, gain visibility and hold your region — free and fair, powered by real riding.',
+        ],
+        'hero'   => [
+            'badge'   => 'FOR CYCLING CLUBS',
+            'title1'  => 'Your club.',
+            'title2'  => 'Your region.',
+            'lead'    => 'CYBERRIDE is the cycling game where clubs ride to hold the sectors of their region. Free for the club, fair for everyone — no pay-to-win, pure riding.',
+            'formCta' => 'Register your club',
+            'appCta'  => 'Get the App',
+        ],
+        'benefits' => [
+            'kicker' => '// WHY JOIN AS A CLUB',
+            'h2'     => 'What your club gets',
+            'items'  => [
+                ['icon' => 'users',        'title' => 'New members & youth',        'body' => 'Every invite link points straight to your club — turn riders into members.'],
+                ['icon' => 'trophy',       'title' => 'Visibility in your region',  'body' => 'The most active club leads the regional standings. Be the name everyone sees.'],
+                ['icon' => 'shield-check', 'title' => 'Official, protected account', 'body' => 'A verified club account only you control — nobody else can run your club.'],
+                ['icon' => 'layout-dashboard', 'title' => 'Together, in one cockpit', 'body' => 'Invite members by email, see your roster and your club’s progress in one place.'],
+                ['icon' => 'scale',        'title' => 'Fair by design',             'body' => 'Standings and rewards are earned by riding — never bought. No pay-to-win, ever.'],
+                ['icon' => 'piggy-bank',   'title' => 'Club treasury (pilot)',      'body' => 'In pilot regions, club kilometres can feed a club treasury. Rolling out step by step — talk to us.'],
+            ],
+        ],
+        'form'   => [
+            'kicker'     => '// REGISTER YOUR CLUB',
+            'h2'         => 'Get on the invite list',
+            'lead'       => 'Tell us about your club and we’ll send you an activation link. No obligation.',
+            'name'       => 'Club name',
+            'region'     => 'County / region',
+            'email'      => 'Contact email',
+            'discipline' => 'Discipline (road, gravel, MTB…)',
+            'submit'     => 'Register club',
+            'fine'       => 'We use your details only to contact you about CYBERRIDE for clubs.',
+            'ok'         => 'Thanks! We’ve noted your club and will be in touch.',
+            'err'        => 'Please enter at least a club name and a valid contact email.',
+        ],
+    ],
     'footer' => [
         'tagline' => 'Ride, conquer, build the map. Surface · Traffic · Hazards — the data the others are missing.',
         'cols' => [

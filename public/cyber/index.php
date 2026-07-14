@@ -12,6 +12,7 @@ require $SEC . 'hero.php';
 require $SEC . 'pulse-teaser.php';
 require $SEC . 'map.php';
 require $SEC . 'features.php';
+require $SEC . 'vereine.php';
 require $SEC . 'news.php';
 require $SEC . 'updates.php';
 require $SEC . 'cta.php';

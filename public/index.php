@@ -509,6 +509,7 @@ $webStrava   = new StravaPagesController($webSession, $auth, $stravaServ, $baseP
 $webSurface  = new SurfaceCheckController($webSession, $auth, $routeSurface, $config, $basePath . '/views');
 $webReferral = new ReferralPagesController($config, $basePath . '/views');
 $webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $auth, $cookieAuth, $webSession, $clubProspectRepo, $mailer, $basePath . '/views');
+$webClubPublic = new \App\Controllers\Web\ClubPublicController($clubProspectRepo, $basePath . '/public/cyber');
 $webLegal    = new LegalPagesController($basePath . '/views');
 $webAdminRef = new AdminReferralPagesController($webSession, $auth, $referrals, $config, $basePath . '/views');
 $webLanding  = new LandingController($basePath . '/views');
@@ -822,6 +823,8 @@ $router->get ("{$apiBase}/pulse",                 fn($r) => $apiPulse->index($r)
 // ---- Web pages ----
 $router->get('/',                  fn($r) => $webLanding->home());
 $router->get('/landing',           fn($r) => $webLanding->home());
+$router->get ('/vereine',          fn($r) => $webClubPublic->page());
+$router->post('/vereine/interesse', fn($r) => $webClubPublic->submitInterest($r), [$csrf]);
 // robots.txt: Crawler-Steuerung. Auf der Admin-Subdomain alles sperren; auf
 // der Hauptdomain private/tokenisierte Bereiche ausschließen, öffentliche
 // Inhalte (Landing, Features, Discover, Heatmap, Profile, Legal) freigeben.
