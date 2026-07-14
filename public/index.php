@@ -545,6 +545,11 @@ $webCronAdmin = new \App\Controllers\Web\Admin\CronAdminController(
     $webSession, $auth, $adminGuard, $cronRunRepo, $gameAudit, $makeManualCli,
     (int)($config->get('CRON_OVERDUE_FACTOR', 2) ?? 2), $basePath . '/views',
 );
+// Vereins-CRM / Outreach (CrewInvite_Onboarding_Spec §8.3, Phase 3).
+$webCrm = new \App\Controllers\Web\Admin\ClubCrmController(
+    $webSession, $auth, $adminGuard,
+    new \App\Growth\ClubProspectRepository(Db::pdo()), $basePath . '/views',
+);
 // Backoffice Phase 0 (GameAdmin_Concept.md): RBAC-Rollenauflösung + Audit-Sicht +
 // Rollen-Verwaltung. $adminGuard liefert weiterhin `super` aus ADMIN_EMAILS.
 $adminRoleSvc = new \App\Game\Admin\AdminRoleService(Db::pdo(), $adminGuard);
@@ -937,6 +942,10 @@ $router->get ('/admin/game/moderation',                fn($r) => $webGameAdmin->
 $router->get ('/admin/game/players',                   fn($r) => $webGameAdmin->players($r));
 $router->get ('/admin/game/player',                    fn($r) => $webGameAdmin->player($r));
 $router->get ('/admin/game/crews',                     fn($r) => $webGameAdmin->crews($r));
+// Vereins-CRM / Outreach (Phase 3)
+$router->get ('/admin/crm',                            fn($r) => $webCrm->index($r));
+$router->post('/admin/crm',                            fn($r) => $webCrm->create($r), [$csrf]);
+$router->post('/admin/crm/{id}',                       fn($r) => $webCrm->update($r), [$csrf]);
 $router->get ('/admin/game/regions',                   fn($r) => $webGameAdmin->regions($r));
 $router->get ('/admin/game/regions/activity',          fn($r) => $webGameAdmin->regionsActivity($r));
 $router->get ('/admin/game/map',                       fn($r) => $webGameAdmin->map($r));
