@@ -81,6 +81,7 @@ final class MailService
             'verify_email'    => 'Bestätige deine E-Mail-Adresse',
             'reset_password'  => 'Passwort zurücksetzen',
             'account_deleted' => 'Dein CYBERRIDE-Konto wurde gelöscht',
+            'club_verify_invite' => 'Euer Verein bei CYBERRIDE — Aktivierungslink',
             default           => 'CYBERRIDE',
         };
     }

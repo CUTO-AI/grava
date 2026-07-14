@@ -5,8 +5,10 @@ namespace App\Controllers\Api;
 
 use App\Game\Crew\CrewException;
 use App\Game\Crew\CrewService;
+use App\Growth\ClubProspectRepository;
 use App\Http\Request;
 use App\Http\Response;
+use App\Support\Clock;
 
 /**
  * HTTP-Adapter für /game/crews (Spec §5, Stufe 2). Logik liegt in
@@ -14,7 +16,10 @@ use App\Http\Response;
  */
 final class CrewController
 {
-    public function __construct(private readonly CrewService $crews) {}
+    public function __construct(
+        private readonly CrewService $crews,
+        private readonly ?ClubProspectRepository $prospects = null,
+    ) {}
 
     public function create(Request $req): void
     {
@@ -66,7 +71,16 @@ final class CrewController
     {
         $uid   = $this->userId($req);
         $token = (string)$req->input('token', '');
-        $this->run(fn () => Response::json($this->crews->activateVerifiedCrew($uid, $token)));
+        $this->run(function () use ($uid, $token): void {
+            $payload = $this->crews->activateVerifiedCrew($uid, $token);
+            // Outreach-Funnel: Prospect (falls per CRM eingeladen) auf „aktiviert".
+            $this->prospects?->markActivatedByToken(
+                trim($token),
+                (int)$payload['id'],
+                Clock::nowUtc()->format('Y-m-d H:i:s.v'),
+            );
+            Response::json($payload);
+        });
     }
 
     public function leave(Request $req): void

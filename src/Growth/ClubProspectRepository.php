@@ -130,6 +130,45 @@ final class ClubProspectRepository
         return $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    /** @return array<string,mixed>|null */
+    public function byInviteToken(string $token): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM club_prospect WHERE invite_token = ?');
+        $st->execute([$token]);
+        $r = $st->fetch(PDO::FETCH_ASSOC);
+        return $r === false ? null : $r;
+    }
+
+    /** Markiert einen Prospect als eingeladen (Token gesetzt, Status/Zeitstempel). */
+    public function setInvited(int $id, string $token, string $invitedAt): void
+    {
+        $this->pdo->prepare(
+            "UPDATE club_prospect SET invite_token = ?, status = 'invited', invited_at = ? WHERE id = ?"
+        )->execute([$token, $invitedAt, $id]);
+    }
+
+    /** Link geöffnet (Aktivierungslink abgerufen); hebt den Status nur vorwärts. */
+    public function markLinkOpenedByToken(string $token, string $at): void
+    {
+        $this->pdo->prepare(
+            "UPDATE club_prospect
+                SET link_opened_at = COALESCE(link_opened_at, ?),
+                    status = CASE WHEN status IN ('prospect','invited','delivered','email_opened')
+                                  THEN 'link_opened' ELSE status END
+              WHERE invite_token = ?"
+        )->execute([$at, $token]);
+    }
+
+    /** Aktiviert (verifizierte Crew erzeugt) → Endstufe verknüpfen. */
+    public function markActivatedByToken(string $token, int $crewId, string $at): void
+    {
+        $this->pdo->prepare(
+            "UPDATE club_prospect
+                SET activated_at = COALESCE(activated_at, ?), crew_id = ?, status = 'activated'
+              WHERE invite_token = ?"
+        )->execute([$at, $crewId, $token]);
+    }
+
     /** @return array<string,int> Anzahl je Status (Funnel-Übersicht). */
     public function statusCounts(): array
     {

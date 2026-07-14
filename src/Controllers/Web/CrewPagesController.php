@@ -5,8 +5,10 @@ namespace App\Controllers\Web;
 
 use App\Config\Config;
 use App\Game\Crew\CrewService;
+use App\Growth\ClubProspectRepository;
 use App\Http\Request;
 use App\Http\Response;
+use App\Support\Clock;
 
 /**
  * Öffentliche Crew-Einladungs-Landingpage `GET /c/{code}`.
@@ -28,6 +30,7 @@ final class CrewPagesController
         private readonly Config $config,
         private readonly CrewService $crews,
         string $viewsPath,
+        private readonly ?ClubProspectRepository $prospects = null,
     ) {
         $this->view = new WebView($viewsPath);
     }
@@ -66,6 +69,10 @@ final class CrewPagesController
         if (preg_match('/^[a-f0-9]{32}$/i', $token) !== 1) {
             Response::redirect('/');
         }
+        // Outreach-Funnel: „Link geöffnet" (nur der App-lose Browser-Fall landet
+        // hier; bei installierter App fängt iOS den Link ab → dann greift erst
+        // das „aktiviert"-Signal). CrewInvite_Onboarding_Spec §8.3.
+        $this->prospects?->markLinkOpenedByToken($token, Clock::nowUtc()->format('Y-m-d H:i:s.v'));
         $this->view->render('crew/activate', [
             '_title'        => 'Vereins-Account aktivieren · CYBERRIDE',
             'open_url'      => 'https://cyberride.world/verein-aktivieren/' . rawurlencode($token),

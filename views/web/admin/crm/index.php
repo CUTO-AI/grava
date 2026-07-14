@@ -57,6 +57,19 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
 </section>
 
 <section class="card">
+    <h2>CSV-Import (Batch)</h2>
+    <p class="muted">Kopfzeile mit Spaltennamen, dann eine Zeile je Verein. Erlaubt: <code>name,landkreis,discipline,contact_email,official_source_url,register_court,register_no,is_charitable</code>. Dedup über Name+Landkreis (Upsert). „Nur Vorschau" zählt, ohne zu speichern.</p>
+    <form method="post" action="/admin/crm/import">
+        <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
+        <p><textarea name="csv" rows="4" style="width:100%" placeholder="name,landkreis,contact_email&#10;RSV Rosenheim,Rosenheim,vorstand@rsv-rosenheim.de"></textarea></p>
+        <p>
+            <label><input type="checkbox" name="dryrun" value="1"> Nur Vorschau (nicht speichern)</label>
+            <button type="submit">Importieren</button>
+        </p>
+    </form>
+</section>
+
+<section class="card">
     <h2><?= count($prospects) ?> Vereine</h2>
     <?php if ($prospects === []): ?>
         <p class="muted">Keine Einträge. Über das Formular oben anlegen.</p>
@@ -92,6 +105,14 @@ $e = static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
                     </form>
                 </td>
                 <td class="muted" style="font-size:.8rem">
+                    <?php if (empty($p['activated_at']) && !empty($p['contact_email'])): ?>
+                        <form method="post" action="/admin/crm/<?= (int)$p['id'] ?>/invite" class="inline-form"
+                              onsubmit="return confirm('Aktivierungslink an <?= $e($p['contact_email']) ?> senden?');">
+                            <input type="hidden" name="_csrf" value="<?= $e($_csrf) ?>">
+                            <button type="submit"><?= empty($p['invited_at']) ? 'Einladen' : 'Erneut einladen' ?></button>
+                        </form>
+                    <?php endif; ?>
+                    <?php if (!empty($p['invited_at'])): ?>✉️ eingeladen<?php endif; ?>
                     <?php if (!empty($p['link_opened_at'])): ?>🔗 Link geöffnet<?php endif; ?>
                     <?php if (!empty($p['activated_at'])): ?>✅ aktiviert<?php endif; ?>
                 </td>

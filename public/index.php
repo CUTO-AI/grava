@@ -466,7 +466,8 @@ $apiRegion = new \App\Controllers\Api\RegionController(
 $apiPrivacyZone = new \App\Controllers\Api\PrivacyZoneController($privacyZoneSvc);
 // $gameCrewRepo, $gameFactionRepo, $gameCrewSvc wurden bereits oben (vor dem
 // CLI-Dispatch) verdrahtet.
-$apiCrew = new \App\Controllers\Api\CrewController($gameCrewSvc);
+$clubProspectRepo = new \App\Growth\ClubProspectRepository(Db::pdo());
+$apiCrew = new \App\Controllers\Api\CrewController($gameCrewSvc, $clubProspectRepo);
 $crewBoardSvc = new \App\Game\CrewLeaderboardService($gameCrewRepo);
 $apiCrewBoard = new \App\Controllers\Api\CrewLeaderboardController($crewBoardSvc);
 $apiCrewLogo = new \App\Controllers\Api\CrewLogoController(
@@ -507,7 +508,7 @@ $webEngage   = new EngagementPagesController($webSession, $likeServ, $commentSer
 $webStrava   = new StravaPagesController($webSession, $auth, $stravaServ, $basePath . '/views');
 $webSurface  = new SurfaceCheckController($webSession, $auth, $routeSurface, $config, $basePath . '/views');
 $webReferral = new ReferralPagesController($config, $basePath . '/views');
-$webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $basePath . '/views');
+$webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $basePath . '/views', $clubProspectRepo);
 $webLegal    = new LegalPagesController($basePath . '/views');
 $webAdminRef = new AdminReferralPagesController($webSession, $auth, $referrals, $config, $basePath . '/views');
 $webLanding  = new LandingController($basePath . '/views');
@@ -548,7 +549,7 @@ $webCronAdmin = new \App\Controllers\Web\Admin\CronAdminController(
 // Vereins-CRM / Outreach (CrewInvite_Onboarding_Spec §8.3, Phase 3).
 $webCrm = new \App\Controllers\Web\Admin\ClubCrmController(
     $webSession, $auth, $adminGuard,
-    new \App\Growth\ClubProspectRepository(Db::pdo()), $basePath . '/views',
+    $clubProspectRepo, $gameCrewSvc, $mailer, $basePath . '/views',
 );
 // Backoffice Phase 0 (GameAdmin_Concept.md): RBAC-Rollenauflösung + Audit-Sicht +
 // Rollen-Verwaltung. $adminGuard liefert weiterhin `super` aus ADMIN_EMAILS.
@@ -945,6 +946,8 @@ $router->get ('/admin/game/crews',                     fn($r) => $webGameAdmin->
 // Vereins-CRM / Outreach (Phase 3)
 $router->get ('/admin/crm',                            fn($r) => $webCrm->index($r));
 $router->post('/admin/crm',                            fn($r) => $webCrm->create($r), [$csrf]);
+$router->post('/admin/crm/import',                     fn($r) => $webCrm->importCsv($r), [$csrf]);
+$router->post('/admin/crm/{id}/invite',                fn($r) => $webCrm->invite($r), [$csrf]);
 $router->post('/admin/crm/{id}',                       fn($r) => $webCrm->update($r), [$csrf]);
 $router->get ('/admin/game/regions',                   fn($r) => $webGameAdmin->regions($r));
 $router->get ('/admin/game/regions/activity',          fn($r) => $webGameAdmin->regionsActivity($r));

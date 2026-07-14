@@ -7,10 +7,13 @@ use App\Auth\AuthService;
 use App\Auth\WebSession;
 use App\Controllers\Web\WebView;
 use App\Game\Admin\AdminGuard;
+use App\Game\Crew\CrewService;
 use App\Growth\ClubProspectRepository;
 use App\Http\Middleware\Csrf;
 use App\Http\Request;
 use App\Http\Response;
+use App\Mail\MailService;
+use App\Support\Clock;
 
 /**
  * Vereins-CRM / Outreach-Backoffice (CrewInvite_Onboarding_Spec §8.3, Phase 3).
@@ -29,6 +32,8 @@ final class ClubCrmController
         private readonly AuthService $auth,
         private readonly AdminGuard $guard,
         private readonly ClubProspectRepository $prospects,
+        private readonly CrewService $crews,
+        private readonly MailService $mail,
         string $viewsPath,
     ) {
         $this->view = new WebView($viewsPath);
@@ -77,6 +82,82 @@ final class ClubCrmController
         }
         $this->prospects->update($id, $this->formData($req, includeStatus: true));
         $this->flash('Aktualisiert.');
+        Response::redirect('/admin/crm');
+    }
+
+    /** POST /admin/crm/{id}/invite — Aktivierungslink minten + per Mail versenden. */
+    public function invite(Request $req): void
+    {
+        $this->requireAdmin();
+        $id = (int)($req->routeParams['id'] ?? 0);
+        $p = $this->prospects->byId($id);
+        if ($p === null) {
+            Response::error('not_found', 'Nicht gefunden.', 404);
+        }
+        $email = trim((string)($p['contact_email'] ?? ''));
+        if ($email === '') {
+            $this->flash('Keine Kontakt-E-Mail hinterlegt — bitte zuerst ergänzen.');
+            Response::redirect('/admin/crm');
+        }
+        $name = (string)$p['name'];
+        $token = $this->crews->issueVerifyInvite([
+            'display_name'        => mb_substr($name, 0, 40),
+            'org_name'            => $name,
+            'register_court'      => $p['register_court'] ?? null,
+            'register_no'         => $p['register_no'] ?? null,
+            'is_charitable'       => (int)($p['is_charitable'] ?? 0) === 1,
+            'official_source_url' => $p['official_source_url'] ?? null,
+            'contact_email'       => $email,
+            'membership_url'      => null,
+        ]);
+        $this->prospects->setInvited($id, $token, Clock::nowUtc()->format('Y-m-d H:i:s.v'));
+        $this->mail->send($email, $name, 'club_verify_invite', [
+            'org_name'     => $name,
+            'activate_url' => 'https://cyberride.world/verein-aktivieren/' . $token,
+            'app_name'     => 'CYBERRIDE',
+        ]);
+        $this->flash('Einladung gesendet an ' . $email . '.');
+        Response::redirect('/admin/crm');
+    }
+
+    /** POST /admin/crm/import — CSV-Batch-Import (Upsert/Dedup); `dryrun` = nur Vorschau. */
+    public function importCsv(Request $req): void
+    {
+        $this->requireAdmin();
+        $raw = trim((string)$req->input('csv', ''));
+        $dry = $req->input('dryrun', null) !== null;
+        $lines = preg_split('/\r\n|\r|\n/', $raw) ?: [];
+        if (count($lines) < 2) {
+            $this->flash('CSV leer oder ohne Datenzeilen (Kopfzeile + mind. 1 Zeile erwartet).');
+            Response::redirect('/admin/crm');
+        }
+        $allowed = ['name', 'landkreis', 'discipline', 'contact_email', 'official_source_url', 'register_court', 'register_no', 'is_charitable'];
+        $header = array_map('trim', str_getcsv((string)array_shift($lines)));
+        $ok = 0; $skipped = 0;
+        foreach ($lines as $ln) {
+            if (trim($ln) === '') {
+                continue;
+            }
+            $cells = str_getcsv($ln);
+            $row = [];
+            foreach ($header as $i => $col) {
+                if (in_array($col, $allowed, true)) {
+                    $row[$col] = trim((string)($cells[$i] ?? ''));
+                }
+            }
+            if (($row['name'] ?? '') === '') {
+                $skipped++;
+                continue;
+            }
+            if (isset($row['is_charitable'])) {
+                $row['is_charitable'] = in_array(mb_strtolower((string)$row['is_charitable']), ['1', 'true', 'ja', 'yes', 'x'], true);
+            }
+            if (!$dry) {
+                $this->prospects->upsert($row);
+            }
+            $ok++;
+        }
+        $this->flash(($dry ? '[Vorschau] ' : '') . "{$ok} Zeilen ok, {$skipped} übersprungen (ohne Name).");
         Response::redirect('/admin/crm');
     }
 
