@@ -508,7 +508,7 @@ $webEngage   = new EngagementPagesController($webSession, $likeServ, $commentSer
 $webStrava   = new StravaPagesController($webSession, $auth, $stravaServ, $basePath . '/views');
 $webSurface  = new SurfaceCheckController($webSession, $auth, $routeSurface, $config, $basePath . '/views');
 $webReferral = new ReferralPagesController($config, $basePath . '/views');
-$webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $basePath . '/views', $clubProspectRepo);
+$webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $auth, $cookieAuth, $webSession, $clubProspectRepo, $basePath . '/views');
 $webLegal    = new LegalPagesController($basePath . '/views');
 $webAdminRef = new AdminReferralPagesController($webSession, $auth, $referrals, $config, $basePath . '/views');
 $webLanding  = new LandingController($basePath . '/views');
@@ -926,6 +926,8 @@ $router->get ('/i/{code}',                               fn($r) => $webReferral-
 // Fallback-Seite mit Crew-Name + „In der App öffnen"/App-Store-Link.
 $router->get ('/c/{code}',                               fn($r) => $webCrewPages->landing($r));
 $router->get ('/verein-aktivieren/{token}',              fn($r) => $webCrewPages->activate($r));
+$router->post('/verein-aktivieren/{token}',              fn($r) => $webCrewPages->activateSubmit($r), [$csrf]);
+$router->get ('/verein',                                 fn($r) => $webCrewPages->cockpit($r));
 
 // ---- Admin-Auswertung Empfehlungen (M7) — ADMIN_EMAILS-Gate ----
 $router->get ('/admin/referrals',                        fn($r) => $webAdminRef->index($r));

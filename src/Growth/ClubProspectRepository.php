@@ -159,14 +159,14 @@ final class ClubProspectRepository
         )->execute([$at, $token]);
     }
 
-    /** Aktiviert (verifizierte Crew erzeugt) → Endstufe verknüpfen. */
-    public function markActivatedByToken(string $token, int $crewId, string $at): void
+    /** Aktiviert (verifizierte Crew erzeugt) → Endstufe verknüpfen (inkl. Owner). */
+    public function markActivatedByToken(string $token, int $crewId, int $ownerUserId, string $at): void
     {
         $this->pdo->prepare(
             "UPDATE club_prospect
-                SET activated_at = COALESCE(activated_at, ?), crew_id = ?, status = 'activated'
+                SET activated_at = COALESCE(activated_at, ?), crew_id = ?, owner_user_id = ?, status = 'activated'
               WHERE invite_token = ?"
-        )->execute([$at, $crewId, $token]);
+        )->execute([$at, $crewId, $ownerUserId, $token]);
     }
 
     /** @return array<string,int> Anzahl je Status (Funnel-Übersicht). */

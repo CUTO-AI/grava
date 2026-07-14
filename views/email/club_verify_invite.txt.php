@@ -13,7 +13,7 @@ viele Vereine tun sich schwer, neue Mitglieder zu gewinnen. Genau da setzen wir 
 
 Für den Verein kostenlos und fair (kein Bezahl-Vorteil, reines Radfahren aus eigener Kraft) — für eingetragene, gemeinnützige Vereine.
 
-Vereins-Account aktivieren:
+Mehr erfahren / Verein aktivieren:
 <?= $activate_url ?>
 
 

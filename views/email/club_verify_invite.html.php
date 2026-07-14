@@ -16,7 +16,7 @@ include __DIR__ . '/_head.php';
             <li style="margin:0 0 6px;">Offizieller, geschützter Vereins-Account — nur ihr führt euren Verein.</li>
         </ul>
         <p style="margin:0 0 14px;">Für den Verein <strong>kostenlos</strong> und <strong>fair</strong> (kein Bezahl-Vorteil, reines Radfahren aus eigener Kraft) — für eingetragene, gemeinnützige Vereine.</p>
-<?php $button_url = $activate_url; $button_label = 'Vereins-Account aktivieren'; include __DIR__ . '/_button.php'; ?>
+<?php $button_url = $activate_url; $button_label = 'Mehr erfahren'; include __DIR__ . '/_button.php'; ?>
         <p style="margin:14px 0 6px;font-size:13px;color:#7C8CA3;">Falls der Button nicht funktioniert, kopiere diese URL in deinen Browser:</p>
         <p style="margin:0 0 6px;font-size:13px;word-break:break-all;"><a href="<?= $e($activate_url) ?>" style="color:#00E5FF;text-decoration:none;"><?= $e($activate_url) ?></a></p>
         <p style="margin:14px 0 0;font-size:13px;color:#7C8CA3;">Kein Interesse? Eine kurze Antwort auf diese Mail genügt, dann melden wir uns nicht wieder.</p>

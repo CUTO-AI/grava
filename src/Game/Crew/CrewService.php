@@ -128,6 +128,30 @@ final class CrewService
         });
     }
 
+    /**
+     * Öffentliche Vorbelegungs-Infos zu einem Aktivierungs-Token (für das
+     * Web-Aktivierungs-Formular, CrewInvite_Onboarding_Spec §10). null =
+     * unbekannt; `used` = bereits eingelöst.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function verifyInviteInfo(string $token): ?array
+    {
+        $t = $this->crews->verifyTokenByToken(trim($token));
+        if ($t === null) {
+            return null;
+        }
+        return [
+            'display_name'   => (string)$t['display_name'],
+            'org_name'       => (string)$t['org_name'],
+            'register_court' => $t['register_court'] !== null ? (string)$t['register_court'] : null,
+            'register_no'    => $t['register_no'] !== null ? (string)$t['register_no'] : null,
+            'is_charitable'  => (int)$t['is_charitable'] === 1,
+            'contact_email'  => $t['contact_email'] !== null ? (string)$t['contact_email'] : null,
+            'used'           => $t['used_at'] !== null,
+        ];
+    }
+
     /** @return array<string,mixed> */
     public function join(int $userId, string $joinCode, ?DateTimeImmutable $now = null): array
     {

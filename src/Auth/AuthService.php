@@ -148,6 +148,41 @@ final class AuthService
     }
 
     /**
+     * Konto-Anlage im Vereins-Aktivierungs-Flow (CrewInvite_Onboarding_Spec §10.4):
+     * Die E-Mail ist per Aktivierungs-Token bereits nachgewiesen → Konto wird
+     * SOFORT als verifiziert angelegt, OHNE Bestätigungsmail. Gibt die userId
+     * zurück. Existiert bereits ein Konto zur E-Mail, wird dessen id geliefert
+     * (der Aufrufer entscheidet dann über den Login-Pfad).
+     */
+    /** @return int|null userId, falls ein Konto zur E-Mail existiert. */
+    public function userIdByEmail(string $email): ?int
+    {
+        $stmt = Db::pdo()->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        $r = $stmt->fetch();
+        return $r ? (int)$r['id'] : null;
+    }
+
+    public function registerVerifiedForClub(string $email, string $password, ?string $displayName): int
+    {
+        $pdo = Db::pdo();
+        $now = Clock::nowUtcString();
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        if ($r = $stmt->fetch()) {
+            return (int)$r['id'];
+        }
+        $publicId = Uuid::v4();
+        $hash = $this->passwords->hash($password);
+        $ins = $pdo->prepare(
+            'INSERT INTO users (public_id, email, password_hash, display_name, status, email_verified_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, "active", ?, ?, ?)'
+        );
+        $ins->execute([$publicId, $email, $hash, $displayName, $now, $now, $now]);
+        return (int)$pdo->lastInsertId();
+    }
+
+    /**
      * @return array{tokens:array,user:array}
      * @throws AuthException
      */

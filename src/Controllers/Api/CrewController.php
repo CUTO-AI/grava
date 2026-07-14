@@ -77,6 +77,7 @@ final class CrewController
             $this->prospects?->markActivatedByToken(
                 trim($token),
                 (int)$payload['id'],
+                $uid,
                 Clock::nowUtc()->format('Y-m-d H:i:s.v'),
             );
             Response::json($payload);
