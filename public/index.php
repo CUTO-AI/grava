@@ -775,6 +775,7 @@ $router->get("{$apiBase}/game/ingest/jobs/{job_id}", fn($r) => $apiGame->ingestJ
 $router->get("{$apiBase}/game/rides/{route_id}/summary", fn($r) => $apiGame->rideSummary($r), [$requireBearer]);
 $router->get ("{$apiBase}/game/crews/me",          fn($r) => $apiCrew->me($r),       [$requireBearer]);
 $router->post("{$apiBase}/game/crews/join",        fn($r) => $apiCrew->join($r),     [$requireBearer]);
+$router->post("{$apiBase}/game/crews/activate",    fn($r) => $apiCrew->activate($r), [$requireBearer]);
 $router->post("{$apiBase}/game/crews/leave",       fn($r) => $apiCrew->leave($r),    [$requireBearer]);
 $router->post("{$apiBase}/game/crews/transfer",    fn($r) => $apiCrew->transfer($r), [$requireBearer]);
 $router->post("{$apiBase}/game/crews",             fn($r) => $apiCrew->create($r),   [$requireBearer]);
@@ -915,6 +916,7 @@ $router->get ('/i/{code}',                               fn($r) => $webReferral-
 // iOS fängt /c/{code} als Universal Link ab; im Browser ist dies die
 // Fallback-Seite mit Crew-Name + „In der App öffnen"/App-Store-Link.
 $router->get ('/c/{code}',                               fn($r) => $webCrewPages->landing($r));
+$router->get ('/verein-aktivieren/{token}',              fn($r) => $webCrewPages->activate($r));
 
 // ---- Admin-Auswertung Empfehlungen (M7) — ADMIN_EMAILS-Gate ----
 $router->get ('/admin/referrals',                        fn($r) => $webAdminRef->index($r));

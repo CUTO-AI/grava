@@ -57,6 +57,18 @@ final class CrewController
         $this->run(fn () => Response::json($this->crews->join($uid, $code)));
     }
 
+    /**
+     * POST /game/crews/activate — löst ein Vereins-Aktivierungs-Token ein
+     * (verifizierter Vereins-Account, CrewInvite_Onboarding_Spec §8.1). Der
+     * eingeloggte Nutzer wird Captain der erzeugten, verifizierten Crew.
+     */
+    public function activate(Request $req): void
+    {
+        $uid   = $this->userId($req);
+        $token = (string)$req->input('token', '');
+        $this->run(fn () => Response::json($this->crews->activateVerifiedCrew($uid, $token)));
+    }
+
     public function leave(Request $req): void
     {
         $uid = $this->userId($req);

@@ -60,6 +60,74 @@ final class CrewService
         });
     }
 
+    /**
+     * Erzeugt ein vereins-gebundenes Aktivierungs-Token (operator-vergeben, z. B.
+     * per CLI `crews:verify-invite`). Wird dem Vorstand geschickt; beim Einlösen
+     * über /verein-aktivieren/{token} entsteht die verifizierte Crew.
+     *
+     * @param array<string,mixed> $fields display_name, org_name, register_court,
+     *        register_no, is_charitable, official_source_url, contact_email, membership_url
+     */
+    public function issueVerifyInvite(array $fields): string
+    {
+        $fields['display_name'] = $this->validateName((string)($fields['display_name'] ?? $fields['org_name'] ?? ''));
+        if (trim((string)($fields['org_name'] ?? '')) === '') {
+            throw CrewException::validation('org_name erforderlich.');
+        }
+        $token = bin2hex(random_bytes(16)); // 32 hex
+        $this->crews->createVerifyToken($token, $fields);
+        return $token;
+    }
+
+    /**
+     * Löst ein Aktivierungs-Token ein: erzeugt die verifizierte Crew mit dem
+     * einlösenden Nutzer als Captain. Einmalig (used_at). CrewInvite_Onboarding_Spec §8.1.
+     *
+     * @return array<string,mixed>
+     */
+    public function activateVerifiedCrew(int $userId, string $token, ?DateTimeImmutable $now = null): array
+    {
+        $token = trim($token);
+        $now ??= Clock::nowUtc();
+
+        return $this->transactional(function () use ($userId, $token, $now): array {
+            $t = $this->crews->verifyTokenByToken($token);
+            if ($t === null) {
+                throw CrewException::notFound('Aktivierungslink ungültig.');
+            }
+            if ($t['used_at'] !== null) {
+                throw CrewException::validation('Dieser Aktivierungslink wurde bereits eingelöst.');
+            }
+
+            if ($this->crews->membershipOf($userId) !== null) {
+                $this->leaveInternal($userId, $now); // Captain-Regel greift hier
+            }
+
+            $slug     = $this->uniqueSlug((string)$t['display_name']);
+            $joinCode = $this->uniqueJoinCode();
+            $claimant = $this->crews->createGroupClaimant();
+            $crewId   = $this->crews->createCrew($claimant, (string)$t['display_name'], $slug, $userId, $joinCode);
+            $this->crews->addMember($userId, $crewId, 'captain');
+
+            $this->crews->applyVerification(
+                $crewId,
+                $now->format('Y-m-d H:i:s.v'),
+                (string)$t['org_name'],
+                $t['register_court'] !== null ? (string)$t['register_court'] : null,
+                $t['register_no'] !== null ? (string)$t['register_no'] : null,
+                (int)$t['is_charitable'] === 1,
+                $t['official_source_url'] !== null ? (string)$t['official_source_url'] : null,
+                $t['contact_email'] !== null ? (string)$t['contact_email'] : null,
+                $t['membership_url'] !== null ? (string)$t['membership_url'] : null,
+            );
+            $this->crews->markVerifyTokenUsed($token, $crewId, $now->format('Y-m-d H:i:s.v'));
+
+            $this->recomputeUserEdges($userId, $now);
+            $this->audit->record($userId, 'crew_verify_activate', $slug);
+            return $this->crewPayload($crewId, true);
+        });
+    }
+
     /** @return array<string,mixed> */
     public function join(int $userId, string $joinCode, ?DateTimeImmutable $now = null): array
     {
@@ -506,6 +574,13 @@ final class CrewService
             'logo_updated_at' => isset($crew['logo_updated_at']) && $crew['logo_updated_at'] !== null
                 ? Clock::toIso8601(substr((string)$crew['logo_updated_at'], 0, 19))
                 : null,
+            // Verifizierter Vereins-Account (CrewInvite_Onboarding_Spec §8) — öffentlich.
+            'verified'          => ($crew['verified_at'] ?? null) !== null,
+            'verified_org_name' => isset($crew['verified_org_name']) && $crew['verified_org_name'] !== null
+                ? (string)$crew['verified_org_name'] : null,
+            'is_charitable'     => (int)($crew['is_charitable'] ?? 0) === 1,
+            'membership_url'    => isset($crew['membership_url']) && $crew['membership_url'] !== null
+                ? (string)$crew['membership_url'] : null,
             'members'         => array_map(
                 static fn (array $m): array => [
                     'user_id' => $m['user_id'],

@@ -54,4 +54,22 @@ final class CrewPagesController
             'app_store_url' => (string)$this->config->get('APP_STORE_URL', ''),
         ]);
     }
+
+    /**
+     * Web-Fallback für den Vereins-Aktivierungslink `GET /verein-aktivieren/{token}`.
+     * iOS fängt den Universal Link ab und aktiviert in der App; im Browser bewerben
+     * wir die App (kein Token-Detail-Leak). Aktivierung erfordert die eingeloggte App.
+     */
+    public function activate(Request $req): void
+    {
+        $token = (string)($req->routeParams['token'] ?? '');
+        if (preg_match('/^[a-f0-9]{32}$/i', $token) !== 1) {
+            Response::redirect('/');
+        }
+        $this->view->render('crew/activate', [
+            '_title'        => 'Vereins-Account aktivieren · CYBERRIDE',
+            'open_url'      => 'https://cyberride.world/verein-aktivieren/' . rawurlencode($token),
+            'app_store_url' => (string)$this->config->get('APP_STORE_URL', ''),
+        ]);
+    }
 }

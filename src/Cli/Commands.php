@@ -148,6 +148,8 @@ final class Commands
 
             case 'game:heal-crews':
                 return $this->healCrews();
+            case 'crews:verify-invite':
+                return $this->crewsVerifyInvite($argv);
 
             case 'game:backfill-speed':
                 return $this->backfillSpeed($argv);
@@ -388,6 +390,45 @@ final class Commands
             echo "Crew '{$h['slug']}': Captain → User #{$h['promoted_user_id']}.\n";
         }
         echo 'Geheilt: ' . count($healed) . " Crew(s).\n";
+        return 0;
+    }
+
+    /**
+     * Erzeugt ein Vereins-Aktivierungs-Token (verifizierter Vereins-Account,
+     * CrewInvite_Onboarding_Spec §8.1). Der Link geht per Mail an den Vorstand.
+     *
+     * Nutzung: crews:verify-invite --name="RSV Rosenheim" --org="Radsportverein
+     *   Rosenheim e.V." [--court="Amtsgericht Traunstein"] [--regno="VR 12345"]
+     *   [--charitable=1] [--source=https://rsv-rosenheim.de/impressum]
+     *   [--email=vorstand@rsv-rosenheim.de] [--membership=https://.../mitglied-werden]
+     *
+     * @param list<string> $argv
+     */
+    private function crewsVerifyInvite(array $argv): int
+    {
+        if ($this->crewService === null) {
+            echo "CrewService nicht verfügbar.\n";
+            return 1;
+        }
+        $opts = $this->parseOptions($argv);
+        $org  = trim((string)($opts['org'] ?? ''));
+        $name = trim((string)($opts['name'] ?? $org));
+        if ($org === '') {
+            echo "Nutzung: crews:verify-invite --name=\"<Anzeige, <=40>\" --org=\"<voller e.V.-Name>\" [--court= --regno= --charitable=1 --source= --email= --membership=]\n";
+            return 1;
+        }
+        $token = $this->crewService->issueVerifyInvite([
+            'display_name'        => $name,
+            'org_name'            => $org,
+            'register_court'      => isset($opts['court']) ? (string)$opts['court'] : null,
+            'register_no'         => isset($opts['regno']) ? (string)$opts['regno'] : null,
+            'is_charitable'       => (string)($opts['charitable'] ?? '1') === '1',
+            'official_source_url' => isset($opts['source']) ? (string)$opts['source'] : null,
+            'contact_email'       => isset($opts['email']) ? (string)$opts['email'] : null,
+            'membership_url'      => isset($opts['membership']) ? (string)$opts['membership'] : null,
+        ]);
+        echo "Aktivierungslink für „{$org}\":\n";
+        echo "https://cyberride.world/verein-aktivieren/{$token}\n";
         return 0;
     }
 

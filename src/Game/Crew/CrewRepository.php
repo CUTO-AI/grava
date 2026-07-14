@@ -43,6 +43,68 @@ final class CrewRepository
         $this->pdo->prepare('DELETE FROM game_crew WHERE id = ?')->execute([$crewId]);
     }
 
+    // --- Verifizierter Vereins-Account (CrewInvite_Onboarding_Spec §8) ---
+
+    /** Markiert eine Crew als verifizierten Verein und setzt die Vereinsfelder. */
+    public function applyVerification(
+        int $crewId,
+        string $verifiedAt,
+        string $orgName,
+        ?string $registerCourt,
+        ?string $registerNo,
+        bool $isCharitable,
+        ?string $officialSourceUrl,
+        ?string $contactEmail,
+        ?string $membershipUrl,
+    ): void {
+        $this->pdo->prepare(
+            'UPDATE game_crew
+                SET verified_at = ?, verified_org_name = ?, register_court = ?, register_no = ?,
+                    is_charitable = ?, official_source_url = ?, contact_email = ?, membership_url = ?
+              WHERE id = ?'
+        )->execute([
+            $verifiedAt, $orgName, $registerCourt, $registerNo,
+            $isCharitable ? 1 : 0, $officialSourceUrl, $contactEmail, $membershipUrl, $crewId,
+        ]);
+    }
+
+    /** Erzeugt ein vereins-gebundenes Aktivierungs-Token (outbound-Einladung). */
+    public function createVerifyToken(string $token, array $fields): void
+    {
+        $this->pdo->prepare(
+            'INSERT INTO game_crew_verify_token
+                (token, display_name, org_name, register_court, register_no, is_charitable,
+                 official_source_url, contact_email, membership_url)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        )->execute([
+            $token,
+            (string)$fields['display_name'],
+            (string)$fields['org_name'],
+            $fields['register_court'] ?? null,
+            $fields['register_no'] ?? null,
+            !empty($fields['is_charitable']) ? 1 : 0,
+            $fields['official_source_url'] ?? null,
+            $fields['contact_email'] ?? null,
+            $fields['membership_url'] ?? null,
+        ]);
+    }
+
+    /** @return array<string,mixed>|null Nur unbenutzte Tokens gelten. */
+    public function verifyTokenByToken(string $token): ?array
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM game_crew_verify_token WHERE token = ?');
+        $stmt->execute([$token]);
+        $r = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $r === false ? null : $r;
+    }
+
+    public function markVerifyTokenUsed(string $token, int $crewId, string $usedAt): void
+    {
+        $this->pdo->prepare(
+            'UPDATE game_crew_verify_token SET used_at = ?, created_crew_id = ? WHERE token = ?'
+        )->execute([$usedAt, $crewId, $token]);
+    }
+
     /** @return array<string,mixed>|null */
     public function crewById(int $crewId): ?array
     {
