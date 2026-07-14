@@ -174,12 +174,34 @@ final class AuthService
         }
         $publicId = Uuid::v4();
         $hash = $this->passwords->hash($password);
+        // Eindeutigen public_handle aus dem Vereinsnamen ableiten — der Vorstand
+        // wird Crew-Captain, und die Captain-Erkennung setzt einen Handle voraus.
+        $base = strtolower((string)($displayName ?? ''));
+        $base = (string)preg_replace('/[^a-z0-9_]+/', '_', $base);
+        $base = trim((string)preg_replace('/_+/', '_', $base), '_');
+        $base = substr($base, 0, 24);
+        if (strlen($base) < 3) {
+            $base = 'verein';
+        }
         $ins = $pdo->prepare(
-            'INSERT INTO users (public_id, email, password_hash, display_name, status, email_verified_at, created_at, updated_at)
-             VALUES (?, ?, ?, ?, "active", ?, ?, ?)'
+            'INSERT INTO users (public_id, email, password_hash, display_name, public_handle, status, email_verified_at, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, "active", ?, ?, ?)'
         );
-        $ins->execute([$publicId, $email, $hash, $displayName, $now, $now, $now]);
-        return (int)$pdo->lastInsertId();
+        for ($attempt = 0; $attempt < 8; $attempt++) {
+            $handle = $attempt === 0 ? $base : substr($base, 0, 20) . (string)random_int(10, 9999);
+            try {
+                $ins->execute([$publicId, $email, $hash, $displayName, $handle, $now, $now, $now]);
+                return (int)$pdo->lastInsertId();
+            } catch (\PDOException $e) {
+                // 1062 = UNIQUE-Verletzung; bei public_handle neuen Kandidaten
+                // versuchen (E-Mail-Kollision ist durch den Vorab-Check oben aus-
+                // geschlossen). Bei anderem Fehler durchreichen.
+                if ((int)($e->errorInfo[1] ?? 0) !== 1062) {
+                    throw $e;
+                }
+            }
+        }
+        throw new \RuntimeException('Konnte keinen eindeutigen Handle vergeben.');
     }
 
     /**
