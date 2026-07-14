@@ -70,12 +70,28 @@ final class CrewPagesController
         $this->prospects->markLinkOpenedByToken($token, Clock::nowUtc()->format('Y-m-d H:i:s.v'));
 
         $loggedIn = $this->webSession->resolve() !== null;
+        $suggested = ($info !== null && empty($info['used']) && !$loggedIn)
+            ? $this->auth->suggestFreeHandle((string)($info['org_name'] ?? $info['display_name'] ?? 'verein'))
+            : '';
         $this->view->render('crew/activate', [
-            '_title'        => 'Verein aktivieren · CYBERRIDE',
-            'token'         => $token,
-            'info'          => $info,          // null = ungültig; ['used'=>true] = schon aktiviert
-            'logged_in'     => $loggedIn,
-            'app_store_url' => (string)$this->config->get('APP_STORE_URL', ''),
+            '_title'           => 'Verein aktivieren · CYBERRIDE',
+            'token'            => $token,
+            'info'             => $info,          // null = ungültig; ['used'=>true] = schon aktiviert
+            'logged_in'        => $loggedIn,
+            'suggested_handle' => $suggested,
+            'app_store_url'    => (string)$this->config->get('APP_STORE_URL', ''),
+        ]);
+    }
+
+    /** GET /verein/handle-verfuegbar?handle=… — Live-Prüfung fürs Formular (JSON). */
+    public function handleAvailable(Request $req): void
+    {
+        $h = strtolower(trim((string)($req->query['handle'] ?? '')));
+        $valid = $this->auth->handleFormatValid($h);
+        Response::json([
+            'handle'    => $h,
+            'valid'     => $valid,
+            'available' => $valid && !$this->auth->handleTaken($h),
         ]);
     }
 
@@ -117,7 +133,17 @@ final class CrewPagesController
                 $this->flash('Zu dieser E-Mail gibt es bereits ein Konto. Bitte melde dich an und öffne den Link erneut.');
                 Response::redirect('/login');
             }
-            $this->auth->registerVerifiedForClub($email, $pw, (string)($info['org_name'] ?? $info['display_name'] ?? ''));
+            // Gewählter Handle: validieren + Verfügbarkeit; bei Problem zurück.
+            $handle = strtolower(trim((string)$req->input('handle', '')));
+            if (!$this->auth->handleFormatValid($handle)) {
+                $this->flash('Bitte einen gültigen Handle wählen (3–30 Zeichen: a–z, 0–9, _).');
+                Response::redirect('/verein-aktivieren/' . rawurlencode($token));
+            }
+            if ($this->auth->handleTaken($handle)) {
+                $this->flash('Dieser Handle ist bereits vergeben — bitte einen anderen wählen.');
+                Response::redirect('/verein-aktivieren/' . rawurlencode($token));
+            }
+            $this->auth->registerVerifiedForClub($email, $pw, (string)($info['org_name'] ?? $info['display_name'] ?? ''), $handle);
             $result = $this->auth->login($email, $pw, 'web', $req->userAgent, $req->ipBinary());
             Csrf::rotateForAuthState();
             $this->cookieAuth->setFromTokens($result['tokens']);

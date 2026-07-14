@@ -154,6 +154,41 @@ final class AuthService
      * zurück. Existiert bereits ein Konto zur E-Mail, wird dessen id geliefert
      * (der Aufrufer entscheidet dann über den Login-Pfad).
      */
+    /** Handle-Format: 3–30 Zeichen a–z, 0–9, _. */
+    public function handleFormatValid(string $handle): bool
+    {
+        return preg_match('/^[a-z0-9_]{3,30}$/', $handle) === 1;
+    }
+
+    public function handleTaken(string $handle): bool
+    {
+        $s = Db::pdo()->prepare('SELECT 1 FROM users WHERE public_handle = ? LIMIT 1');
+        $s->execute([$handle]);
+        return $s->fetchColumn() !== false;
+    }
+
+    /** Freier Handle-Vorschlag aus einem Basistext (Vereinsname). */
+    public function suggestFreeHandle(string $base): string
+    {
+        $base = strtolower($base);
+        $base = (string)preg_replace('/[^a-z0-9_]+/', '_', $base);
+        $base = trim((string)preg_replace('/_+/', '_', $base), '_');
+        $base = substr($base, 0, 24);
+        if (strlen($base) < 3) {
+            $base = 'verein';
+        }
+        if (!$this->handleTaken($base)) {
+            return $base;
+        }
+        for ($i = 0; $i < 20; $i++) {
+            $c = substr($base, 0, 20) . (string)random_int(10, 9999);
+            if (!$this->handleTaken($c)) {
+                return $c;
+            }
+        }
+        return $base . (string)random_int(1000, 9999);
+    }
+
     /** @return int|null userId, falls ein Konto zur E-Mail existiert. */
     public function userIdByEmail(string $email): ?int
     {
@@ -163,7 +198,7 @@ final class AuthService
         return $r ? (int)$r['id'] : null;
     }
 
-    public function registerVerifiedForClub(string $email, string $password, ?string $displayName): int
+    public function registerVerifiedForClub(string $email, string $password, ?string $displayName, ?string $preferredHandle = null): int
     {
         $pdo = Db::pdo();
         $now = Clock::nowUtcString();
@@ -174,8 +209,9 @@ final class AuthService
         }
         $publicId = Uuid::v4();
         $hash = $this->passwords->hash($password);
-        // Eindeutigen public_handle aus dem Vereinsnamen ableiten — der Vorstand
-        // wird Crew-Captain, und die Captain-Erkennung setzt einen Handle voraus.
+        // public_handle: bevorzugt den vom Vorstand gewählten (validiert), sonst
+        // aus dem Vereinsnamen abgeleitet. Der Vorstand wird Crew-Captain, und die
+        // Captain-Erkennung setzt einen Handle voraus.
         $base = strtolower((string)($displayName ?? ''));
         $base = (string)preg_replace('/[^a-z0-9_]+/', '_', $base);
         $base = trim((string)preg_replace('/_+/', '_', $base), '_');
@@ -183,19 +219,24 @@ final class AuthService
         if (strlen($base) < 3) {
             $base = 'verein';
         }
+        // Kandidatenreihe: gewünschter Handle (falls gültig) → Basis → Basis+Zufall.
+        $candidates = [];
+        $pref = $preferredHandle !== null ? strtolower(trim($preferredHandle)) : null;
+        if ($pref !== null && $this->handleFormatValid($pref)) {
+            $candidates[] = $pref;
+        }
+        $candidates[] = $base;
+
         $ins = $pdo->prepare(
             'INSERT INTO users (public_id, email, password_hash, display_name, public_handle, status, email_verified_at, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, "active", ?, ?, ?)'
         );
-        for ($attempt = 0; $attempt < 8; $attempt++) {
-            $handle = $attempt === 0 ? $base : substr($base, 0, 20) . (string)random_int(10, 9999);
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $handle = $candidates[$attempt] ?? (substr($base, 0, 20) . (string)random_int(10, 9999));
             try {
                 $ins->execute([$publicId, $email, $hash, $displayName, $handle, $now, $now, $now]);
                 return (int)$pdo->lastInsertId();
             } catch (\PDOException $e) {
-                // 1062 = UNIQUE-Verletzung; bei public_handle neuen Kandidaten
-                // versuchen (E-Mail-Kollision ist durch den Vorab-Check oben aus-
-                // geschlossen). Bei anderem Fehler durchreichen.
                 if ((int)($e->errorInfo[1] ?? 0) !== 1062) {
                     throw $e;
                 }

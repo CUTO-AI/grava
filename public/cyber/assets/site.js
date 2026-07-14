@@ -39,4 +39,35 @@
   if (close) close.addEventListener('click', function () { setOpen(false); });
   if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) setOpen(false); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setOpen(false); });
+
+  // Vereins-Handle: Live-Verfügbarkeitsprüfung im Aktivierungs-Formular.
+  var handleInput = document.getElementById('crewHandle');
+  if (handleInput) {
+    var statusEl = document.getElementById('crewHandleStatus');
+    var submitBtn = document.getElementById('crewActivateBtn');
+    var checkUrl = handleInput.getAttribute('data-check-url');
+    var timer = null;
+    var setStatus = function (msg, ok) {
+      if (statusEl) { statusEl.textContent = msg; statusEl.style.color = ok === true ? '#7CE38B' : (ok === false ? '#FF6B8A' : ''); }
+      if (submitBtn) submitBtn.disabled = (ok === false);
+    };
+    var check = function () {
+      var h = (handleInput.value || '').toLowerCase();
+      if (handleInput.value !== h) handleInput.value = h; // Kleinschreibung erzwingen
+      if (!/^[a-z0-9_]{3,30}$/.test(h)) { setStatus('3–30 Zeichen: a–z, 0–9, _', false); return; }
+      setStatus('Prüfe Verfügbarkeit …', null);
+      fetch(checkUrl + '?handle=' + encodeURIComponent(h), { headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d && d.available) setStatus('„' + h + '" ist frei ✓', true);
+          else setStatus('„' + h + '" ist bereits vergeben', false);
+        })
+        .catch(function () { setStatus('', null); }); // Netzfehler: nicht blockieren, Server prüft final
+    };
+    handleInput.addEventListener('input', function () {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(check, 400);
+    });
+    check();
+  }
 })();

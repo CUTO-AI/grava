@@ -927,6 +927,7 @@ $router->get ('/i/{code}',                               fn($r) => $webReferral-
 $router->get ('/c/{code}',                               fn($r) => $webCrewPages->landing($r));
 $router->get ('/verein-aktivieren/{token}',              fn($r) => $webCrewPages->activate($r));
 $router->post('/verein-aktivieren/{token}',              fn($r) => $webCrewPages->activateSubmit($r), [$csrf]);
+$router->get ('/verein/handle-verfuegbar',               fn($r) => $webCrewPages->handleAvailable($r));
 $router->get ('/verein',                                 fn($r) => $webCrewPages->cockpit($r));
 
 // ---- Admin-Auswertung Empfehlungen (M7) — ADMIN_EMAILS-Gate ----

@@ -52,10 +52,18 @@ $action = '/verein-aktivieren/' . rawurlencode($token);
                         <input type="email" name="email" required autocomplete="email">
                     </label>
                 <?php endif; ?>
+                <label>Handle (öffentlicher Vereins-Name im Spiel)
+                    <input type="text" name="handle" id="crewHandle"
+                           value="<?= $e($suggested_handle ?? '') ?>"
+                           pattern="[a-z0-9_]{3,30}" minlength="3" maxlength="30" required
+                           autocapitalize="off" autocomplete="off" spellcheck="false"
+                           data-check-url="/verein/handle-verfuegbar">
+                </label>
+                <p id="crewHandleStatus" class="muted" style="margin:-6px 0 12px;">3–30 Zeichen: a–z, 0–9, _</p>
                 <label>Passwort für euren Vereins-Account (min. 10 Zeichen)
                     <input type="password" name="password" minlength="10" required autocomplete="new-password">
                 </label>
-                <button type="submit">Verein aktivieren &amp; Konto anlegen</button>
+                <button type="submit" id="crewActivateBtn">Verein aktivieren &amp; Konto anlegen</button>
                 <p class="muted" style="margin-top:8px;">Keine separate Bestätigungsmail nötig — dieser Link bestätigt eure Adresse bereits.</p>
             <?php endif; ?>
         </form>
