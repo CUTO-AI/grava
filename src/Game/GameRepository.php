@@ -1318,10 +1318,19 @@ final class GameRepository
      * Recompute mit der Verarbeitungszeit gestempelt (EdgeRecalculator), sodass ein
      * Batch-Import historischer Fahrten (z. B. Strava) sonst ALLE Kanten auf den
      * Import-Tag legt und der Verlauf eine Stufe zeigt. Wir nehmen stattdessen die
-     * früheste eigene, gültige Vorbeifahrt des Besitzers auf der Kante (MIN(ridden_at)
-     * aus `game_edge_pass`). Fällt ausnahmsweise keine passende Vorbeifahrt an, greift
-     * `owner_since` als Rückfall, damit die Kante nicht aus der Serie fällt (Summe
-     * bleibt konsistent zu meStats).
+     * früheste gültige Vorbeifahrt des Besitzers auf der Kante (MIN(ridden_at) aus
+     * `game_edge_pass`).
+     *
+     * Wichtig für Crews: Besitz läuft über den **effektiven Claimant** (User →
+     * Crew-Group-Claimant, sonst Rider), aber die Pässe behalten die Rider-Claimant-ID
+     * („kein Pass-Backfill", 0017_game_crew.sql). Wir spiegeln daher dasselbe Mapping
+     * wie `effectiveClaimantMap`/`EdgeRecalculator` und ordnen jeden Pass über seinen
+     * User dem effektiven Claimant zu (`COALESCE(gc.claimant_id, p.claimant_id)`).
+     * Ohne diese Auflösung fänden Crew-Kanten (Besitzer = Group) keine Pässe und
+     * fielen auf `owner_since` = Import-Tag zurück → die Stufe bliebe bestehen.
+     * Fällt ausnahmsweise keine passende Vorbeifahrt an, greift `owner_since` als
+     * Rückfall, damit die Kante nicht aus der Serie fällt (Summe bleibt konsistent
+     * zu meStats).
      * @return array{held:list<array{d:string,len:float}>,pioneered:list<string>}
      */
     public function edgeAcquisitionDates(int $claimantId): array
@@ -1330,9 +1339,11 @@ final class GameRepository
             'SELECT DATE(COALESCE(
                         (SELECT MIN(p.ridden_at)
                            FROM game_edge_pass p
+                           LEFT JOIN game_crew_member m ON m.user_id = p.user_id
+                           LEFT JOIN game_crew gc       ON gc.id = m.crew_id
                           WHERE p.edge_id = e.id
-                            AND p.claimant_id = e.owner_claimant_id
-                            AND p.invalidated_at IS NULL),
+                            AND p.invalidated_at IS NULL
+                            AND COALESCE(gc.claimant_id, p.claimant_id) = e.owner_claimant_id),
                         e.owner_since)) AS d,
                     e.length_m AS len
                FROM game_edge e

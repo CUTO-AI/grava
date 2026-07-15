@@ -126,6 +126,48 @@ final class GameHistoryTest extends IntegrationTestCase
         $this->assertArrayNotHasKey('2026-07-10', $byDate);
     }
 
+    public function testCrewOwnedEdgeDatedByMemberRideDate(): void
+    {
+        // Crew-Fall: Besitz läuft über den Group-Claimant, die Pässe behalten aber
+        // die Rider-Claimant-ID. Ohne Auflösung über die Mitgliedschaft fände die
+        // Datierung keine Pässe und fiele auf owner_since (Import-Tag) zurück.
+        $uid = $this->createUser('crewrider');
+        $now = new DateTimeImmutable('2026-05-01T08:00:00Z', new DateTimeZone('UTC'));
+        $route = (new GeometryParser())->parse('{"type":"LineString","coordinates":[[9.70,47.20],[9.71,47.21]]}');
+        $segs = [new MatchedSegment(2002, 20, 21, 90.0, [[9.70, 47.20], [9.71, 47.21]], 'gravel', 18.0, 8.0, true, $now)];
+        $config = new GameConfig($this->pdo);
+        (new GameIngestionService(
+            new FakeEdgeMatcher($segs), $this->repo,
+            new EdgeRecalculator($this->repo, $config), $config, $this->pdo,
+        ))->ingest(2, $uid, $route, true, $now);
+
+        // Crew anlegen und die eben eroberte Kante dem Group-Claimant zuschlagen,
+        // owner_since = späterer „Import-Tag".
+        $this->pdo->exec("INSERT INTO game_claimant (type, user_id) VALUES ('group', NULL)");
+        $groupId = (int)$this->pdo->lastInsertId();
+        $this->pdo->prepare(
+            'INSERT INTO game_crew (claimant_id, name, slug, owner_user_id, join_code)
+             VALUES (?, ?, ?, ?, ?)'
+        )->execute([$groupId, 'Testcrew', 'testcrew', $uid, 'JOIN1234']);
+        $crewId = (int)$this->pdo->lastInsertId();
+        $this->pdo->prepare("INSERT INTO game_crew_member (user_id, crew_id, role) VALUES (?, ?, 'captain')")
+            ->execute([$uid, $crewId]);
+        $this->pdo->prepare(
+            'UPDATE game_edge SET owner_claimant_id = ?, owner_since = ? WHERE way_id = 2002'
+        )->execute([$groupId, '2026-07-11 12:00:00.000']);
+
+        $this->history->rebuild($groupId, '2026-07-15');
+        $byDate = [];
+        foreach ($this->history->history($groupId, 100000)['points'] as $p) {
+            $byDate[$p['date']] = $p;
+        }
+
+        // Datiert auf das FAHRDATUM des Crew-Mitglieds, nicht den Import-Tag.
+        $this->assertArrayHasKey('2026-05-01', $byDate);
+        $this->assertSame(1, $byDate['2026-05-01']['held_edges']);
+        $this->assertArrayNotHasKey('2026-07-11', $byDate);
+    }
+
     public function testHistoryWindowExcludesOlderPoints(): void
     {
         $this->history->snapshotAll('2026-06-25');
