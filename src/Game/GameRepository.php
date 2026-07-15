@@ -365,23 +365,31 @@ final class GameRepository
      */
     /**
      * Kanten-Gewinne/-Verluste eines Users im Fenster aus dem Event-Ledger
-     * (game_event). „Gewonnen" = erobert/zurückerobert/neu erschlossen; „verloren"
-     * = an einen anderen Claimant abgegeben. Für den Home-„Revier-Puls".
+     * (game_event). „Gewonnen" = ICH bin Auslöser (actor) einer Erstbefahrung/
+     * Übernahme/Rückeroberung; „verloren" = mir wurde eine Kante genommen (ich bin
+     * `user_id` eines `edge_taken`, ausgelöst von jemand anderem). Für den Home-
+     * „Revier-Puls".
+     *
+     * WICHTIG: Fenster über das FAHRDATUM (`ridden_on`), NICHT `created_at`. Ein
+     * Massenimport (z. B. komplette Strava-Historie, alle `created_at` = Importzeit)
+     * würde sonst die ganze Historie ins 7-Tage-Fenster ziehen. `ridden_on` trägt
+     * das echte Fahrdatum. Zählung per DISTINCT edge_id, damit Crew-Kanten mit
+     * mehreren Empfänger-Zeilen nicht mehrfach zählen.
      *
      * @return array{gained:int,lost:int}
      */
-    public function edgeEventCounts(int $userId, string $sinceDatetime): array
+    public function edgeEventCounts(int $userId, string $sinceDate): array
     {
         $stmt = $this->pdo->prepare(
             "SELECT
-                SUM(type IN ('edge_taken','edge_reclaimed','edge_new')) AS gained,
-                SUM(type = 'edge_lost')                                 AS lost
+                COUNT(DISTINCT CASE WHEN type IN ('edge_new','edge_taken','edge_reclaimed')
+                                     AND actor_user_id = ? THEN edge_id END)                     AS gained,
+                COUNT(DISTINCT CASE WHEN type = 'edge_taken'
+                                     AND user_id = ? AND actor_user_id <> ? THEN edge_id END)    AS lost
                FROM game_event
-              WHERE user_id = :uid AND created_at >= :since"
+              WHERE ridden_on >= ? AND (actor_user_id = ? OR user_id = ?)"
         );
-        $stmt->bindValue(':uid', $userId, PDO::PARAM_INT);
-        $stmt->bindValue(':since', $sinceDatetime);
-        $stmt->execute();
+        $stmt->execute([$userId, $userId, $userId, $sinceDate, $userId, $userId]);
         $r = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
         return ['gained' => (int)($r['gained'] ?? 0), 'lost' => (int)($r['lost'] ?? 0)];
     }
