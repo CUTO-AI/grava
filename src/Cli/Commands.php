@@ -1023,10 +1023,9 @@ final class Commands
 
     /** @param list<string> $argv */
     /**
-     * Täglicher Revier-Verlauf-Snapshot (GameHistory_Backend_Spec.md): schreibt je
-     * aktivem Claimant den heutigen Stand (idempotent) und backfillt beim ersten Lauf
-     * die Vergangenheit aus game_edge.owner_since/discovered_at. Für Cron gedacht
-     * (z. B. täglich ~00:05 UTC).
+     * Täglicher Revier-Verlauf-Snapshot (GameHistory_Backend_Spec.md): baut je aktivem
+     * Claimant die komplette Historie aus den Fahrdaten neu auf (Voll-Rebuild,
+     * idempotent). Für Cron gedacht (z. B. täglich ~00:05 UTC).
      */
     private function gameSnapshotDaily(): int
     {
@@ -1036,8 +1035,8 @@ final class Commands
         }
         $res = $this->gameHistory->snapshotAll();
         echo sprintf(
-            "Revier-Verlauf: %d Claimant(s) für %s, %d neu backfillt.\n",
-            $res['claimants'], $res['date'], $res['backfilled'],
+            "Revier-Verlauf: %d Claimant(s) für %s neu aufgebaut.\n",
+            $res['claimants'], $res['date'],
         );
         return 0;
     }

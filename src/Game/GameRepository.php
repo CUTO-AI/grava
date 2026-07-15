@@ -1245,6 +1245,38 @@ final class GameRepository
         $stmt->execute([$claimantId, $date, $held, $pioneered, $heldLengthM]);
     }
 
+    /**
+     * Ersetzt die komplette Tages-Historie eines Claimants atomar (Voll-Rebuild):
+     * löscht alle bestehenden Punkte und schreibt die übergebene, bereits kumulierte
+     * Serie neu. Idempotent — gleicher Eingang ⇒ gleiche Tabelle. In einer Transaktion,
+     * damit ein paralleler Lese-Zugriff nie eine halb leere Historie sieht.
+     * @param list<array{date:string,held:int,pioneered:int,held_length_m:float}> $points chronologisch
+     */
+    public function replaceDailySnapshots(int $claimantId, array $points): void
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $this->pdo->prepare('DELETE FROM game_user_stats_daily WHERE claimant_id = ?')
+                ->execute([$claimantId]);
+            if ($points !== []) {
+                $ins = $this->pdo->prepare(
+                    'INSERT INTO game_user_stats_daily
+                        (claimant_id, snapshot_date, held_edges, pioneered_edges, held_length_m)
+                     VALUES (?, ?, ?, ?, ?)'
+                );
+                foreach ($points as $p) {
+                    $ins->execute([
+                        $claimantId, $p['date'], $p['held'], $p['pioneered'], $p['held_length_m'],
+                    ]);
+                }
+            }
+            $this->pdo->commit();
+        } catch (\Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
+    }
+
     /** Hat der Claimant bereits Snapshot-Zeilen? Steuert das einmalige Backfill. */
     public function hasDailySnapshots(int $claimantId): bool
     {
@@ -1278,18 +1310,34 @@ final class GameRepository
 
     /**
      * Erwerbs-/Erschließungs-Daten der aktuell gehaltenen bzw. erschlossenen Kanten
-     * eines Claimants — Grundlage für das einmalige Backfill des Verlaufs. Held ist
-     * dabei die Wachstumskurve des HEUTE gehaltenen Reviers (seither verlorene Kanten
-     * fehlen — dokumentierte Näherung); Pionier ist exakt (Erstbefahrer bleibt es).
+     * eines Claimants — Grundlage für den Verlaufs-Rebuild. Held ist dabei die
+     * Wachstumskurve des HEUTE gehaltenen Reviers (seither verlorene Kanten fehlen
+     * — dokumentierte Näherung); Pionier ist exakt (Erstbefahrer bleibt es).
+     *
+     * Datierung nach **Fahrdatum**, nicht nach `owner_since`: `owner_since` wird beim
+     * Recompute mit der Verarbeitungszeit gestempelt (EdgeRecalculator), sodass ein
+     * Batch-Import historischer Fahrten (z. B. Strava) sonst ALLE Kanten auf den
+     * Import-Tag legt und der Verlauf eine Stufe zeigt. Wir nehmen stattdessen die
+     * früheste eigene, gültige Vorbeifahrt des Besitzers auf der Kante (MIN(ridden_at)
+     * aus `game_edge_pass`). Fällt ausnahmsweise keine passende Vorbeifahrt an, greift
+     * `owner_since` als Rückfall, damit die Kante nicht aus der Serie fällt (Summe
+     * bleibt konsistent zu meStats).
      * @return array{held:list<array{d:string,len:float}>,pioneered:list<string>}
      */
     public function edgeAcquisitionDates(int $claimantId): array
     {
         $held = $this->pdo->prepare(
-            'SELECT DATE(owner_since) AS d, length_m AS len
-               FROM game_edge
-              WHERE owner_claimant_id = ? AND owner_since IS NOT NULL
-              ORDER BY owner_since'
+            'SELECT DATE(COALESCE(
+                        (SELECT MIN(p.ridden_at)
+                           FROM game_edge_pass p
+                          WHERE p.edge_id = e.id
+                            AND p.claimant_id = e.owner_claimant_id
+                            AND p.invalidated_at IS NULL),
+                        e.owner_since)) AS d,
+                    e.length_m AS len
+               FROM game_edge e
+              WHERE e.owner_claimant_id = ?
+              ORDER BY d'
         );
         $held->execute([$claimantId]);
         $heldRows = array_map(static fn(array $r): array => [

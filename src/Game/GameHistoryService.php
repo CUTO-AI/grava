@@ -8,13 +8,18 @@ use App\Support\Clock;
 /**
  * Zeitlicher Verlauf der eigenen Revier-Kennzahlen (GameHistory_Backend_Spec.md).
  *
- * Zwei-Wege-Strategie:
- *  - **Vorwärts (exakt):** ein Cron (`game:snapshot-daily`) schreibt je Tag einen
- *    Snapshot pro Claimant (`GameRepository::allClaimantHoldings` → upsert).
- *  - **Rückwärts (einmalig, Näherung):** beim ersten Lauf pro Claimant Backfill aus
- *    `game_edge.owner_since` / `discovered_at`. Pionier ist dabei exakt (Erstbefahrer
- *    bleibt es dauerhaft), „gehalten" ist die Wachstumskurve des HEUTE gehaltenen
- *    Reviers (seither verlorene Kanten fehlen — dokumentierte Näherung).
+ * **Voll-Rebuild aus Fahrdaten** statt Vorwärts-Append: sowohl der Cron
+ * (`game:snapshot-daily`) als auch der Lese-Pfad rekonstruieren die komplette Serie
+ * eines Claimants aus den Erwerbs-/Erschließungs-Daten der HEUTE gehaltenen bzw.
+ * erschlossenen Kanten (`GameRepository::edgeAcquisitionDates`) und ersetzen die
+ * Tabelle atomar. „Gehalten" wird nach dem **Fahrdatum** der eigenen Vorbeifahrt
+ * datiert (nicht nach `owner_since`) — sonst legt ein Batch-Import historischer
+ * Fahrten (z. B. Strava) alle Kanten auf den Import-Tag und der Chart springt als
+ * Stufe (z. B. 10.000 → 35.000 an einem Tag). Der Rebuild ist idempotent und heilt
+ * bestehende Stufen beim nächsten Lauf rückwirkend.
+ *
+ * Näherung: seither verlorene Kanten fehlen (die Kurve des heute gehaltenen Reviers
+ * ist monoton steigend); Pionier ist exakt (Erstbefahrer bleibt es dauerhaft).
  *
  * Der Lese-Pfad (`history`) aggregiert nur die Tabelle, ohne Recompute.
  */
@@ -42,54 +47,43 @@ final class GameHistoryService
     }
 
     /**
-     * Self-Heal auf dem Lese-Pfad: stellt sicher, dass der heutige Snapshot des
-     * Claimants existiert — wichtig auf Hostern OHNE täglichen Cron (der Chart
-     * wächst dann allein durchs App-Öffnen). Backfillt beim allerersten Mal die
-     * Vergangenheit. Idempotent + billig (ein meStats + Upsert).
+     * Self-Heal auf dem Lese-Pfad: baut die Historie des Claimants aus den Fahrdaten
+     * neu auf — wichtig auf Hostern OHNE täglichen Cron (der Chart korrigiert sich
+     * dann allein durchs App-Öffnen) und sorgt dafür, dass eine durch einen Import
+     * entstandene Stufe sofort geglättet ist. Idempotent.
      */
     public function ensureTodaySnapshot(int $claimantId): void
     {
-        if (!$this->repo->hasDailySnapshots($claimantId)) {
-            $this->backfill($claimantId);
-        }
-        $s = $this->repo->meStats($claimantId);
-        $this->repo->upsertDailySnapshot(
-            $claimantId, Clock::nowUtc()->format('Y-m-d'),
-            $s['held'], $s['pioneered'], $s['held_length_m']
-        );
+        $this->rebuild($claimantId);
     }
 
     /**
-     * Tages-Snapshot über alle aktiven Claimants (Cron). Backfillt Claimants ohne
-     * Historie einmalig. `$today` überschreibbar für Tests; sonst UTC-heute.
-     * @return array{claimants:int,backfilled:int,date:string}
+     * Tages-Snapshot über alle aktiven Claimants (Cron): baut jede Historie aus den
+     * Fahrdaten neu auf (Voll-Rebuild, idempotent). `$today` überschreibbar für
+     * Tests; sonst UTC-heute — Ankerpunkt, bis zu dem die Kurve verlängert wird.
+     * @return array{claimants:int,rebuilt:int,date:string}
      */
     public function snapshotAll(?string $today = null): array
     {
         $date = $today ?? Clock::nowUtc()->format('Y-m-d');
         $holdings = $this->repo->allClaimantHoldings();
-        $backfilled = 0;
-        foreach ($holdings as $claimantId => $h) {
-            if (!$this->repo->hasDailySnapshots($claimantId)) {
-                $this->backfill($claimantId);
-                $backfilled++;
-            }
-            $this->repo->upsertDailySnapshot(
-                $claimantId, $date, $h['held'], $h['pioneered'], $h['held_length_m']
-            );
+        foreach (array_keys($holdings) as $claimantId) {
+            $this->rebuild((int)$claimantId, $date);
         }
-        return ['claimants' => count($holdings), 'backfilled' => $backfilled, 'date' => $date];
+        return ['claimants' => count($holdings), 'rebuilt' => count($holdings), 'date' => $date];
     }
 
     /**
-     * Einmaliges Backfill: rekonstruiert Step-Punkte aus den Erwerbs-/Erschließungs-
-     * Daten der aktuell gehaltenen/erschlossenen Kanten. Ein Punkt je Kalendertag mit
-     * Änderung (der Client interpoliert linear dazwischen). Idempotenz stellt der
-     * Aufrufer über `hasDailySnapshots` sicher.
-     * @return int Anzahl eingefügter Punkte
+     * Rekonstruiert die komplette Serie eines Claimants aus den Erwerbs-/Erschließungs-
+     * Daten der aktuell gehaltenen/erschlossenen Kanten und ersetzt die Tabelle atomar.
+     * Ein Punkt je Kalendertag mit Änderung (der Client interpoliert linear dazwischen);
+     * ein Ankerpunkt am `$today` verlängert die Kurve bis heute, falls der letzte
+     * Erwerbstag früher liegt. Idempotent.
+     * @return int Anzahl geschriebener Punkte
      */
-    public function backfill(int $claimantId): int
+    public function rebuild(int $claimantId, ?string $today = null): int
     {
+        $date = $today ?? Clock::nowUtc()->format('Y-m-d');
         $data = $this->repo->edgeAcquisitionDates($claimantId);
 
         // Deltas je Tag zusammenführen (gehaltene Kanten + Länge, Pionierkanten).
@@ -107,14 +101,28 @@ final class GameHistoryService
         $dates = array_keys($heldDelta + $pioDelta);
         sort($dates);
 
-        $held = 0; $pio = 0; $len = 0.0; $inserted = 0;
+        $points = [];
+        $held = 0; $pio = 0; $len = 0.0;
         foreach ($dates as $d) {
             $held += $heldDelta[$d] ?? 0;
             $len  += $lenDelta[$d] ?? 0.0;
             $pio  += $pioDelta[$d] ?? 0;
-            $this->repo->upsertDailySnapshot($claimantId, $d, $held, $pio, $len);
-            $inserted++;
+            $points[] = [
+                'date' => (string)$d, 'held' => $held, 'pioneered' => $pio, 'held_length_m' => $len,
+            ];
         }
-        return $inserted;
+
+        // Kurve bis heute verlängern: Ankerpunkt mit dem finalen Bestand (= meStats),
+        // damit der Chart nicht am letzten Erwerbstag endet. Nur wenn nötig — und
+        // nur, wenn der letzte Erwerbstag nicht in der Zukunft liegt (Clock-Skew).
+        $lastDate = $points === [] ? null : $points[count($points) - 1]['date'];
+        if ($lastDate === null || ($lastDate < $date)) {
+            $points[] = [
+                'date' => $date, 'held' => $held, 'pioneered' => $pio, 'held_length_m' => $len,
+            ];
+        }
+
+        $this->repo->replaceDailySnapshots($claimantId, $points);
+        return count($points);
     }
 }

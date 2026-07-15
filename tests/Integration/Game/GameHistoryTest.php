@@ -17,8 +17,9 @@ use PDO;
 use Tests\IntegrationTestCase;
 
 /**
- * Revier-Verlauf (GameHistory_Backend_Spec.md): Backfill aus owner_since/
- * discovered_at, täglicher Snapshot (idempotent) und der Lese-Pfad.
+ * Revier-Verlauf (GameHistory_Backend_Spec.md): Voll-Rebuild aus den Fahrdaten
+ * (Held nach Fahrdatum, nicht owner_since), täglicher Snapshot (idempotent) und
+ * der Lese-Pfad.
  */
 final class GameHistoryTest extends IntegrationTestCase
 {
@@ -50,7 +51,7 @@ final class GameHistoryTest extends IntegrationTestCase
     {
         $res = $this->history->snapshotAll('2026-06-25');
         $this->assertSame(1, $res['claimants']);
-        $this->assertSame(1, $res['backfilled']);
+        $this->assertSame(1, $res['rebuilt']);
 
         // Weites Fenster (unabhängig von der realen Uhr), chronologisch.
         $points = $this->history->history($this->claimant, 100000)['points'];
@@ -76,10 +77,10 @@ final class GameHistoryTest extends IntegrationTestCase
         $this->history->snapshotAll('2026-06-25');
         $second = $this->history->snapshotAll('2026-06-25');
 
-        // Zweiter Lauf backfillt nicht erneut …
-        $this->assertSame(0, $second['backfilled']);
+        // Voll-Rebuild ist idempotent: gleicher Eingang ⇒ gleiche Tabelle.
+        $this->assertSame(1, $second['rebuilt']);
 
-        // … und erzeugt keine Duplikate (UNIQUE claimant_id+snapshot_date).
+        // Keine Duplikate (Rebuild ersetzt atomar; UNIQUE claimant_id+snapshot_date).
         $stmt = $this->pdo->prepare(
             'SELECT COUNT(*) FROM game_user_stats_daily WHERE claimant_id = ? AND snapshot_date = ?'
         );
@@ -100,6 +101,29 @@ final class GameHistoryTest extends IntegrationTestCase
         );
         $stmt->execute([$this->claimant, $today]);
         $this->assertSame(1, (int)$stmt->fetchColumn());
+    }
+
+    public function testHeldDatedByRideDateNotOwnerSince(): void
+    {
+        // Import-Szenario: owner_since wird beim Recompute mit der Verarbeitungszeit
+        // gestempelt. Simuliere einen Batch-Import, der die Kante (gefahren am
+        // 2026-06-20) erst am 2026-07-10 verarbeitet — owner_since = Import-Tag,
+        // die Vorbeifahrt (ridden_at) bleibt beim echten Fahrdatum.
+        $this->pdo->prepare(
+            'UPDATE game_edge SET owner_since = ? WHERE owner_claimant_id = ?'
+        )->execute(['2026-07-10 12:00:00.000', $this->claimant]);
+
+        $this->history->snapshotAll('2026-07-15');
+        $byDate = [];
+        foreach ($this->history->history($this->claimant, 100000)['points'] as $p) {
+            $byDate[$p['date']] = $p;
+        }
+
+        // Der Zuwachs liegt auf dem FAHRDATUM, nicht auf dem Import-Tag …
+        $this->assertArrayHasKey('2026-06-20', $byDate);
+        $this->assertSame(1, $byDate['2026-06-20']['held_edges']);
+        // … und es gibt keine Stufe am Import-/Verarbeitungstag.
+        $this->assertArrayNotHasKey('2026-07-10', $byDate);
     }
 
     public function testHistoryWindowExcludesOlderPoints(): void
