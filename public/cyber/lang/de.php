@@ -6,7 +6,7 @@
 return [
     'meta' => [
         'title' => 'CYBERRIDE — Fahr echte Wege. Erobere das Grid.',
-        'description' => 'CYBERRIDE macht deine Stadt zum umkämpften Revier. Fahr echte Straßen, erobere Sektoren und kartiere Untergrund, Verkehr und Gefahren für alle.',
+        'description' => 'CYBERRIDE macht deine Region zum umkämpften Revier. Fahr echte Straßen, erobere Sektoren und kartiere Untergrund, Verkehr und Gefahren für alle.',
     ],
     'nav' => [
         'features' => 'Funktionen',
@@ -39,7 +39,7 @@ return [
         'badge'     => 'Launch-Phase // Season 03',
         'title1'    => 'Fahr echte Wege.',
         'title2'    => 'Erobere das Grid.',
-        'lead'      => 'CYBERRIDE macht deine Stadt zum umkämpften Revier. Jeder gefahrene Kilometer erobert Sektoren für deine Crew — und kartiert Untergrund, Verkehr und Gefahren für alle, die nach dir kommen. Ingress, angetrieben von deinem Rad.',
+        'lead'      => 'CYBERRIDE macht deine Region zum umkämpften Revier. Jeder gefahrene Kilometer erobert Sektoren für deine Crew — und kartiert Untergrund, Verkehr und Gefahren für alle, die nach dir kommen. Ingress, angetrieben von deinem Rad.',
         'ctaApp'    => 'iOS-App laden',
         'trailer'   => 'Trailer ansehen',
         'trailerMeta' => '02:14 // SEASON 03',

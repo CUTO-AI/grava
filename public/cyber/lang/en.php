@@ -7,7 +7,7 @@
 return [
     'meta' => [
         'title' => 'CYBERRIDE — Ride Real Roads. Claim the Grid.',
-        'description' => 'CYBERRIDE turns your city into contested territory. Ride real roads to claim sectors and map surface, traffic and hazards for every rider.',
+        'description' => 'CYBERRIDE turns your region into contested territory. Ride real roads to claim sectors and map surface, traffic and hazards for every rider.',
     ],
     'nav' => [
         'features' => 'Features',
@@ -41,7 +41,7 @@ return [
         'badge'     => 'Launch Phase // Season 03',
         'title1'    => 'Ride real roads.',
         'title2'    => 'Claim the grid.',
-        'lead'      => 'CYBERRIDE turns your city into contested territory. Every kilometer you ride captures sectors for your crew — and maps surface, traffic and hazards for every rider behind you. Ingress, powered by your bike.',
+        'lead'      => 'CYBERRIDE turns your region into contested territory. Every kilometer you ride captures sectors for your crew — and maps surface, traffic and hazards for every rider behind you. Ingress, powered by your bike.',
         'ctaApp'    => 'Get the iOS App',
         'trailer'   => 'Watch Trailer',
         'trailerMeta' => '02:14 // SEASON 03',
