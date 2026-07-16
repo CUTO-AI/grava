@@ -33,6 +33,7 @@ use App\Controllers\Api\FeedController;
 use App\Controllers\Api\HeatmapController;
 use App\Controllers\Api\HeatmapLinesController;
 use App\Controllers\Api\IntegrationsController;
+use App\Controllers\Api\WahooController;
 use App\Controllers\Api\LikeController;
 use App\Controllers\Api\NotificationController;
 use App\Controllers\Api\PushDeviceController;
@@ -44,6 +45,7 @@ use App\Controllers\Web\DashboardController;
 use App\Controllers\Web\DiscoveryPagesController;
 use App\Controllers\Web\EngagementPagesController;
 use App\Controllers\Web\StravaPagesController;
+use App\Controllers\Web\WahooPagesController;
 use App\Controllers\Web\PublicSharePageController;
 use App\Controllers\Web\ReferralPagesController;
 use App\Controllers\Web\AdminReferralPagesController;
@@ -75,6 +77,9 @@ use App\Heatmap\ValhallaClient;
 use App\Integrations\Strava\FakeStravaClient;
 use App\Integrations\Strava\RealStravaClient;
 use App\Integrations\Strava\StravaService;
+use App\Integrations\Wahoo\FakeWahooClient;
+use App\Integrations\Wahoo\RealWahooClient;
+use App\Integrations\Wahoo\WahooService;
 use App\Media\AvatarService;
 use App\Support\Crypto;
 use App\Http\Middleware\OptionalBearer;
@@ -413,6 +418,24 @@ $stravaServ    = new StravaService(
     $routeRepo,
     $gameRepo,
 );
+// Wahoo-Integration (Import-only, Phase B). Dev-Seam wie Strava — Fake-Client,
+// wenn WAHOO_FAKE=1 oder keine WAHOO_CLIENT_ID gesetzt ist.
+$wahooClientId     = (string)($config->get('WAHOO_CLIENT_ID', '') ?? '');
+$wahooClientSecret = (string)($config->get('WAHOO_CLIENT_SECRET', '') ?? '');
+$wahooRedirectUri  = (string)($config->get('WAHOO_REDIRECT_URI', '') ?? '');
+$wahooFake         = (string)($config->get('WAHOO_FAKE', '') ?? '') === '1' || $wahooClientId === '';
+$wahooClient       = $wahooFake
+    ? new FakeWahooClient()
+    : new RealWahooClient($wahooClientId, $wahooClientSecret, $wahooRedirectUri);
+$wahooServ         = new WahooService(
+    $wahooClient,
+    $cryptoServ,
+    $wahooClientId,
+    $wahooRedirectUri,
+    $wahooFake,
+    (string)$config->get('APP_URL', ''),
+);
+
 $gameRideSummary = new \App\Game\GameRideSummaryService($gameRepo, $gameRushRepo, $privacyZoneRepo, $privacyTrimmer, new \App\Game\RegionRepository(Db::pdo()));
 $gameAtRisk      = new \App\Game\GameEdgesAtRiskService($gameRepo, $gameConfig, $gameRecalc, $privacyZoneRepo);
 
@@ -436,6 +459,7 @@ $apiNotif    = new NotificationController($notifServ, $notifPrefs);
 $apiPushDev  = new PushDeviceController($pushDevices);
 $apiAvatar   = new AvatarController($avatarServ);
 $apiIntegr   = new IntegrationsController($stravaServ);
+$apiWahoo    = new WahooController($wahooServ);
 $apiHeatmap  = new HeatmapController($heatmapServ);
 $personalHeatmap = new \App\Heatmap\PersonalHeatmapService($routeStorage, new GeometryParser(), $privacyZoneRepo);
 $apiMeHeatmap = new \App\Controllers\Api\MeHeatmapController($personalHeatmap);
@@ -506,6 +530,7 @@ $webDiscover = new DiscoveryPagesController($webSession, $auth, $discovery, $pro
 $webSocial   = new SocialPagesController($webSession, $auth, $followServ, $blockServ);
 $webEngage   = new EngagementPagesController($webSession, $likeServ, $commentServ, $auth, $rate);
 $webStrava   = new StravaPagesController($webSession, $auth, $stravaServ, $basePath . '/views');
+$webWahoo    = new WahooPagesController($webSession, $wahooServ);
 $webSurface  = new SurfaceCheckController($webSession, $auth, $routeSurface, $config, $basePath . '/views');
 $webReferral = new ReferralPagesController($config, $basePath . '/views');
 $webCrewPages = new \App\Controllers\Web\CrewPagesController($config, $gameCrewSvc, $auth, $cookieAuth, $webSession, $clubProspectRepo, $mailer, $basePath . '/views');
@@ -736,6 +761,9 @@ $router->get("{$apiBase}/integrations/strava/connect-url",        fn($r) => $api
 $router->post("{$apiBase}/integrations/strava/import",            fn($r) => $apiIntegr->stravaImport($r),     [$requireBearer, $requireVerified]);
 $router->post("{$apiBase}/integrations/strava/share",             fn($r) => $apiIntegr->stravaShare($r),      [$requireBearer]);
 $router->delete("{$apiBase}/integrations/strava",                 fn($r) => $apiIntegr->stravaDisconnect($r), [$requireBearer]);
+$router->get("{$apiBase}/integrations/wahoo",                     fn($r) => $apiWahoo->status($r),      [$requireBearer]);
+$router->get("{$apiBase}/integrations/wahoo/connect-url",         fn($r) => $apiWahoo->connectUrl($r),  [$requireBearer]);
+$router->delete("{$apiBase}/integrations/wahoo",                  fn($r) => $apiWahoo->disconnect($r), [$requireBearer]);
 
 $router->get("{$apiBase}/heatmap",                                fn($r) => $apiHeatmap->index($r));
 $router->get("{$apiBase}/heatmap/lines",                          fn($r) => $apiHeatmapLines->index($r));
@@ -1024,6 +1052,7 @@ $router->post('/settings/avatar/delete',                 fn($r) => $webSetting->
 $router->get ('/settings/integrations',                  fn($r) => $webStrava->settings($r));
 $router->get ('/auth/strava/connect',                    fn($r) => $webStrava->connect($r));
 $router->get ('/auth/strava/callback',                   fn($r) => $webStrava->callback($r));
+$router->get ('/auth/wahoo/callback',                    fn($r) => $webWahoo->callback($r));
 $router->post('/settings/integrations/import',           fn($r) => $webStrava->import($r),     [$csrf]);
 $router->post('/settings/integrations/disconnect',       fn($r) => $webStrava->disconnect($r), [$csrf]);
 
