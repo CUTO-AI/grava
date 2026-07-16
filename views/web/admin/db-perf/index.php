@@ -13,6 +13,7 @@ $num = static fn($v): string => $v === null ? '–' : number_format((float)$v, 0
     <a href="/admin/game">Health</a>
     <a href="/admin/cron">Cron</a>
     <a href="/admin/db-perf"><strong>DB</strong></a>
+    <a href="/dbadmin/" target="_blank" rel="noopener">Adminer&nbsp;↗</a>
     <a href="/admin/audit">Audit</a>
     <a href="/admin/roles">Rollen</a>
     <a href="/admin/game/config">Config</a>
@@ -105,4 +106,11 @@ GRANT PROCESS ON *.* TO CURRENT_USER;</pre>
         <p class="muted"><?= t('Aktuelle Grants:') ?></p>
         <pre class="muted" style="white-space:pre-wrap"><?php foreach ($grants as $g) { echo $e($g) . "\n"; } ?></pre>
     <?php endif; ?>
+</section>
+
+<section class="card">
+    <h2><?= t('Volle SQL-Konsole (Adminer)') ?></h2>
+    <p class="muted"><?= t('Ad-hoc-Abfragen, EXPLAIN, Indexe – Adminer öffnet in neuem Tab (eigener Zugangsschutz davor).') ?></p>
+    <p><a href="/dbadmin/" target="_blank" rel="noopener"><strong><?= t('Adminer öffnen') ?> ↗</strong></a></p>
+    <p class="muted"><?= t('DB-Login:') ?> System MySQL · <?= t('Server') ?> <code>127.0.0.1</code> · <?= t('Benutzer') ?> <code>grava</code> · <?= t('Datenbank') ?> <code>gravelexplorer</code></p>
 </section>
