@@ -24,6 +24,16 @@ final class RegionService
     ) {}
 
     /**
+     * Anzeigesprache für Gebietsnamen setzen ('de'|'en'). Aus Accept-Language
+     * (API/Browser) bzw. der SSR-Seitensprache (Web). Muss vor den Lesemethoden
+     * aufgerufen werden; ohne Aufruf bleibt es beim internationalen Default.
+     */
+    public function setLanguage(string $lang): void
+    {
+        $this->repo->setDisplayLang($lang);
+    }
+
+    /**
      * Self-Heal: ist der Besitz-Cache leer (Cron nie gelaufen, noch kein Ingest),
      * einmal rechnen. Bei 0 Spielkanten ist recomputeAll ein No-Op → billig.
      */

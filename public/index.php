@@ -794,37 +794,6 @@ $router->get("{$apiBase}/game/config",             fn($r) => $apiGame->config($r
 $router->get("{$apiBase}/game/progression",        fn($r) => $apiGame->progression($r), [$requireBearer]);
 // Gebiets-Eroberung (CityConquest_Backend_Spec.md): Gebiete im Ausschnitt (zoom-
 // adaptiv), Detail mit Breadcrumb/Kindern/Bestenliste, eigene Gebiete.
-// TEMP-Diagnose (wird gleich wieder entfernt): Schema/Query-Selbsttest.
-$router->get("{$apiBase}/game/_regiondiag", function ($r) use ($regionRepo, $gameRepo, $gameConfig, $regionOwnershipSvc) {
-    if (($r->query['reset'] ?? '') === '1' && function_exists('opcache_reset')) {
-        $ok = opcache_reset();
-        \App\Http\Response::json(['opcache_reset' => $ok]);
-        return;
-    }
-    $pdo = \App\Database\Db::pdo();
-    $out = ['db' => $pdo->query('SELECT DATABASE()')->fetchColumn()];
-    $rc = new \ReflectionClass(\App\Game\RegionService::class);
-    $out['svc_file'] = $rc->getFileName();
-    $out['svc_mtime'] = @date('c', (int)@filemtime((string)$rc->getFileName()));
-    $out['svc_hasSetLanguage'] = method_exists(\App\Game\RegionService::class, 'setLanguage');
-    $out['svc_methods'] = array_map(fn($m) => $m->name, $rc->getMethods());
-    $out['cols'] = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='game_region' AND COLUMN_NAME IN ('name','name_de','name_en')")->fetchAll(\PDO::FETCH_COLUMN);
-    try {
-        $pdo->query("SELECT COALESCE(NULLIF(r.name_en,''), r.name) FROM game_region r LIMIT 1")->fetchColumn();
-        $out['query'] = 'ok';
-    } catch (\Throwable $e) {
-        $out['query'] = 'ERR: ' . $e->getMessage();
-    }
-    try {
-        $svc = new \App\Game\RegionService($regionRepo, $gameRepo, $gameConfig, $regionOwnershipSvc);
-        $svc->setLanguage('de');
-        $res = $svc->regionsInBbox(11.3, 48.0, 11.8, 48.3, 6, false, null, false);
-        $out['service'] = 'ok, ' . count($res['regions']) . ' regions';
-    } catch (\Throwable $e) {
-        $out['service'] = 'ERR: ' . get_class($e) . ': ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine();
-    }
-    \App\Http\Response::json($out);
-});
 $router->get("{$apiBase}/game/regions",            fn($r) => $apiRegion->index($r),  [$optionalBearer]);
 $router->get("{$apiBase}/game/me/regions",         fn($r) => $apiRegion->mine($r),   [$requireBearer]);
 // Nordstern-Aktivität (UserGrowth_Concept.md §4): WAR/Region-Übersicht (Karte/Admin)
