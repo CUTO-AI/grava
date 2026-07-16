@@ -794,6 +794,19 @@ $router->get("{$apiBase}/game/config",             fn($r) => $apiGame->config($r
 $router->get("{$apiBase}/game/progression",        fn($r) => $apiGame->progression($r), [$requireBearer]);
 // Gebiets-Eroberung (CityConquest_Backend_Spec.md): Gebiete im Ausschnitt (zoom-
 // adaptiv), Detail mit Breadcrumb/Kindern/Bestenliste, eigene Gebiete.
+// TEMP-Diagnose (wird gleich wieder entfernt): Schema/Query-Selbsttest.
+$router->get("{$apiBase}/game/_regiondiag", function ($r) {
+    $pdo = \App\Database\Db::pdo();
+    $out = ['db' => $pdo->query('SELECT DATABASE()')->fetchColumn()];
+    $out['cols'] = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='game_region' AND COLUMN_NAME IN ('name','name_de','name_en')")->fetchAll(\PDO::FETCH_COLUMN);
+    try {
+        $pdo->query("SELECT COALESCE(NULLIF(r.name_en,''), r.name) FROM game_region r LIMIT 1")->fetchColumn();
+        $out['query'] = 'ok';
+    } catch (\Throwable $e) {
+        $out['query'] = 'ERR: ' . $e->getMessage();
+    }
+    \App\Http\Response::json($out);
+});
 $router->get("{$apiBase}/game/regions",            fn($r) => $apiRegion->index($r),  [$optionalBearer]);
 $router->get("{$apiBase}/game/me/regions",         fn($r) => $apiRegion->mine($r),   [$requireBearer]);
 // Nordstern-Aktivität (UserGrowth_Concept.md §4): WAR/Region-Übersicht (Karte/Admin)
