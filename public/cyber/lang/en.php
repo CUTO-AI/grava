@@ -94,6 +94,9 @@ return [
         'h2'     => 'Updates from the game',
         'lead'   => 'What shipped, what changed. Rider-facing changelog for every release.',
         'releases' => [
+            ['v' => 'v2.5', 'date' => '16 JUL 2026', 'title' => 'Profile Polish', 'notes' => [
+                ['CHANGED', 'cyan', 'Your all-time stats (distance · elevation · time · rides) now live on your profile — right under your photo and rank.'],
+            ]],
             ['v' => 'v2.4', 'date' => '01 JUL 2026', 'title' => 'Season 03 — The Reclamation', 'notes' => [
                 ['NEW', 'lime', 'Seasonal territory reset — the map is wide open again.'],
                 ['NEW', 'lime', 'Crew war rooms with live sector heat.'],

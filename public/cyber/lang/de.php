@@ -92,6 +92,9 @@ return [
         'h2'     => 'Updates aus dem Spiel',
         'lead'   => 'Was neu ist, was sich geändert hat. Der Changelog für Fahrer zu jedem Release.',
         'releases' => [
+            ['v' => 'v2.5', 'date' => '16. Juli 2026', 'title' => 'Profil-Feinschliff', 'notes' => [
+                ['GEÄNDERT', 'cyan', 'Deine Gesamt-Statistik (Distanz · Höhenmeter · Zeit · Touren) sitzt jetzt im Profil — direkt unter Bild und Rang.'],
+            ]],
             ['v' => 'v2.4', 'date' => '01. Juli 2026', 'title' => 'Season 03 — Die Rückeroberung', 'notes' => [
                 ['NEU', 'lime', 'Saisonaler Revier-Reset — die Karte ist wieder weit offen.'],
                 ['NEU', 'lime', 'Crew-Lageräume mit Live-Sektor-Heat.'],
