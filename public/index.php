@@ -575,6 +575,10 @@ $webCronAdmin = new \App\Controllers\Web\Admin\CronAdminController(
     $webSession, $auth, $adminGuard, $cronRunRepo, $gameAudit, $makeManualCli,
     (int)($config->get('CRON_OVERDUE_FACTOR', 2) ?? 2), $basePath . '/views',
 );
+// DB-Performance-Diagnose (performance_schema + PROCESSLIST), read-only.
+$webDbPerfAdmin = new \App\Controllers\Web\Admin\DbPerfAdminController(
+    $webSession, $auth, $adminGuard, $basePath . '/views',
+);
 // Vereins-CRM / Outreach (CrewInvite_Onboarding_Spec §8.3, Phase 3).
 $supporterAccounting = new \App\Growth\SupporterAccountingService(
     Db::pdo(), $gameConfig, new \App\Game\RegionRepository(Db::pdo()),
@@ -1006,6 +1010,10 @@ $router->post('/admin/game/user/{user_id}/ban',        fn($r) => $webGameEdge->b
 $router->get ('/admin/cron',                           fn($r) => $webCronAdmin->dashboard($r));
 $router->get ('/admin/cron/{command}',                 fn($r) => $webCronAdmin->history($r));
 $router->post('/admin/cron/{command}/run',             fn($r) => $webCronAdmin->runNow($r),          [$csrf]);
+
+// DB-Performance (performance_schema/PROCESSLIST) + Digest-Reset.
+$router->get ('/admin/db-perf',                        fn($r) => $webDbPerfAdmin->dashboard($r));
+$router->post('/admin/db-perf/reset',                  fn($r) => $webDbPerfAdmin->reset($r),         [$csrf]);
 
 // Backoffice Phase 0: Audit-Sicht + RBAC-Rollenverwaltung.
 $router->get ('/admin/audit',                          fn($r) => $webAuditAdmin->index($r));
