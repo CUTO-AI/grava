@@ -795,7 +795,7 @@ $router->get("{$apiBase}/game/progression",        fn($r) => $apiGame->progressi
 // Gebiets-Eroberung (CityConquest_Backend_Spec.md): Gebiete im Ausschnitt (zoom-
 // adaptiv), Detail mit Breadcrumb/Kindern/Bestenliste, eigene Gebiete.
 // TEMP-Diagnose (wird gleich wieder entfernt): Schema/Query-Selbsttest.
-$router->get("{$apiBase}/game/_regiondiag", function ($r) {
+$router->get("{$apiBase}/game/_regiondiag", function ($r) use ($regionRepo, $gameRepo, $gameConfig, $regionOwnershipSvc) {
     $pdo = \App\Database\Db::pdo();
     $out = ['db' => $pdo->query('SELECT DATABASE()')->fetchColumn()];
     $out['cols'] = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='game_region' AND COLUMN_NAME IN ('name','name_de','name_en')")->fetchAll(\PDO::FETCH_COLUMN);
@@ -804,6 +804,14 @@ $router->get("{$apiBase}/game/_regiondiag", function ($r) {
         $out['query'] = 'ok';
     } catch (\Throwable $e) {
         $out['query'] = 'ERR: ' . $e->getMessage();
+    }
+    try {
+        $svc = new \App\Game\RegionService($regionRepo, $gameRepo, $gameConfig, $regionOwnershipSvc);
+        $svc->setLanguage('de');
+        $res = $svc->regionsInBbox(11.3, 48.0, 11.8, 48.3, 6, false, null, false);
+        $out['service'] = 'ok, ' . count($res['regions']) . ' regions';
+    } catch (\Throwable $e) {
+        $out['service'] = 'ERR: ' . get_class($e) . ': ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine();
     }
     \App\Http\Response::json($out);
 });
