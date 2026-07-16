@@ -796,6 +796,11 @@ $router->get("{$apiBase}/game/progression",        fn($r) => $apiGame->progressi
 // adaptiv), Detail mit Breadcrumb/Kindern/Bestenliste, eigene Gebiete.
 // TEMP-Diagnose (wird gleich wieder entfernt): Schema/Query-Selbsttest.
 $router->get("{$apiBase}/game/_regiondiag", function ($r) use ($regionRepo, $gameRepo, $gameConfig, $regionOwnershipSvc) {
+    if (($r->query['reset'] ?? '') === '1' && function_exists('opcache_reset')) {
+        $ok = opcache_reset();
+        \App\Http\Response::json(['opcache_reset' => $ok]);
+        return;
+    }
     $pdo = \App\Database\Db::pdo();
     $out = ['db' => $pdo->query('SELECT DATABASE()')->fetchColumn()];
     $out['cols'] = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='game_region' AND COLUMN_NAME IN ('name','name_de','name_en')")->fetchAll(\PDO::FETCH_COLUMN);
