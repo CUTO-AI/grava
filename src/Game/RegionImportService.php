@@ -110,6 +110,8 @@ final class RegionImportService
                 'level'            => $level,
                 'kind'             => self::KIND[$level] ?? ('level' . $level),
                 'name'             => mb_substr($name, 0, 120),
+                'name_de'          => $this->pickTag($props, ['name:de']),
+                'name_en'          => $this->pickTag($props, ['name:en', 'int_name']),
                 'country_code'     => $this->pickCountryCode($props),
                 'center_lat'       => $center['lat'],
                 'center_lon'       => $center['lon'],
@@ -132,6 +134,69 @@ final class RegionImportService
 
         $linked = $this->linkHierarchy($log);
         return ['inserted' => $inserted, 'linked' => $linked];
+    }
+
+    /**
+     * Nicht-destruktiver Namens-Backfill: streamt die geojsonseq und setzt für
+     * jedes bereits vorhandene Gebiet (Match über osm_relation_id) NUR die
+     * lokalisierten Spalten name_de/name_en. Geometrie, Hierarchie und Besitz
+     * bleiben unangetastet — sicher auf einer laufenden Karte. Idempotent
+     * (mehrfaches Ausführen ergibt dasselbe Resultat).
+     *
+     * @param callable(string):void|null $log
+     * @return array{features:int,withOsm:int,withName:int,matched:int}
+     */
+    public function backfillNames(string $path, ?callable $log = null): array
+    {
+        $log ??= static function (string $_): void {};
+        if (!is_readable($path)) {
+            throw new \RuntimeException("GeoJSONSeq nicht lesbar: {$path}");
+        }
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            throw new \RuntimeException("Kann {$path} nicht öffnen.");
+        }
+        $features = 0;   // gültige Features gesamt
+        $withOsm  = 0;   // davon mit OSM-Relations-id (Match-Schlüssel)
+        $withName = 0;   // davon mit name:de / name:en / int_name
+        $matched  = 0;   // tatsächlich aktualisierte Gebiete
+        while (($line = fgets($handle)) !== false) {
+            $line = ltrim($line, "\x1e \t\r\n");
+            if ($line === '') {
+                continue;
+            }
+            $feature = json_decode($line, true);
+            if (!is_array($feature)) {
+                continue;
+            }
+            $props = $feature['properties'] ?? [];
+            if (!is_array($props)) {
+                continue;
+            }
+            $features++;
+            $osmId = $this->osmRelationId($props, $feature);
+            if ($osmId === null) {
+                continue;
+            }
+            $withOsm++;
+            $nameDe = $this->pickTag($props, ['name:de']);
+            $nameEn = $this->pickTag($props, ['name:en', 'int_name']);
+            if ($nameDe === null && $nameEn === null) {
+                continue;
+            }
+            $withName++;
+            $matched += $this->repo->updateNamesByOsm($osmId, $nameDe, $nameEn);
+            if (($withName % 5000) === 0) {
+                $log("… {$withName} Features mit Namensvariante geprüft, {$matched} Gebiete aktualisiert");
+            }
+        }
+        fclose($handle);
+        if ($withOsm === 0 && $features > 0) {
+            $log("WARNUNG: Kein Feature trägt eine OSM-Relations-id — dieser Export kann");
+            $log("nicht über osm_relation_id gematcht werden (re-export mit `osmium export -a @id`).");
+        }
+        $log("Fertig: {$features} Features, {$withOsm} mit OSM-id, {$withName} mit Namensvariante, {$matched} Gebiete aktualisiert.");
+        return ['features' => $features, 'withOsm' => $withOsm, 'withName' => $withName, 'matched' => $matched];
     }
 
     /**
@@ -622,6 +687,21 @@ final class RegionImportService
             $v = $props[$k] ?? null;
             if (is_string($v) && trim($v) !== '') {
                 return trim($v);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Erste nicht-leere OSM-Namensvariante aus der Schlüsselliste (auf 120 Zeichen
+     * gekürzt), sonst null. Für die lokalisierten Spalten name_de / name_en.
+     */
+    private function pickTag(array $props, array $keys): ?string
+    {
+        foreach ($keys as $k) {
+            $v = $props[$k] ?? null;
+            if (is_string($v) && trim($v) !== '') {
+                return mb_substr(trim($v), 0, 120);
             }
         }
         return null;

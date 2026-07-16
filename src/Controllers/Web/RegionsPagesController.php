@@ -10,6 +10,7 @@ use App\Game\RegionService;
 use App\Http\Middleware\Csrf;
 use App\Http\Request;
 use App\Http\Response;
+use App\Support\I18n;
 
 /**
  * Öffentliche Gebiets-Auswertung (WebAnalytics_Concept.md, Phase C): Einstieg
@@ -34,6 +35,7 @@ final class RegionsPagesController
     public function index(Request $req): void
     {
         [$user, $viewerClaimant] = $this->resolveViewer();
+        $this->regions->setLanguage(I18n::locale());
         $regions = $this->regions->rootRegions($viewerClaimant)['regions'];
 
         $this->view->render('regions/index', [
@@ -64,6 +66,7 @@ final class RegionsPagesController
     public function detail(Request $req, int $id): void
     {
         [$user, $viewerClaimant] = $this->resolveViewer();
+        $this->regions->setLanguage(I18n::locale());
         $detail = $id > 0 ? $this->regions->regionDetail($id, $viewerClaimant) : null;
         if ($detail === null) {
             Response::redirect('/gebiete');

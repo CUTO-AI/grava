@@ -27,6 +27,7 @@ final class RegionController
     /** GET /game/regions?bbox=&level=&geometry= */
     public function index(Request $req): void
     {
+        $this->service->setLanguage($this->negotiateLang($req));
         $parsed = MapLod::parseBbox((string)($req->query['bbox'] ?? ''));
         if ($parsed === null) {
             Response::error('bad_request', 'bbox erforderlich (minLon,minLat,maxLon,maxLat).', 400);
@@ -44,6 +45,7 @@ final class RegionController
     /** GET /game/regions/{id} */
     public function detail(Request $req): void
     {
+        $this->service->setLanguage($this->negotiateLang($req));
         $id = (int)($req->routeParams['id'] ?? 0);
         $detail = $this->service->regionDetail($id, $this->viewerClaimant($req));
         if ($detail === null) {
@@ -55,6 +57,7 @@ final class RegionController
     /** GET /game/regions/{id}/activity?days=7|30 — Nordstern-Aktivität (WAR + Solo/Crew-Rangliste). */
     public function activity(Request $req): void
     {
+        $this->service->setLanguage($this->negotiateLang($req));
         $id = (int)($req->routeParams['id'] ?? 0);
         $out = $this->service->regionActivity($id, $this->parseDays($req->query['days'] ?? null));
         if ($out === null) {
@@ -66,6 +69,7 @@ final class RegionController
     /** GET /game/regions/activity-overview?days=&level=&bbox= — WAR je Gebiet (Karte/Admin). */
     public function activityOverview(Request $req): void
     {
+        $this->service->setLanguage($this->negotiateLang($req));
         $bbox = MapLod::parseBbox((string)($req->query['bbox'] ?? ''));
         Response::json($this->service->warOverview(
             $this->parseDays($req->query['days'] ?? null),
@@ -77,6 +81,7 @@ final class RegionController
     /** GET /game/me/regions?level= (Bearer). */
     public function mine(Request $req): void
     {
+        $this->service->setLanguage($this->negotiateLang($req));
         $u = $req->user;
         $uid = $u !== null ? (int)($u->internal_id ?? 0) : 0;
         if ($uid <= 0) {
@@ -84,6 +89,23 @@ final class RegionController
         }
         $claimant = $this->repo->effectiveClaimantId($uid);
         Response::json($this->service->myRegions($claimant, $this->parseLevel($req->query['level'] ?? null)));
+    }
+
+    /**
+     * Anzeigesprache für Gebietsnamen aus dem Accept-Language-Header (App + Browser
+     * senden ihn). Nur die höchstpriorisierte Sprache zählt; 'de*' → Deutsch, alles
+     * andere → international/englisch. Beispiel: "de-DE,de;q=0.9,en;q=0.8" → 'de'.
+     */
+    private function negotiateLang(Request $req): string
+    {
+        $header = strtolower(trim($req->header('Accept-Language')));
+        if ($header === '') {
+            return 'en';
+        }
+        // Erste Sprach-Range vor dem ersten Komma / Semikolon.
+        $first = trim(explode(',', $header)[0]);
+        $first = trim(explode(';', $first)[0]);
+        return str_starts_with($first, 'de') ? 'de' : 'en';
     }
 
     /** Zeitfenster in Tagen — nur 7 oder 30 zulässig (Default 7). */

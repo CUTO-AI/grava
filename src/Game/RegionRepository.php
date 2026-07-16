@@ -15,6 +15,37 @@ final class RegionRepository
 {
     public function __construct(private readonly PDO $pdo) {}
 
+    /** Anzeigesprache für Gebietsnamen im Lesepfad ('de'|'en'); Default international. */
+    private string $displayLang = 'en';
+
+    /**
+     * Setzt die Anzeigesprache für Gebietsnamen (aus Accept-Language, siehe
+     * RegionController). Nur 'de' schaltet auf Deutsch; alles andere bleibt
+     * international/englisch. Pro Request einmal gesetzt.
+     */
+    public function setDisplayLang(string $lang): void
+    {
+        $this->displayLang = str_starts_with(strtolower($lang), 'de') ? 'de' : 'en';
+    }
+
+    /**
+     * SQL-Ausdruck für den anzuzeigenden Gebietsnamen in der aktuellen
+     * Anzeigesprache. Fallback-Kette:
+     *   de → name_de → name_en → name (lokaler OSM-Name)
+     *   en → name_en → name
+     * `$q` ist der Spalten-Qualifier inkl. Punkt (z. B. 'r.' oder '').
+     */
+    private function nameExpr(string $q = ''): string
+    {
+        $local = $q . 'name';
+        $de    = $q . 'name_de';
+        $en    = $q . 'name_en';
+        if ($this->displayLang === 'de') {
+            return "COALESCE(NULLIF($de,''), NULLIF($en,''), $local)";
+        }
+        return "COALESCE(NULLIF($en,''), $local)";
+    }
+
     /** WKT-Polygon der bbox (für die SRID-0-Spatial-Spalte bbox_geom). */
     private static function bboxWkt(float $minLon, float $minLat, float $maxLon, float $maxLat): string
     {
@@ -47,19 +78,21 @@ final class RegionRepository
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO game_region
-               (osm_relation_id, level, kind, name, country_code, parent_id, path,
+               (osm_relation_id, level, kind, name, name_de, name_en, country_code, parent_id, path,
                 center_lat, center_lon, min_lat, min_lon, max_lat, max_lon, area_km2, boundary_geojson, bbox_geom)
              VALUES
-               (:osm, :level, :kind, :name, :cc, NULL, :path,
+               (:osm, :level, :kind, :name, :name_de, :name_en, :cc, NULL, :path,
                 :clat, :clon, :minlat, :minlon, :maxlat, :maxlon, :area, :geo,
                 ST_SRID(ST_GeomFromText(:wkt), 0))'
         );
         // Vorläufiger Self-Path; wird im Link-Pass überschrieben, sobald die id feststeht.
         $stmt->execute([
-            ':osm'    => $r['osm_relation_id'],
-            ':level'  => $r['level'],
-            ':kind'   => $r['kind'],
-            ':name'   => $r['name'],
+            ':osm'     => $r['osm_relation_id'],
+            ':level'   => $r['level'],
+            ':kind'    => $r['kind'],
+            ':name'    => $r['name'],
+            ':name_de' => $r['name_de'] ?? null,
+            ':name_en' => $r['name_en'] ?? null,
             ':cc'     => $r['country_code'],
             ':path'   => '/',
             ':clat'   => $r['center_lat'],
@@ -73,6 +106,21 @@ final class RegionRepository
             ':wkt'    => self::bboxWkt((float)$r['min_lon'], (float)$r['min_lat'], (float)$r['max_lon'], (float)$r['max_lat']),
         ]);
         return (int)$this->pdo->lastInsertId();
+    }
+
+    /**
+     * Setzt NUR die lokalisierten Namen (name_de/name_en) eines Gebiets anhand
+     * seiner OSM-Relations-id — nicht-destruktiver Backfill ohne Geometrie/
+     * Besitz/Hierarchie anzufassen. Liefert die Zahl geänderter Zeilen (0, wenn
+     * kein Gebiet mit dieser osm_relation_id existiert).
+     */
+    public function updateNamesByOsm(int $osmRelationId, ?string $nameDe, ?string $nameEn): int
+    {
+        $stmt = $this->pdo->prepare(
+            'UPDATE game_region SET name_de = :de, name_en = :en WHERE osm_relation_id = :osm'
+        );
+        $stmt->execute([':de' => $nameDe, ':en' => $nameEn, ':osm' => $osmRelationId]);
+        return $stmt->rowCount();
     }
 
     public function setParent(int $id, ?int $parentId, string $path, ?string $countryCode): void
@@ -410,7 +458,7 @@ final class RegionRepository
     public function exportPage(int $afterId, int $limit): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, osm_relation_id, level, kind, name, country_code, parent_id, path,
+            'SELECT id, osm_relation_id, level, kind, name, name_de, name_en, country_code, parent_id, path,
                     center_lat, center_lon, min_lat, min_lon, max_lat, max_lon, area_km2, boundary_geojson
                FROM game_region
               WHERE id > :after
@@ -439,15 +487,16 @@ final class RegionRepository
             $this->pdo->exec('DELETE FROM game_region');
         }
         $sql = 'INSERT INTO game_region
-                  (id, osm_relation_id, level, kind, name, country_code, parent_id, path,
+                  (id, osm_relation_id, level, kind, name, name_de, name_en, country_code, parent_id, path,
                    center_lat, center_lon, min_lat, min_lon, max_lat, max_lon, area_km2, boundary_geojson, bbox_geom)
                 VALUES
-                  (:id, :osm, :level, :kind, :name, :cc, :pid, :path,
+                  (:id, :osm, :level, :kind, :name, :name_de, :name_en, :cc, :pid, :path,
                    :clat, :clon, :minlat, :minlon, :maxlat, :maxlon, :area, :geo,
                    ST_SRID(ST_GeomFromText(:wkt), 0))
                 ON DUPLICATE KEY UPDATE
                    osm_relation_id = VALUES(osm_relation_id), level = VALUES(level), kind = VALUES(kind),
-                   name = VALUES(name), country_code = VALUES(country_code), parent_id = VALUES(parent_id),
+                   name = VALUES(name), name_de = VALUES(name_de), name_en = VALUES(name_en),
+                   country_code = VALUES(country_code), parent_id = VALUES(parent_id),
                    path = VALUES(path), center_lat = VALUES(center_lat), center_lon = VALUES(center_lon),
                    min_lat = VALUES(min_lat), min_lon = VALUES(min_lon), max_lat = VALUES(max_lat),
                    max_lon = VALUES(max_lon), area_km2 = VALUES(area_km2), boundary_geojson = VALUES(boundary_geojson),
@@ -461,6 +510,8 @@ final class RegionRepository
                 ':level'  => (int)$r['level'],
                 ':kind'   => (string)$r['kind'],
                 ':name'   => (string)$r['name'],
+                ':name_de' => isset($r['name_de']) && $r['name_de'] !== null && $r['name_de'] !== '' ? (string)$r['name_de'] : null,
+                ':name_en' => isset($r['name_en']) && $r['name_en'] !== null && $r['name_en'] !== '' ? (string)$r['name_en'] : null,
                 ':cc'     => $r['country_code'] !== null && $r['country_code'] !== '' ? (string)$r['country_code'] : null,
                 ':pid'    => $r['parent_id'] !== null ? (int)$r['parent_id'] : null,
                 ':path'   => (string)$r['path'],
@@ -502,7 +553,7 @@ final class RegionRepository
         // ownedOnly: nur eroberte Gebiete (Schwelle erreicht) — für das leichte
         // Polygon-Overlay eroberter Fein-Gebiete beim Rauszoomen.
         $ownedFilter = $ownedOnly ? ' AND o.owner_claimant_id IS NOT NULL AND o.contested = 0' : '';
-        $sql = "SELECT r.id, r.level, r.kind, r.name, r.parent_id, r.center_lat, r.center_lon,
+        $sql = "SELECT r.id, r.level, r.kind, {$this->nameExpr('r.')} AS name, r.parent_id, r.center_lat, r.center_lon,
                        r.min_lat, r.min_lon, r.max_lat, r.max_lon,
                        o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested, o.total_edges
                        {$geoCol}
@@ -538,14 +589,14 @@ final class RegionRepository
         // („territorial waters"), Grenzstreifen-Relationen und Exklaven (allesamt
         // ohne Spielkanten) — die gehören nicht in die Länderliste.
         $stmt = $this->pdo->prepare(
-            'SELECT r.id, r.level, r.kind, r.name, r.country_code, r.parent_id, r.center_lat, r.center_lon,
+            'SELECT r.id, r.level, r.kind, ' . $this->nameExpr('r.') . ' AS name, r.country_code, r.parent_id, r.center_lat, r.center_lon,
                     r.min_lat, r.min_lon, r.max_lat, r.max_lon,
                     o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested,
                     o.total_edges, o.total_game_length_m
                FROM game_region r
           LEFT JOIN game_region_ownership o ON o.region_id = r.id
               WHERE r.parent_id IS NULL AND r.country_code IS NOT NULL
-           ORDER BY r.name ASC
+           ORDER BY name ASC
               LIMIT :lim'
         );
         $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
@@ -557,7 +608,7 @@ final class RegionRepository
     public function regionFull(int $id): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT r.id, r.level, r.kind, r.name, r.country_code, r.parent_id, r.path, r.center_lat, r.center_lon,
+            'SELECT r.id, r.level, r.kind, ' . $this->nameExpr('r.') . ' AS name, r.country_code, r.parent_id, r.path, r.center_lat, r.center_lon,
                     r.min_lat, r.min_lon, r.max_lat, r.max_lon, r.boundary_geojson,
                     o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested,
                     o.total_game_length_m, o.total_edges, o.owner_since
@@ -574,13 +625,13 @@ final class RegionRepository
     public function childrenOf(int $parentId, int $limit = 400): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT r.id, r.level, r.kind, r.name, r.country_code, r.center_lat, r.center_lon,
+            'SELECT r.id, r.level, r.kind, ' . $this->nameExpr('r.') . ' AS name, r.country_code, r.center_lat, r.center_lon,
                     o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested,
                     o.total_edges, o.total_game_length_m
                FROM game_region r
           LEFT JOIN game_region_ownership o ON o.region_id = r.id
               WHERE r.parent_id = :pid
-           ORDER BY r.name ASC
+           ORDER BY name ASC
               LIMIT :lim'
         );
         $stmt->bindValue(':pid', $parentId, PDO::PARAM_INT);
@@ -604,7 +655,7 @@ final class RegionRepository
         }
         $in = implode(',', array_fill(0, count($ids), '?'));
         $stmt = $this->pdo->prepare(
-            "SELECT id, level, kind, name, country_code FROM game_region WHERE id IN ($in) ORDER BY level ASC"
+            "SELECT id, level, kind, {$this->nameExpr()} AS name, country_code FROM game_region WHERE id IN ($in) ORDER BY level ASC"
         );
         $stmt->execute($ids);
         $out = [];
@@ -754,7 +805,7 @@ final class RegionRepository
             $bboxFilter = ' AND a.min_lat <= :maxLat AND a.max_lat >= :minLat'
                         . ' AND a.min_lon <= :maxLon AND a.max_lon >= :minLon';
         }
-        $sql = "SELECT a.id AS region_id, a.name AS name, a.level AS level, a.kind AS kind,
+        $sql = "SELECT a.id AS region_id, {$this->nameExpr('a.')} AS name, a.level AS level, a.kind AS kind,
                        COUNT(DISTINCT p.user_id) AS war,
                        COUNT(DISTINCT CASE WHEN gc.claimant_id IS NULL THEN p.user_id END) AS solo_riders,
                        COUNT(DISTINCT gc.claimant_id) AS crew_count,
@@ -940,7 +991,7 @@ final class RegionRepository
             $bboxFilter = ' AND r.min_lat <= :maxLat AND r.max_lat >= :minLat'
                         . ' AND r.min_lon <= :maxLon AND r.max_lon >= :minLon';
         }
-        $sql = "SELECT r.id AS region_id, r.name AS name, r.level AS level, r.kind AS kind,
+        $sql = "SELECT r.id AS region_id, {$this->nameExpr('r.')} AS name, r.level AS level, r.kind AS kind,
                        a.war AS war, a.solo_riders AS solo_riders, a.crew_count AS crew_count, a.edges AS edges
                   FROM game_region_activity a
                   JOIN game_region r ON r.id = a.region_id
@@ -984,7 +1035,7 @@ final class RegionRepository
      */
     public function regionsForClaimant(int $claimantId, ?int $level, int $limit = 200): array
     {
-        $sql = 'SELECT r.id, r.level, r.kind, r.name, r.center_lat, r.center_lon,
+        $sql = 'SELECT r.id, r.level, r.kind, ' . $this->nameExpr('r.') . ' AS name, r.center_lat, r.center_lon,
                        o.owner_claimant_id, o.leader_claimant_id, o.held_fraction, o.contested
                   FROM game_region_ownership o
                   JOIN game_region r ON r.id = o.region_id

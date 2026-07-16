@@ -177,6 +177,9 @@ final class Commands
             case 'regions:backfill':
                 return $this->regionsBackfill($argv);
 
+            case 'regions:backfill-names':
+                return $this->regionsBackfillNames($argv);
+
             case 'regions:relink':
                 return $this->regionsRelink();
 
@@ -1080,6 +1083,34 @@ final class Commands
         foreach ($res['inserted'] as $lvl => $cnt) {
             echo sprintf("  Ebene %d: %d\n", $lvl, $cnt);
         }
+        return 0;
+    }
+
+    /**
+     * regions:backfill-names [--file=storage/regions/boundaries.geojsonseq]
+     * Nicht-destruktiver Backfill der lokalisierten Gebietsnamen (name_de/name_en)
+     * aus der geojsonseq — Match über osm_relation_id, setzt NUR die zwei Namens-
+     * spalten (keine Geometrie/Besitz/Hierarchie). Idempotent, sicher auf einer
+     * laufenden Karte. Für bestehende Datenbestände nach Migration 0067.
+     */
+    private function regionsBackfillNames(array $argv): int
+    {
+        if ($this->regionImport === null) {
+            fwrite(STDERR, "regions:backfill-names nicht verfügbar (Service nicht verdrahtet).\n");
+            return 1;
+        }
+        ini_set('memory_limit', '1G');
+        $opts = $this->parseOptions($argv);
+        $file = (string)($opts['file'] ?? ($this->basePath . '/storage/regions/boundaries.geojsonseq'));
+        $log = static fn(string $m): int => fwrite(STDERR, $m . "\n");
+        try {
+            $res = $this->regionImport->backfillNames($file, $log);
+        } catch (\Throwable $e) {
+            fwrite(STDERR, "Fehler: {$e->getMessage()}\n");
+            return 1;
+        }
+        echo sprintf("Namens-Backfill: %d Gebiete aktualisiert (%d Features, %d mit OSM-id, %d mit Variante).\n",
+            $res['matched'], $res['features'], $res['withOsm'], $res['withName']);
         return 0;
     }
 
