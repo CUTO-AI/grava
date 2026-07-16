@@ -58,7 +58,7 @@ final class RouteRepository
         RouteStats $initialStats,
     ): int {
         self::assertEnum($visibility, ['private','unlisted','public'], 'visibility');
-        self::assertEnum($source,     ['app','import','strava','manual'], 'source');
+        self::assertEnum($source,     ['app','import','strava','manual','wahoo'], 'source');
 
         $now = Clock::nowUtcString();
         $sql = 'INSERT INTO routes (

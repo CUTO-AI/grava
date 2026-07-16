@@ -4,6 +4,9 @@ declare(strict_types=1);
 namespace App\Integrations\Wahoo;
 
 use App\Database\Db;
+use App\Routes\RouteRepository;
+use App\Routes\RouteService;
+use App\Routes\SensorMetrics;
 use App\Support\Clock;
 use App\Support\Crypto;
 
@@ -31,6 +34,11 @@ final class WahooService
         private readonly string $redirectUri,
         private readonly bool $fakeMode,
         private readonly string $appUrl,
+        // Ingestion-Abhängigkeiten (Phase C+). Nullable, damit reine OAuth-Nutzung
+        // (Phase B) den Service ohne diese konstruieren kann.
+        private readonly ?RouteService $routes = null,
+        private readonly ?RouteRepository $routeRepo = null,
+        private readonly ?FitDecoder $fit = null,
     ) {}
 
     public function isConfigured(): bool
@@ -145,6 +153,97 @@ final class WahooService
             'scope'         => $conn['scope'] === null ? null : (string)$conn['scope'],
             'connected_at'  => str_replace(' ', 'T', (string)$conn['created_at']) . 'Z',
         ] + $base;
+    }
+
+    /**
+     * Importiert ein einzelnes Wahoo-Workout als private Route (Phase-C-Kern;
+     * wird von Pull (Phase D) und Webhook (Phase E) genutzt). Idempotent über die
+     * deterministische client_route_uuid. FIT ohne verwertbaren GPS-Track wird
+     * übersprungen (z. B. Indoor). Startdatum kommt aus der FIT → korrekte
+     * Datierung im Revier.
+     *
+     * @return array{status:string, reason?:string}
+     */
+    public function ingestWorkout(int $userId, string $workoutId): array
+    {
+        if ($this->routes === null || $this->routeRepo === null) {
+            throw new WahooException('not_configured', 'Wahoo-Import ist nicht verdrahtet.', 500);
+        }
+        $conn = $this->connectionRow($userId);
+        if ($conn === null) {
+            throw new WahooException('not_connected', 'Keine Wahoo-Verbindung.', 409);
+        }
+
+        // Schon importiert? → idempotenter Skip (Pull + Webhook kollidieren nicht).
+        $clientUuid = self::workoutUuid($workoutId);
+        if ($this->routeExists($userId, $clientUuid)) {
+            return ['status' => 'skipped', 'reason' => 'already_imported'];
+        }
+
+        $token   = $this->freshAccessToken($userId, $conn);
+        $summary = $this->client->getWorkoutSummary($token, $workoutId);
+        $fitUrl  = $summary['fit_file_url'] ?? null;
+        if ($fitUrl === null || $fitUrl === '') {
+            return ['status' => 'skipped', 'reason' => 'no_fit'];
+        }
+
+        $bytes   = $this->client->downloadFit($token, $fitUrl);
+        $decoded = ($this->fit ?? new FitDecoder())->decode($bytes);
+        if ($decoded['point_count'] < 2) {
+            return ['status' => 'skipped', 'reason' => 'no_track'];
+        }
+
+        $result = $this->routes->createOrAddVersion(
+            userId: $userId,
+            title: 'Wahoo-Fahrt ' . $workoutId,
+            description: 'Importiert aus Wahoo (Workout ' . $workoutId . ').',
+            visibility: 'private',
+            source: 'wahoo',
+            clientRouteUuid: $clientUuid,
+            payload: $decoded['geojson'],
+            tags: ['wahoo'],
+        );
+
+        // Sensor-Aggregate aus der FIT persistieren: Der GeoJSON-Payload trägt keine
+        // GPX-Sensor-Tags, daher greift SensorMetricsParser (GPX) nicht — wir setzen
+        // die vom Gerät berechneten Session-Werte direkt. Interne Route-ID über die
+        // deterministische client_route_uuid (die public-Form liefert keine interne id).
+        $routeId = $this->routeIdByClientUuid($userId, $clientUuid);
+        if ($routeId !== null) {
+            $a = $decoded['aggregates'];
+            $this->routeRepo->updateSensorMetrics($routeId, new SensorMetrics(
+                avgPowerW: $a['avg_power_w'],
+                maxPowerW: $a['max_power_w'],
+                avgCadenceRpm: $a['avg_cadence_rpm'],
+                avgPedalBalancePct: null,
+                avgHeartRateBpm: $a['avg_heart_rate_bpm'],
+                maxHeartRateBpm: $a['max_heart_rate_bpm'],
+            ));
+        }
+
+        return ['status' => 'imported'];
+    }
+
+    /** Deterministische UUID (CHAR(36)) aus der Workout-ID — Import-Idempotenz. */
+    public static function workoutUuid(string $workoutId): string
+    {
+        $hex = md5('wahoo:' . $workoutId);
+        return substr($hex, 0, 8) . '-' . substr($hex, 8, 4) . '-'
+            . substr($hex, 12, 4) . '-' . substr($hex, 16, 4) . '-'
+            . substr($hex, 20, 12);
+    }
+
+    private function routeExists(int $userId, string $clientUuid): bool
+    {
+        return $this->routeIdByClientUuid($userId, $clientUuid) !== null;
+    }
+
+    private function routeIdByClientUuid(int $userId, string $clientUuid): ?int
+    {
+        $stmt = Db::pdo()->prepare('SELECT id FROM routes WHERE user_id = ? AND client_route_uuid = ? LIMIT 1');
+        $stmt->execute([$userId, $clientUuid]);
+        $id = $stmt->fetchColumn();
+        return $id === false ? null : (int)$id;
     }
 
     // -----------------------------------------------------------------

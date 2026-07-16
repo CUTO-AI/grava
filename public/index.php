@@ -434,6 +434,9 @@ $wahooServ         = new WahooService(
     $wahooRedirectUri,
     $wahooFake,
     (string)$config->get('APP_URL', ''),
+    $routeService,
+    $routeRepo,
+    new \App\Integrations\Wahoo\FitDecoder(),
 );
 
 $gameRideSummary = new \App\Game\GameRideSummaryService($gameRepo, $gameRushRepo, $privacyZoneRepo, $privacyTrimmer, new \App\Game\RegionRepository(Db::pdo()));

@@ -31,3 +31,6 @@
 /000_CUTOVER/
 # APNs-Signing-Keys gehören generell nie ins Repo
 *.p8
+
+# Wahoo FIT-Testfixtures: echte GPS-/Fitnessdaten, NICHT einchecken (Datenschutz)
+tests/fixtures/wahoo/*.fit
