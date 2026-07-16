@@ -803,6 +803,11 @@ $router->get("{$apiBase}/game/_regiondiag", function ($r) use ($regionRepo, $gam
     }
     $pdo = \App\Database\Db::pdo();
     $out = ['db' => $pdo->query('SELECT DATABASE()')->fetchColumn()];
+    $rc = new \ReflectionClass(\App\Game\RegionService::class);
+    $out['svc_file'] = $rc->getFileName();
+    $out['svc_mtime'] = @date('c', (int)@filemtime((string)$rc->getFileName()));
+    $out['svc_hasSetLanguage'] = method_exists(\App\Game\RegionService::class, 'setLanguage');
+    $out['svc_methods'] = array_map(fn($m) => $m->name, $rc->getMethods());
     $out['cols'] = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='game_region' AND COLUMN_NAME IN ('name','name_de','name_en')")->fetchAll(\PDO::FETCH_COLUMN);
     try {
         $pdo->query("SELECT COALESCE(NULLIF(r.name_en,''), r.name) FROM game_region r LIMIT 1")->fetchColumn();
