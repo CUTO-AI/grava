@@ -793,29 +793,6 @@ $router->get("{$apiBase}/game/me/pioneered",       fn($r) => $apiGame->pioneered
 $router->get("{$apiBase}/game/challenges",         fn($r) => $apiGame->challenges($r), [$requireBearer]);
 $router->get("{$apiBase}/game/config",             fn($r) => $apiGame->config($r),   [$requireBearer]);
 $router->get("{$apiBase}/game/progression",        fn($r) => $apiGame->progression($r), [$requireBearer]);
-// TEMP-Diagnose (wird gleich wieder entfernt): OSM-id-Abdeckung der Gebiete.
-$router->get("{$apiBase}/game/_osmcov", function ($r) {
-    $pdo = \App\Database\Db::pdo();
-    $out = [
-        'total'    => (int)$pdo->query('SELECT COUNT(*) FROM game_region')->fetchColumn(),
-        'with_osm' => (int)$pdo->query('SELECT COUNT(*) FROM game_region WHERE osm_relation_id IS NOT NULL')->fetchColumn(),
-    ];
-    $out['by_level'] = $pdo->query(
-        "SELECT level,
-                COUNT(*) AS total,
-                SUM(osm_relation_id IS NOT NULL) AS with_osm,
-                SUM(name_de IS NOT NULL) AS with_de,
-                SUM(name_en IS NOT NULL) AS with_en
-           FROM game_region GROUP BY level ORDER BY level"
-    )->fetchAll(\PDO::FETCH_ASSOC);
-    $out['sample'] = $pdo->query(
-        "SELECT id, level, country_code, osm_relation_id, name
-           FROM game_region
-          WHERE country_code IN ('RU','GR','UA','BG','RS','GE') AND level >= 6
-          LIMIT 5"
-    )->fetchAll(\PDO::FETCH_ASSOC);
-    \App\Http\Response::json($out);
-});
 // Gebiets-Eroberung (CityConquest_Backend_Spec.md): Gebiete im Ausschnitt (zoom-
 // adaptiv), Detail mit Breadcrumb/Kindern/Bestenliste, eigene Gebiete.
 $router->get("{$apiBase}/game/regions",            fn($r) => $apiRegion->index($r),  [$optionalBearer]);
