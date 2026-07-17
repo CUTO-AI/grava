@@ -385,29 +385,39 @@ final class GameReadService
     }
 
     /**
-     * In den letzten N Tagen (Fahrdatum) eroberte/verlorene Kanten inkl. Geometrie
-     * für die Home-„Mein Revier"-Minikarte. Deduped je Kante (jüngstes Ereignis
-     * gewinnt die Richtung — eine zwischenzeitlich verlorene, dann zurückeroberte
-     * Kante zählt zuletzt als „gained").
+     * In den letzten N Tagen (Fahrdatum) eroberte/verlorene Kanten für die Home-
+     * „Mein Revier"-Minikarte. `gained`/`lost` sind die EXAKTEN Distinct-Zähler
+     * (ohne Limit, identisch zur Logik des Puls-Zählers). `edges` ist eine für die
+     * Darstellung GEKAPPTE Geometrie-Auswahl (Zeichnen tausender Polylinien wäre
+     * zu teuer) — deduped je Kante (jüngstes Ereignis gewinnt die Richtung).
      *
-     * @return array{edges:list<array{id:int,direction:string,geom:mixed}>}
+     * @return array{gained:int,lost:int,edges:list<array{id:int,direction:string,geom:mixed}>}
      */
     public function recentTerritoryEdges(int $userId, int $days): array
     {
         $since = Clock::nowUtc()->modify("-{$days} days")->format('Y-m-d');
-        $edges = [];   // edge_id => row (letzter Eintrag gewinnt, Query sortiert asc)
+        $counts = $this->repo->edgeEventCounts($userId, $since);   // exakt, ohne Limit
+        $edges = [];   // edge_id => row (Query DESC → ERSTER Eintrag je Kante gewinnt = jüngstes Ereignis)
         foreach ($this->repo->recentEdgeEvents($userId, $since) as $row) {
+            $id = (int)$row['edge_id'];
+            if (isset($edges[$id])) {
+                continue;
+            }
             $geom = json_decode((string)($row['geom_geojson'] ?? ''), true);
             if (!is_array($geom)) {
                 continue;
             }
-            $edges[(int)$row['edge_id']] = [
-                'id'        => (int)$row['edge_id'],
+            $edges[$id] = [
+                'id'        => $id,
                 'direction' => (string)$row['direction'],
                 'geom'      => $geom,
             ];
         }
-        return ['edges' => array_values($edges)];
+        return [
+            'gained' => $counts['gained'],
+            'lost'   => $counts['lost'],
+            'edges'  => array_values($edges),
+        ];
     }
 
     /**

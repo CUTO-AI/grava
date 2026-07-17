@@ -415,8 +415,8 @@ final class GameRepository
                 AND ev.edge_id IS NOT NULL
                 AND ( (ev.type IN ('edge_new','edge_taken','edge_reclaimed') AND ev.actor_user_id = ?)
                       OR (ev.type = 'edge_taken' AND ev.user_id = ? AND ev.actor_user_id <> ?) )
-              ORDER BY ev.ridden_on ASC
-              LIMIT 2000"
+              ORDER BY ev.ridden_on DESC
+              LIMIT 4000"
         );
         $stmt->execute([$userId, $sinceDate, $userId, $userId, $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
