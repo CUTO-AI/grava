@@ -385,6 +385,32 @@ final class GameReadService
     }
 
     /**
+     * In den letzten N Tagen (Fahrdatum) eroberte/verlorene Kanten inkl. Geometrie
+     * für die Home-„Mein Revier"-Minikarte. Deduped je Kante (jüngstes Ereignis
+     * gewinnt die Richtung — eine zwischenzeitlich verlorene, dann zurückeroberte
+     * Kante zählt zuletzt als „gained").
+     *
+     * @return array{edges:list<array{id:int,direction:string,geom:mixed}>}
+     */
+    public function recentTerritoryEdges(int $userId, int $days): array
+    {
+        $since = Clock::nowUtc()->modify("-{$days} days")->format('Y-m-d');
+        $edges = [];   // edge_id => row (letzter Eintrag gewinnt, Query sortiert asc)
+        foreach ($this->repo->recentEdgeEvents($userId, $since) as $row) {
+            $geom = json_decode((string)($row['geom_geojson'] ?? ''), true);
+            if (!is_array($geom)) {
+                continue;
+            }
+            $edges[(int)$row['edge_id']] = [
+                'id'        => (int)$row['edge_id'],
+                'direction' => (string)$row['direction'],
+                'geom'      => $geom,
+            ];
+        }
+        return ['edges' => array_values($edges)];
+    }
+
+    /**
      * Pionier-Showcase (§7): die zuletzt vom Claimant erschlossenen Kanten mit
      * Geometrie + Erschließungs-Datum, für die Profil-Sektion „Pionier".
      * @return array{edges:list<array<string,mixed>>}

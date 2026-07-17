@@ -174,6 +174,18 @@ final class GameController
         Response::json($this->read->me($claimant, $uid));
     }
 
+    /**
+     * GET /game/me/recent-edges?days=30 (Bearer) — in den letzten N Tagen (Fahrdatum)
+     * eroberte/verlorene Kanten inkl. Geometrie, für die Home-„Mein Revier"-Minikarte.
+     * `direction` = "gained" (ich Auslöser) | "lost" (mir genommen).
+     */
+    public function recentEdges(Request $req): void
+    {
+        $uid = $this->userId($req);
+        $days = max(1, min(90, (int)($req->query['days'] ?? 30)));
+        Response::json($this->read->recentTerritoryEdges($uid, $days));
+    }
+
     /** GET /game/me/at-risk — gefährdete eigene Kanten (Bearer). */
     public function atRisk(Request $req): void
     {

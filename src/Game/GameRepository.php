@@ -394,6 +394,34 @@ final class GameRepository
         return ['gained' => (int)($r['gained'] ?? 0), 'lost' => (int)($r['lost'] ?? 0)];
     }
 
+    /**
+     * Ereignisse (mit Kanten-Geometrie) der letzten N Tage für die Home-Minikarte.
+     * Gleiche Semantik wie {@see edgeEventCounts} (Fahrdatum-Fenster, actor = gewonnen,
+     * Opfer = verloren), liefert aber je Zeile die Geometrie. ASC nach `ridden_on`,
+     * damit der Aufrufer per „letzter gewinnt" je Kante deduplizieren kann.
+     *
+     * @return list<array{edge_id:int,geom_geojson:?string,direction:string,ridden_on:?string}>
+     */
+    public function recentEdgeEvents(int $userId, string $sinceDate): array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT ev.edge_id,
+                    e.geom_geojson,
+                    CASE WHEN ev.actor_user_id = ? THEN 'gained' ELSE 'lost' END AS direction,
+                    ev.ridden_on
+               FROM game_event ev
+               JOIN game_edge e ON e.id = ev.edge_id
+              WHERE ev.ridden_on >= ?
+                AND ev.edge_id IS NOT NULL
+                AND ( (ev.type IN ('edge_new','edge_taken','edge_reclaimed') AND ev.actor_user_id = ?)
+                      OR (ev.type = 'edge_taken' AND ev.user_id = ? AND ev.actor_user_id <> ?) )
+              ORDER BY ev.ridden_on ASC
+              LIMIT 2000"
+        );
+        $stmt->execute([$userId, $sinceDate, $userId, $userId, $userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function passesForEdgesByUsers(array $edgeIds, array $userIds): array
     {
         if ($edgeIds === [] || $userIds === []) {
