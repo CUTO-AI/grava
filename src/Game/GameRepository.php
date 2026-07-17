@@ -1175,10 +1175,19 @@ final class GameRepository
         );
         $pio->execute([$claimantId]);
 
+        // Schnittmenge: aktuell gehaltene Kanten, die ich selbst erschlossen habe
+        // (Basis der „Verteidigung" = Anteil selbst erschlossener gehaltener Kanten).
+        $pioHeld = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM game_edge
+              WHERE owner_claimant_id = ? AND discoverer_claimant_id = ?'
+        );
+        $pioHeld->execute([$claimantId, $claimantId]);
+
         return [
-            'held'          => (int)$h['held'],
-            'pioneered'     => (int)$pio->fetchColumn(),
-            'held_length_m' => (float)$h['len'],
+            'held'           => (int)$h['held'],
+            'pioneered'      => (int)$pio->fetchColumn(),
+            'held_pioneered' => (int)$pioHeld->fetchColumn(),
+            'held_length_m'  => (float)$h['len'],
         ];
     }
 

@@ -341,10 +341,11 @@ final class GameReadService
             ? $this->records->recordsHeld($userId)
             : 0;
         $out = [
-            'held_edges'      => $s['held'],
-            'pioneered_edges' => $s['pioneered'],
-            'held_length_m'   => $s['held_length_m'],
-            'records_held'    => $recordsHeld,
+            'held_edges'           => $s['held'],
+            'pioneered_edges'      => $s['pioneered'],
+            'held_pioneered_edges' => $s['held_pioneered'],
+            'held_length_m'        => $s['held_length_m'],
+            'records_held'         => $recordsHeld,
         ];
 
         // Wochen-Serie (GAME_EVENTS_BACKEND.md Teil 2), additiv. Trägt die Fahrt
