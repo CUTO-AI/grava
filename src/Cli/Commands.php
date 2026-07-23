@@ -36,6 +36,7 @@ final class Commands
         private readonly string $triggerKind = 'cron',
         private readonly ?\App\Game\Admin\BroadcastService $broadcasts = null,
         private readonly ?\App\Game\RegionActivityCacheService $regionActivity = null,
+        private readonly ?\App\Game\GameEdgesAtRiskService $atRisk = null,
     ) {}
 
     /**
@@ -196,6 +197,9 @@ final class Commands
             case 'cron:region-activity':
             case 'game:region-activity-refresh':
                 return $this->regionActivityRefresh();
+
+            case 'game:at-risk-refresh':
+                return $this->atRiskRefresh();
 
             case 'regions:push':
                 return $this->regionsPush($argv);
@@ -1382,6 +1386,24 @@ final class Commands
             "Gebiets-Aktivität aktualisiert: %d Fenster, %d Gebiet-Zeilen.\n",
             $res['windows'], $res['regions']
         );
+        return 0;
+    }
+
+    /**
+     * game:at-risk-refresh — erneuert abgelaufene Einträge des at-risk-Antwort-
+     * Caches (game_at_risk_cache), älteste zuerst. Der API-Endpoint liefert für
+     * Power-Konten immer aus dem Cache; ohne diesen Lauf altern deren Werte.
+     */
+    private function atRiskRefresh(): int
+    {
+        if ($this->atRisk === null) {
+            echo "game:at-risk-refresh nicht verfügbar (Service nicht verdrahtet).\n";
+            return 1;
+        }
+        ini_set('memory_limit', '1G');
+        $res = $this->atRisk->refreshStale();
+        $this->didWork = $res['refreshed'] > 0;
+        echo sprintf("At-Risk-Cache erneuert: %d Einträge.\n", $res['refreshed']);
         return 0;
     }
 

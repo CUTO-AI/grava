@@ -22,6 +22,69 @@ final class GameEdgesAtRiskService
     ) {}
 
     /**
+     * Cache-Fassade für den API-Endpoint: berechnet EINMAL, speichert die fertige
+     * Antwort (game_at_risk_cache) und liefert danach aus dem Cache. Abgelaufene
+     * Einträge erneuert der Cron `game:at-risk-refresh`; kleine Konten (bis
+     * `at_risk_live_max_edges` gehaltene Kanten) rechnen auch bei abgelaufenem
+     * Cache live, Power-Konten liefern die (leicht veraltete) Kopie sofort —
+     * die Live-Ableitung lief dort sonst in den 20-s-Client-Timeout.
+     *
+     * @return array{at_risk_count:int,fading_count:int,edges:list<array<string,mixed>>}
+     */
+    public function atRiskCached(int $userId): array
+    {
+        $cached = $this->repo->atRiskCacheGet($userId);
+        if ($cached !== null) {
+            $payload = json_decode($cached['payload'], true);
+            if (is_array($payload)) {
+                $ttlMin = max(0, $this->config->int('at_risk_cache_ttl_min'));
+                $ageSec = time() - strtotime($cached['computed_at'] . ' UTC');
+                if ($ageSec < $ttlMin * 60) {
+                    return $payload;
+                }
+                // Abgelaufen: nur kleine Konten live nachrechnen, große liefern
+                // die Kopie (Refresh übernimmt der Cron).
+                $claimantId = $this->repo->effectiveClaimantId($userId);
+                if ($this->repo->heldEdgeCountByClaimant($claimantId) > $this->config->int('at_risk_live_max_edges')) {
+                    return $payload;
+                }
+            }
+        }
+        return $this->computeAndStore($userId);
+    }
+
+    /** Berechnet frisch und legt die Antwort im Cache ab (gemeinsamer Pfad API/Cron). */
+    public function computeAndStore(int $userId): array
+    {
+        $fresh = $this->atRisk($userId);
+        $json = json_encode($fresh, JSON_UNESCAPED_UNICODE);
+        if ($json !== false) {
+            $this->repo->atRiskCachePut($userId, $json);
+        }
+        return $fresh;
+    }
+
+    /**
+     * Cron-Pfad (`game:at-risk-refresh`): erneuert die ältesten abgelaufenen
+     * Cache-Einträge. Nur User, die den Endpoint schon einmal benutzt haben,
+     * besitzen eine Zeile — Karteileichen kosten nichts.
+     *
+     * @return array{checked:int,refreshed:int}
+     */
+    public function refreshStale(int $limit = 200): array
+    {
+        $ttlMin = max(0, $this->config->int('at_risk_cache_ttl_min'));
+        $stale = $this->repo->atRiskCacheStaleUserIds($ttlMin, $limit);
+        foreach ($stale as $uid) {
+            $this->computeAndStore($uid);
+        }
+        return ['checked' => count($stale), 'refreshed' => count($stale)];
+    }
+
+    /**
+     * Reine Live-Ableitung (ohne Cache) — direkter Aufruf nur für Tests/Cron;
+     * der API-Endpoint nutzt {@see atRiskCached()}.
+     *
      * @return array{at_risk_count:int,fading_count:int,edges:list<array<string,mixed>>}
      */
     public function atRisk(int $userId): array
@@ -43,7 +106,9 @@ final class GameEdgesAtRiskService
             }
 
             $edgeId = (int)$row['id'];
-            $presence = $this->recalc->presenceByClaimant($edgeId, $now);
+            // Präsenz + Besitzer-Frische in EINEM Pass-Scan (statt zweier Aufrufe
+            // pro Kante — halbiert die Query-Last dieses N-Kanten-Loops).
+            [$presence, $ownerFreshness] = $this->recalc->presenceWithOwnerFreshness($edgeId, $claimantId, $now);
             $ownerPresence = $presence[$claimantId] ?? 0.0;
             [$challengerId, $challengerPresence] = $this->topChallenger($presence, $claimantId);
 
@@ -62,9 +127,8 @@ final class GameEdgesAtRiskService
             }
 
             if ($fadeThreshold > 0.0 && ($challengerPresence <= 0.0 || $challengerPresence < $ownerPresence * $riskThreshold)) {
-                $freshness = $this->recalc->ownerFreshness($edgeId, $claimantId, $now);
-                if ($freshness <= $fadeThreshold) {
-                    $fading[] = $this->formatFadingEdge($row, $freshness);
+                if ($ownerFreshness <= $fadeThreshold) {
+                    $fading[] = $this->formatFadingEdge($row, $ownerFreshness);
                 }
             }
         }

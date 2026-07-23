@@ -116,6 +116,27 @@ final class EdgeRecalculator
         return $this->computePresenceState($edgeId, $now)['presence'];
     }
 
+    /**
+     * Präsenz je Claimant UND Besitzer-Frische in EINEM Durchlauf. Der at-risk-Pfad
+     * brauchte vorher zwei getrennte Aufrufe (presenceByClaimant + ownerFreshness),
+     * die denselben Pass-Scan doppelt rechneten — bei tausenden gehaltener Kanten
+     * verdoppelte das die Query-Last.
+     *
+     * @return array{0:array<int,float>,1:float} [Präsenz je Claimant, Frische 0…1]
+     */
+    public function presenceWithOwnerFreshness(int $edgeId, int $ownerClaimantId, ?DateTimeImmutable $now = null): array
+    {
+        $now ??= new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        $state = $this->computePresenceState($edgeId, $now);
+        $last = $state['last_pass_by_claimant'][$ownerClaimantId] ?? null;
+        $freshness = 0.0;
+        if ($last !== null) {
+            $windowDays = $this->config->int('presence_window_days');
+            $freshness = min(1.0, GameMath::presenceWeight($this->ageDays($last, $now), $windowDays));
+        }
+        return [$state['presence'], $freshness];
+    }
+
     /** Frische 0…1 des Besitzer-Claimants (letzter Pass auf der Kante). */
     public function ownerFreshness(int $edgeId, int $ownerClaimantId, ?DateTimeImmutable $now = null): float
     {

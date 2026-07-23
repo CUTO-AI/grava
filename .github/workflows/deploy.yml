@@ -67,6 +67,10 @@ jobs:
             printf '%s\n' '50 3 * * * www-data php /var/www/app/public/index.php game:region-activity-refresh >/dev/null 2>&1' \
               | sudo tee /etc/cron.d/gravelexplorer-region-activity >/dev/null
             sudo chmod 0644 /etc/cron.d/gravelexplorer-region-activity
+            # At-Risk-Antwort-Cache (Kanten in Gefahr) täglich 04:10 erneuern.
+            printf '%s\n' '10 4 * * * www-data php /var/www/app/public/index.php game:at-risk-refresh >/dev/null 2>&1' \
+              | sudo tee /etc/cron.d/gravelexplorer-at-risk >/dev/null
+            sudo chmod 0644 /etc/cron.d/gravelexplorer-at-risk
             # PHP-Upload-Limits an die App-Grenze (REQUEST_MAX_UPLOAD_BYTES = 25 MB)
             # angleichen. Debian-Defaults (upload_max_filesize 2M / post_max_size 8M)
             # brechen große Routen-GPX ab, BEVOR die App-Prüfung greift — $_FILES

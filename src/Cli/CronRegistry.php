@@ -26,6 +26,7 @@ final class CronRegistry
         'game:snapshot-daily'       => ['Tages-Snapshot',          86400, 900],
         'regions:ownership-refresh' => ['Gebiets-Besitz',          86400, 900],
         'game:region-activity-refresh' => ['Gebiets-Aktivität',    86400, 900],
+        'game:at-risk-refresh'      => ['At-Risk-Cache',            86400, 900],
         'cron:cleanup'              => ['Cleanup / Retention',      86400, 600],
         'supporter:snapshot-monthly'=> ['Supporter-Snapshot',       86400, 900],
     ];

@@ -108,6 +108,12 @@ final class GameConfig
         'risk_threshold'               => '0.85',
         'fade_threshold'               => '0.2',
         'at_risk_list_limit'           => '10',
+        // Antwort-Cache (game_at_risk_cache): Gültigkeit in Minuten; abgelaufene
+        // Zeilen erneuert der Cron `game:at-risk-refresh`. Kleine Konten (bis
+        // `at_risk_live_max_edges` gehaltene Kanten) rechnen auch bei abgelaufenem
+        // Cache live — nur Power-Konten liefern dann die (leicht veraltete) Kopie.
+        'at_risk_cache_ttl_min'        => '360',
+        'at_risk_live_max_edges'       => '300',
         // Segment-Rekorde (GAME_SEGMENT_SPEED_BACKEND.md 2026-06-24).
         'record_max_speed_kmh'         => '70',
         'record_min_edge_length_m'     => '50',

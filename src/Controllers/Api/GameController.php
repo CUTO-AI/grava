@@ -186,11 +186,11 @@ final class GameController
         Response::json($this->read->recentTerritoryEdges($uid, $days));
     }
 
-    /** GET /game/me/at-risk — gefährdete eigene Kanten (Bearer). */
+    /** GET /game/me/at-risk — gefährdete eigene Kanten (Bearer, Antwort gecacht). */
     public function atRisk(Request $req): void
     {
         $uid = $this->userId($req);
-        Response::json($this->atRisk->atRisk($uid));
+        Response::json($this->atRisk->atRiskCached($uid));
     }
 
     /**

@@ -171,6 +171,28 @@ final class GameEdgesAtRiskServiceTest extends IntegrationTestCase
         $this->assertSame($outside, $res['edges'][0]['edge_id']);
     }
 
+    /** Cache-Fassade: zweiter Aufruf liefert die gespeicherte Antwort bis zum Refresh. */
+    public function testCachedServesStoredAnswerUntilRefresh(): void
+    {
+        $owner = $this->createUser('cacher');
+        $challenger = $this->createUser('creeper');
+        $edge = $this->makeEdge(5301, [[9.65, 47.12], [9.66, 47.13]]);
+        $this->seedOwnerDays($owner, $edge, 10);
+
+        $first = $this->atRisk->atRiskCached($owner);
+        $this->assertSame(0, $first['at_risk_count']);
+
+        // Lage ändert sich — innerhalb der TTL kommt weiter die gespeicherte Antwort …
+        $this->seedChallengerDays($challenger, $edge, 9);
+        $second = $this->atRisk->atRiskCached($owner);
+        $this->assertSame(0, $second['at_risk_count'], 'Cache-Treffer statt Live-Ableitung.');
+
+        // … bis der (Cron-)Refresh neu rechnet und den Cache ersetzt.
+        $this->atRisk->computeAndStore($owner);
+        $third = $this->atRisk->atRiskCached($owner);
+        $this->assertSame(1, $third['at_risk_count']);
+    }
+
     /** @param list<array{0:float,1:float}> $coords */
     private function makeEdge(int $wayId, array $coords): int
     {

@@ -140,6 +140,54 @@ final class GameRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    /** Anzahl gehaltener Kanten (billiger COUNT für die Live-/Cache-Weiche at-risk). */
+    public function heldEdgeCountByClaimant(int $claimantId): int
+    {
+        $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM game_edge WHERE owner_claimant_id = ?');
+        $stmt->execute([$claimantId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    // -----------------------------------------------------------------
+    // At-Risk-Antwort-Cache (game_at_risk_cache, Migration 0069)
+    // -----------------------------------------------------------------
+
+    /** @return array{payload:string,computed_at:string}|null */
+    public function atRiskCacheGet(int $userId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT payload, computed_at FROM game_at_risk_cache WHERE user_id = ?'
+        );
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row === false ? null : ['payload' => (string)$row['payload'], 'computed_at' => (string)$row['computed_at']];
+    }
+
+    public function atRiskCachePut(int $userId, string $payload): void
+    {
+        $this->pdo->prepare(
+            'INSERT INTO game_at_risk_cache (user_id, payload, computed_at)
+             VALUES (?, ?, NOW(3))
+             ON DUPLICATE KEY UPDATE payload = VALUES(payload), computed_at = NOW(3)'
+        )->execute([$userId, $payload]);
+    }
+
+    /**
+     * User mit abgelaufenem Cache-Eintrag (für den Cron-Refresh), älteste zuerst.
+     * @return list<int>
+     */
+    public function atRiskCacheStaleUserIds(int $olderThanMinutes, int $limit): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT user_id FROM game_at_risk_cache
+              WHERE computed_at < DATE_SUB(NOW(3), INTERVAL ? MINUTE)
+              ORDER BY computed_at ASC
+              LIMIT ' . max(1, $limit)
+        );
+        $stmt->execute([$olderThanMinutes]);
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+    }
+
     public function upsertNode(int $osmNodeId, float $lat, float $lon): int
     {
         $this->pdo->prepare(
