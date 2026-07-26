@@ -186,6 +186,39 @@ final class GameController
         Response::json($this->read->recentTerritoryEdges($uid, $days));
     }
 
+    /**
+     * GET /game/me/edges — Voll-Snapshot aller gehaltenen Kanten des effektiven
+     * Claimants für den Eigene-Kanten-Cache der App (OwnEdgesCache_Concept.md).
+     * `max_points_per_edge` wie bei /game/edges (Default 24).
+     */
+    public function myEdges(Request $req): void
+    {
+        $uid = $this->userId($req);
+        $mpe = isset($req->query['max_points_per_edge'])
+            ? max(2, (int)$req->query['max_points_per_edge']) : 24;
+        Response::json($this->read->ownEdgesSnapshot($uid, $mpe));
+    }
+
+    /**
+     * GET /game/me/edges/changes?since=<ISO8601> — Delta zum Eigene-Kanten-Cache:
+     * `gained` (mit Geometrie) + `lost_ids` + `held_count` (Selbstheilungs-
+     * Abgleich); `resync=true`, wenn `since` außerhalb des Delta-Fensters liegt.
+     */
+    public function myEdgeChanges(Request $req): void
+    {
+        $uid = $this->userId($req);
+        $sinceRaw = (string)($req->query['since'] ?? '');
+        try {
+            $since = new \DateTimeImmutable($sinceRaw, new \DateTimeZone('UTC'));
+        } catch (\Exception) {
+            Response::error('bad_request', 'Parameter `since` fehlt oder ist kein gültiges Datum.', 400);
+            return;
+        }
+        $mpe = isset($req->query['max_points_per_edge'])
+            ? max(2, (int)$req->query['max_points_per_edge']) : 24;
+        Response::json($this->read->ownEdgeChanges($uid, $since, $mpe));
+    }
+
     /** GET /game/me/at-risk — gefährdete eigene Kanten (Bearer, Antwort gecacht). */
     public function atRisk(Request $req): void
     {

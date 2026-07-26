@@ -385,6 +385,98 @@ final class GameReadService
         return $out;
     }
 
+    // -----------------------------------------------------------------
+    // Eigene-Kanten-Cache (OwnEdgesCache_Concept.md): Voll-Snapshot + Delta
+    // -----------------------------------------------------------------
+
+    /** Delta-Anfragen, die weiter zurückliegen, beantworten wir mit resync=true. */
+    private const OWN_EDGES_MAX_DELTA_DAYS = 60;
+
+    /**
+     * Voll-Snapshot aller aktuell gehaltenen Kanten des effektiven Claimants,
+     * mit ausgedünnter Geometrie. `as_of` wird VOR dem Lesen gestempelt (lieber
+     * ein Delta doppelt als eines verpasst).
+     *
+     * @return array{as_of:string,claimant_id:int,held_count:int,edges:list<array<string,mixed>>}
+     */
+    public function ownEdgesSnapshot(int $userId, int $maxPointsPerEdge = 24): array
+    {
+        $claimant = $this->repo->effectiveClaimantId($userId);
+        $asOf = Clock::nowUtc()->format('Y-m-d\TH:i:s\Z');
+        $edges = [];
+        foreach ($this->repo->heldEdgesByClaimant($claimant) as $row) {
+            $edges[] = $this->formatOwnEdge($row, $maxPointsPerEdge);
+        }
+        return ['as_of' => $asOf, 'claimant_id' => $claimant,
+                'held_count' => count($edges), 'edges' => $edges];
+    }
+
+    /**
+     * Delta seit `since`: neu/zurück übernommene Kanten mit Geometrie (`gained`,
+     * owner_since-basiert → claimant-korrekt inkl. Crew-Kollegen) und verlorene
+     * IDs (`lost_ids`, Ledger). Eine inzwischen zurückeroberte Kante steht nur
+     * in `gained` („gained gewinnt"). `held_count` erlaubt dem Client einen
+     * Selbstheilungs-Abgleich (Zahl passt nicht → Voll-Resync); `resync=true`,
+     * wenn `since` außerhalb des Delta-Fensters liegt.
+     *
+     * @return array{as_of:string,claimant_id:int,resync:bool,held_count:int,gained:list<array<string,mixed>>,lost_ids:list<int>}
+     */
+    public function ownEdgeChanges(int $userId, DateTimeImmutable $since, int $maxPointsPerEdge = 24): array
+    {
+        $claimant = $this->repo->effectiveClaimantId($userId);
+        $now = Clock::nowUtc();
+        $asOf = $now->format('Y-m-d\TH:i:s\Z');
+        $base = ['as_of' => $asOf, 'claimant_id' => $claimant,
+                 'held_count' => $this->repo->heldEdgeCountByClaimant($claimant)];
+
+        $ageDays = ($now->getTimestamp() - $since->getTimestamp()) / 86400.0;
+        if ($ageDays > self::OWN_EDGES_MAX_DELTA_DAYS || $ageDays < 0) {
+            return $base + ['resync' => true, 'gained' => [], 'lost_ids' => []];
+        }
+
+        $sinceUtc = $since->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s.v');
+        $gained = [];
+        $gainedIds = [];
+        foreach ($this->repo->heldEdgesGainedSince($claimant, $sinceUtc) as $row) {
+            $gained[] = $this->formatOwnEdge($row, $maxPointsPerEdge);
+            $gainedIds[(int)$row['id']] = true;
+        }
+        $lost = array_values(array_filter(
+            $this->repo->lostEdgeIdsSince($userId, $sinceUtc),
+            static fn(int $id): bool => !isset($gainedIds[$id]),
+        ));
+        return $base + ['resync' => false, 'gained' => $gained, 'lost_ids' => $lost];
+    }
+
+    /** @param array<string,mixed> $row Snapshot-/Delta-Kante mit ausgedünnter Geometrie. */
+    private function formatOwnEdge(array $row, int $maxPointsPerEdge): array
+    {
+        $geom = json_decode((string)($row['geom_geojson'] ?? ''), true);
+        if (is_array($geom) && ($geom['type'] ?? null) === 'LineString'
+            && is_array($geom['coordinates'] ?? null)
+            && count($geom['coordinates']) > $maxPointsPerEdge) {
+            $points = [];
+            foreach ($geom['coordinates'] as $c) {
+                if (is_array($c) && count($c) >= 2) {
+                    $points[] = ['lon' => (float)$c[0], 'lat' => (float)$c[1], 'score' => null];
+                }
+            }
+            $lod = MapLod::simplifyTrack($points, null, $maxPointsPerEdge);
+            $geom['coordinates'] = array_map(
+                static fn(array $p): array => [$p['lon'], $p['lat']],
+                $lod['points'],
+            );
+        }
+        $lastPass = $row['last_pass_at'] ?? null;
+        return [
+            'id'           => (int)$row['id'],
+            'geom'         => is_array($geom) ? $geom : null,
+            'length_m'     => (float)($row['length_m'] ?? 0),
+            'value'        => (float)($row['value_cached'] ?? 0),
+            'last_pass_at' => $lastPass !== null ? Clock::toIso8601(substr((string)$lastPass, 0, 19)) : null,
+        ];
+    }
+
     /**
      * In den letzten N Tagen (Fahrdatum) eroberte/verlorene Kanten für die Home-
      * „Mein Revier"-Minikarte. `gained`/`lost` sind die EXAKTEN Distinct-Zähler

@@ -131,13 +131,51 @@ final class GameRepository
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, way_id, length_m, geom_geojson, min_lat, min_lon, max_lat, max_lon,
-                    owner_claimant_id, last_pass_at
+                    owner_claimant_id, last_pass_at, value_cached
                FROM game_edge
               WHERE owner_claimant_id = ?
               ORDER BY id'
         );
         $stmt->execute([$claimantId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Seit `since` (UTC, `owner_since`-basiert) vom Claimant übernommene Kanten —
+     * Delta-Pfad des Eigene-Kanten-Caches (OwnEdgesCache_Concept.md §3). Claimant-
+     * korrekt: erfasst auch Übernahmen durch Crew-Kollegen und Rückeroberungen;
+     * es erscheinen nur Kanten, die JETZT noch dem Claimant gehören.
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function heldEdgesGainedSince(int $claimantId, string $sinceUtc): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id, length_m, geom_geojson, last_pass_at, value_cached
+               FROM game_edge
+              WHERE owner_claimant_id = ? AND owner_since > ?
+              ORDER BY id'
+        );
+        $stmt->execute([$claimantId, $sinceUtc]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Kanten-IDs, die dem User seit `since` abgenommen wurden (Ledger,
+     * `created_at`-basiert — erfasst auch rückdatierte Fahrten/Recomputes).
+     *
+     * @return list<int>
+     */
+    public function lostEdgeIdsSince(int $userId, string $sinceUtc): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT DISTINCT edge_id FROM game_event
+              WHERE type = "edge_taken" AND user_id = ?
+                AND (actor_user_id IS NULL OR actor_user_id <> ?)
+                AND created_at > ? AND edge_id IS NOT NULL'
+        );
+        $stmt->execute([$userId, $userId, $sinceUtc]);
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
     }
 
     /** Anzahl gehaltener Kanten (billiger COUNT für die Live-/Cache-Weiche at-risk). */
