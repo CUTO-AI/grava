@@ -401,6 +401,10 @@ final class GameReadService
      */
     public function ownEdgesSnapshot(int $userId, int $maxPointsPerEdge = 24): array
     {
+        // Voll-Snapshot großer Reviere: tausende GeoJSON-Decodes + das Encode der
+        // Gesamtantwort sprengen das Standard-memory_limit (Web-SAPI) — der
+        // Endpoint antwortete dann mit leerem 500. Punktuell anheben.
+        ini_set('memory_limit', '768M');
         $claimant = $this->repo->effectiveClaimantId($userId);
         $asOf = Clock::nowUtc()->format('Y-m-d\TH:i:s\Z');
         $edges = [];
