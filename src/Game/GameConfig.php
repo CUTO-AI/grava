@@ -162,7 +162,9 @@ final class GameConfig
         // Marketing-Generation (die App bildet ihre Hardware darauf ab und schickt
         // `device_class` mit); `default` greift für Unbekanntes. Im Admin nach
         // Erfahrung justierbar — kein App-Build nötig.
-        'map_edge_render_caps'         => '{"default":2000,"iPhone 11":1400,"iPhone 12":1600,"iPhone 13":2000,"iPhone 14":2400,"iPhone 15":3000,"iPhone 16":3500,"iPhone 17":4000}',
+        // Halbiert (Migration 0070): VectorKit kippte auf iPhone 15 Pro Max bei
+        // >50k Metal-Buffern in Watchdog-Kills — s. Kommentar in 0070.
+        'map_edge_render_caps'         => '{"default":1000,"iPhone 11":700,"iPhone 12":800,"iPhone 13":1000,"iPhone 14":1200,"iPhone 15":1500,"iPhone 16":1800,"iPhone 17":2000}',
         // Faktor, um den das vom Server angeforderte Kanten-Limit über der Zeichen-
         // Grenze liegt (etwas Reserve zum Priorisieren der wertvollsten Kanten).
         'map_edge_fetch_multiplier'    => '1.25',

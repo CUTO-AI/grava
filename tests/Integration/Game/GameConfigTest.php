@@ -40,15 +40,16 @@ final class GameConfigTest extends IntegrationTestCase
         $cfg = new GameConfig($this->pdo); // greift auf eingebaute Defaults zurück
 
         // Bekannte Generation → deren Kappe; Fetch-Limit = round(cap × 1.25).
+        // Werte seit Migration 0070 halbiert (VectorKit-Watchdog-Kills).
         $caps = $cfg->resolveMapEdgeCaps('iPhone 15', 'iPhone16,1');
-        $this->assertSame(3000, $caps['max_render_edges']);
-        $this->assertSame(3750, $caps['edge_request_limit']);
+        $this->assertSame(1500, $caps['max_render_edges']);
+        $this->assertSame(1875, $caps['edge_request_limit']);
 
         // Unbekannte Generation → default.
-        $this->assertSame(2000, $cfg->resolveMapEdgeCaps('iPhone 99', 'iPhoneX,Y')['max_render_edges']);
+        $this->assertSame(1000, $cfg->resolveMapEdgeCaps('iPhone 99', 'iPhoneX,Y')['max_render_edges']);
 
         // Ohne device_class: rohe Kennung greift, sonst default.
-        $this->assertSame(2000, $cfg->resolveMapEdgeCaps(null, null)['max_render_edges']);
+        $this->assertSame(1000, $cfg->resolveMapEdgeCaps(null, null)['max_render_edges']);
     }
 
     public function testResolvesMapEdgeCapsFromDbOverride(): void
