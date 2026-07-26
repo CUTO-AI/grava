@@ -445,8 +445,11 @@ final class GameRepository
     /**
      * Ereignisse (mit Kanten-Geometrie) der letzten N Tage für die Home-Minikarte.
      * Gleiche Semantik wie {@see edgeEventCounts} (Fahrdatum-Fenster, actor = gewonnen,
-     * Opfer = verloren), liefert aber je Zeile die Geometrie. ASC nach `ridden_on`,
-     * damit der Aufrufer per „letzter gewinnt" je Kante deduplizieren kann.
+     * Opfer = verloren), liefert aber je Zeile die Geometrie. DESC nach `ridden_on`
+     * (der Aufrufer dedupliziert per „erster gewinnt" = jüngstes Ereignis je Kante).
+     * LIMIT 500: die Minikarte ist nur eine Card — 4000 Geometrien haben das JSON-
+     * Decoding + MapKit-Overlay-Diffing der App in Sekunden-Hangs getrieben; die
+     * exakten Zähler kommen ohnehin aus {@see edgeEventCounts}.
      *
      * @return list<array{edge_id:int,geom_geojson:?string,direction:string,ridden_on:?string}>
      */
@@ -464,7 +467,7 @@ final class GameRepository
                 AND ( (ev.type IN ('edge_new','edge_taken','edge_reclaimed') AND ev.actor_user_id = ?)
                       OR (ev.type = 'edge_taken' AND ev.user_id = ? AND ev.actor_user_id <> ?) )
               ORDER BY ev.ridden_on DESC
-              LIMIT 4000"
+              LIMIT 500"
         );
         $stmt->execute([$userId, $sinceDate, $userId, $userId, $userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
